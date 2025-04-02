@@ -53,12 +53,40 @@ namespace EmuLibrary.RomTypes.PcInstaller
 
         public override void BrowseToSource()
         {
-            var psi = new System.Diagnostics.ProcessStartInfo()
+            // Check the platform before launching the file browser
+            if (Environment.OSVersion.Platform == PlatformID.Win32NT)
             {
-                FileName = "explorer.exe",
-                Arguments = $"/e, /select, \"{Path.GetFullPath(SourceFullPath)}\""
-            };
-            System.Diagnostics.Process.Start(psi);
+                // Windows-specific explorer
+                var psi = new System.Diagnostics.ProcessStartInfo()
+                {
+                    FileName = "explorer.exe",
+                    Arguments = $"/e, /select, \"{Path.GetFullPath(SourceFullPath)}\""
+                };
+                System.Diagnostics.Process.Start(psi);
+            }
+            else
+            {
+                // Use platform-agnostic approach for non-Windows platforms
+                try
+                {
+                    // Try to open the directory containing the file
+                    string directory = Path.GetDirectoryName(SourceFullPath);
+                    if (Directory.Exists(directory))
+                    {
+                        System.Diagnostics.Process.Start(directory);
+                    }
+                    else
+                    {
+                        // Fallback to just starting the file
+                        System.Diagnostics.Process.Start(SourceFullPath);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // Log the error but don't crash
+                    System.Diagnostics.Debug.WriteLine($"Error browsing to source: {ex.Message}");
+                }
+            }
         }
     }
 }

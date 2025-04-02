@@ -26,6 +26,20 @@ namespace EmuLibrary.RomTypes.PcInstaller
         
         public override void Install(InstallActionArgs args)
         {
+            // Ensure we clean up any previous cancellation token
+            if (_watcherToken != null)
+            {
+                try
+                {
+                    _watcherToken.Dispose();
+                }
+                catch (Exception ex)
+                {
+                    _logger.Error(ex, "Error disposing previous cancellation token");
+                }
+                _watcherToken = null;
+            }
+            
             var info = Game.GetELGameInfo() as PcInstallerGameInfo;
             
             var dstBasePath = info.Mapping?.DestinationPathResolved ??
@@ -122,15 +136,29 @@ namespace EmuLibrary.RomTypes.PcInstaller
                                             
                                         // We need to use the UI thread for this
                                         string selectedOption = null;
-                                        if (_emuLibrary?.Playnite?.MainView?.UIDispatcher != null)
+                                        try
                                         {
-                                            _emuLibrary.Playnite.MainView.UIDispatcher.Invoke(() =>
+                                            if (_emuLibrary?.Playnite?.MainView?.UIDispatcher != null)
                                             {
-                                                selectedOption = _emuLibrary.Playnite.Dialogs.SelectString(
-                                                    "Multiple installers found. Please select which one to use:",
-                                                    "Select Installer",
-                                                    selectionOptions.Keys.ToList());
-                                            });
+                                                _emuLibrary.Playnite.MainView.UIDispatcher.Invoke(() =>
+                                                {
+                                                    try
+                                                    {
+                                                        selectedOption = _emuLibrary.Playnite.Dialogs.SelectString(
+                                                            "Multiple installers found. Please select which one to use:",
+                                                            "Select Installer",
+                                                            selectionOptions.Keys.ToList());
+                                                    }
+                                                    catch (Exception ex)
+                                                    {
+                                                        _logger.Error(ex, "Error showing installer selection dialog");
+                                                    }
+                                                });
+                                            }
+                                        }
+                                        catch (Exception ex)
+                                        {
+                                            _logger.Error(ex, "Error accessing UI dispatcher for installer selection");
                                         }
                                         
                                         if (!string.IsNullOrEmpty(selectedOption) && selectionOptions.TryGetValue(selectedOption, out string selectedPath))
@@ -292,40 +320,57 @@ namespace EmuLibrary.RomTypes.PcInstaller
                             if (_emuLibrary.Settings.PromptForInstallLocation)
                             {
                                 // We need to use the UI thread for this
-                                if (_emuLibrary?.Playnite?.MainView?.UIDispatcher != null)
+                                try
                                 {
-                                    string selectedExe = null;
-                                    
-                                    _emuLibrary.Playnite.MainView.UIDispatcher.Invoke(() =>
+                                    if (_emuLibrary?.Playnite?.MainView?.UIDispatcher != null)
                                     {
-                                        SafelyAddNotification(
-                                            Guid.NewGuid().ToString(),
-                                            $"Please select the executable for {Game.Name}...",
-                                            NotificationType.Info);
+                                        string selectedExe = null;
                                         
-                                        // First ask the user to provide the installation directory if we don't have one
-                                        string installDir = gameInstallDir;
-                                        if (!Directory.Exists(gameInstallDir) || Directory.GetFiles(gameInstallDir, "*.*", SearchOption.AllDirectories).Length == 0)
+                                        try
                                         {
-                                            installDir = _emuLibrary.Playnite.Dialogs.SelectFolder(
-                                                $"Please select the folder where {Game.Name} was installed");
-                                                
-                                            // Update the installation directory if user selected one
-                                            if (!string.IsNullOrEmpty(installDir) && Directory.Exists(installDir))
+                                            _emuLibrary.Playnite.MainView.UIDispatcher.Invoke(() =>
                                             {
-                                                gameInstallDir = installDir;
-                                                info.InstallDirectory = installDir;
-                                            }
+                                                try
+                                                {
+                                                    SafelyAddNotification(
+                                                        Guid.NewGuid().ToString(),
+                                                        $"Please select the executable for {Game.Name}...",
+                                                        NotificationType.Info);
+                                                    
+                                                    // First ask the user to provide the installation directory if we don't have one
+                                                    string installDir = gameInstallDir;
+                                                    if (!Directory.Exists(gameInstallDir) || Directory.GetFiles(gameInstallDir, "*.*", SearchOption.AllDirectories).Length == 0)
+                                                    {
+                                                        installDir = _emuLibrary.Playnite.Dialogs.SelectFolder(
+                                                            $"Please select the folder where {Game.Name} was installed");
+                                                            
+                                                        // Update the installation directory if user selected one
+                                                        if (!string.IsNullOrEmpty(installDir) && Directory.Exists(installDir))
+                                                        {
+                                                            gameInstallDir = installDir;
+                                                            info.InstallDirectory = installDir;
+                                                        }
+                                                    }
+                                                    
+                                                    // Then ask for the specific executable 
+                                                    if (!string.IsNullOrEmpty(installDir) && Directory.Exists(installDir))
+                                                    {
+                                                        selectedExe = _emuLibrary.Playnite.Dialogs.SelectFile(
+                                                            "Select Game Executable (*.exe)|*.exe", 
+                                                            installDir);
+                                                    }
+                                                }
+                                                catch (Exception ex)
+                                                {
+                                                    _logger.Error(ex, "Error in executable selection dialog");
+                                                }
+                                            });
                                         }
-                                        
-                                        // Then ask for the specific executable 
-                                        if (!string.IsNullOrEmpty(installDir) && Directory.Exists(installDir))
+                                        catch (Exception ex)
                                         {
-                                            selectedExe = _emuLibrary.Playnite.Dialogs.SelectFile(
-                                                "Select Game Executable (*.exe)|*.exe", 
-                                                installDir);
+                                            _logger.Error(ex, "Error invoking UI dispatcher for executable selection");
                                         }
-                                    });
+                                    }
                                     
                                     if (!string.IsNullOrEmpty(selectedExe))
                                     {
@@ -411,17 +456,70 @@ namespace EmuLibrary.RomTypes.PcInstaller
                     Game.GameId = info.AsGameId();
                     
                     // Make sure to run this on the UI thread
-                    if (_emuLibrary?.Playnite?.MainView?.UIDispatcher != null)
+                    try
                     {
-                        _emuLibrary.Playnite.MainView.UIDispatcher.Invoke(() =>
+                        if (_emuLibrary?.Playnite?.MainView?.UIDispatcher != null)
+                        {
+                            _emuLibrary.Playnite.MainView.UIDispatcher.Invoke(() =>
+                            {
+                                try
+                                {
+                                    _emuLibrary.Playnite.Database.Games.Update(Game);
+                                }
+                                catch (Exception ex)
+                                {
+                                    _logger.Error(ex, "Error updating game in database");
+                                }
+                            });
+                        }
+                        else
+                        {
+                            // Fallback to direct update if UIDispatcher isn't available
+                            _logger.Warn("UIDispatcher not available, using direct database update");
+                            _emuLibrary.Playnite.Database.Games.Update(Game);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.Error(ex, "Error accessing UI dispatcher for database update");
+                        
+                        // Try direct update as last resort
+                        try
                         {
                             _emuLibrary.Playnite.Database.Games.Update(Game);
-                        });
+                        }
+                        catch (Exception updateEx)
+                        {
+                            _logger.Error(updateEx, "Error in direct database update fallback");
+                        }
                     }
-                    else
-                    {
-                        _emuLibrary.Playnite.Database.Games.Update(Game);
-                    }
+                }
+                catch (OperationCanceledException ex)
+                {
+                    _logger.Info(ex, $"Installation of {Game.Name} was cancelled by user");
+                    SafelyAddNotification(
+                        Game.GameId, 
+                        $"Installation of {Game.Name} was cancelled.", 
+                        NotificationType.Info);
+                    Game.IsInstalling = false;
+                }
+                catch (TimeoutException ex)
+                {
+                    _logger.Error(ex, $"Installer for {Game.Name} timed out");
+                    SafelyAddNotification(
+                        Game.GameId, 
+                        $"Installation of {Game.Name} timed out after 10 minutes. The installer may be waiting for input or stuck.", 
+                        NotificationType.Error);
+                    Game.IsInstalling = false;
+                }
+                catch (IOException ex)
+                {
+                    _logger.Error(ex, $"IO error installing game {Game.Name}");
+                    SafelyAddNotification(
+                        Game.GameId, 
+                        $"Failed to install {Game.Name} due to file access error: {ex.Message}", 
+                        NotificationType.Error);
+                    Game.IsInstalling = false;
                 }
                 catch (Exception ex)
                 {
@@ -487,25 +585,31 @@ namespace EmuLibrary.RomTypes.PcInstaller
                     {
                         if (!process.WaitForExit(600000)) // 10 minute timeout
                         {
-                            try { process.Kill(); } catch { }
+                            try { process.Kill(); } catch (Exception ex) { _logger.Error(ex, "Error killing timed out process"); }
                             tcs.TrySetException(new TimeoutException("Installer process timed out after 10 minutes"));
                         }
                         else if (!tcs.Task.IsCompleted)
                         {
                             tcs.TrySetResult(true);
                         }
-                    }, ct);
+                    }, ct).ConfigureAwait(false);
                     
                     // Wait for the task to complete with proper exception handling
                     bool isCancelled = false;
                     try
                     {
-                        await tcs.Task;
+                        // Only wait on tcs.Task once
+                        await tcs.Task.ConfigureAwait(false);
                     }
                     catch (TaskCanceledException)
                     {
                         _logger.Info("Installation was cancelled by user");
                         isCancelled = true;
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.Error(ex, "Error waiting for installer process");
+                        throw;
                     }
                     
                     // If cancelled, throw after all resources are cleaned up
@@ -513,7 +617,6 @@ namespace EmuLibrary.RomTypes.PcInstaller
                     {
                         throw new OperationCanceledException("Installation was cancelled");
                     }
-                    await tcs.Task;
                 }
                 
                 _logger.Info($"Installer exited with code: {process.ExitCode}");
@@ -765,21 +868,39 @@ namespace EmuLibrary.RomTypes.PcInstaller
                         
                     // We need to use the UI thread for this
                     string selectedOption = null;
-                    if (_emuLibrary?.Playnite?.MainView?.UIDispatcher != null)
+                    try
                     {
-                        _emuLibrary.Playnite.MainView.UIDispatcher.Invoke(() =>
+                        if (_emuLibrary?.Playnite?.MainView?.UIDispatcher != null)
                         {
-                            selectedOption = _emuLibrary.Playnite.Dialogs.SelectString(
-                                "Multiple potential installers found. Please select which one to use:",
-                                "Select Installer",
-                                selectionOptions.Keys.ToList());
-                        });
+                            _emuLibrary.Playnite.MainView.UIDispatcher.Invoke(() =>
+                            {
+                                try
+                                {
+                                    selectedOption = _emuLibrary.Playnite.Dialogs.SelectString(
+                                        "Multiple potential installers found. Please select which one to use:",
+                                        "Select Installer",
+                                        selectionOptions.Keys.ToList());
+                                }
+                                catch (Exception ex)
+                                {
+                                    _logger.Error(ex, "Error showing installer selection dialog");
+                                }
+                            });
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.Error(ex, "Error accessing UI dispatcher for installer selection");
                     }
                     
                     if (!string.IsNullOrEmpty(selectedOption) && selectionOptions.TryGetValue(selectedOption, out string selectedPath))
                     {
                         _logger.Info($"User selected installer: {selectedPath}");
                         return selectedPath;
+                    }
+                    else if (selectedOption != null) // User made a selection but it's not in our dictionary
+                    {
+                        _logger.Warn($"User selected an option not in dictionary: {selectedOption}");
                     }
                 }
                 

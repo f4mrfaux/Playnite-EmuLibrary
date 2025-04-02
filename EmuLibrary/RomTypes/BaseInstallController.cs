@@ -23,7 +23,19 @@ namespace EmuLibrary.RomTypes
 
         public override void Dispose()
         {
-            _watcherToken?.Cancel();
+            try
+            {
+                if (_watcherToken != null)
+                {
+                    _watcherToken.Cancel();
+                    _watcherToken.Dispose();
+                    _watcherToken = null;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger?.Error(ex, "Error disposing cancellation token");
+            }
             base.Dispose();
         }
 
@@ -54,17 +66,32 @@ namespace EmuLibrary.RomTypes
         /// </summary>
         protected void SafelyAddNotification(string id, string message, NotificationType type)
         {
-            if (_emuLibrary?.Playnite?.MainView?.UIDispatcher != null)
+            try
             {
-                _emuLibrary.Playnite.MainView.UIDispatcher.Invoke(() =>
+                if (_emuLibrary?.Playnite?.MainView?.UIDispatcher != null)
                 {
-                    _emuLibrary.Playnite.Notifications.Add(id, message, type);
-                });
+                    _emuLibrary.Playnite.MainView.UIDispatcher.Invoke(() =>
+                    {
+                        try
+                        {
+                            _emuLibrary.Playnite.Notifications.Add(id, message, type);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger?.Error(ex, $"Error adding notification: {message}");
+                        }
+                    });
+                }
+                else
+                {
+                    // If UIDispatcher is not available, log the message
+                    _logger?.Info($"Notification: {message}");
+                }
             }
-            else
+            catch (Exception ex)
             {
-                // If UIDispatcher is not available, log the message
-                _logger?.Info($"Notification: {message}");
+                // Last resort fallback if UI dispatcher throws an exception
+                _logger?.Error(ex, $"Error invoking UI dispatcher for notification: {message}");
             }
         }
     }

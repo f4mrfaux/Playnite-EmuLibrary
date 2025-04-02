@@ -10,6 +10,9 @@
 - Added option to prompt for installer selection when multiple options are found in archives
 - Added option to prompt for installation location when executable detection fails
 - Improved archive handling with game-specific temporary directories
+- Enhanced threading model with proper UI thread handling and exception management
+- Added cross-platform support for file browsing operations
+- Fixed resource cleanup to ensure proper disposal of temporary resources
 ### Security
 - Updated Newtonsoft.Json from 10.0.1 to 13.0.3 to address high severity vulnerability (GHSA-5crp-9r3c-p9vr)
 - Reverted to the original LibHac version 0.7.0 which is compatible with .NET Framework 4.6.2

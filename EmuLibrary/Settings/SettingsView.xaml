@@ -210,12 +210,16 @@
                 </CheckBox>
                 
                 <CheckBox IsChecked="{Binding PromptForInstallerSelection, Mode=TwoWay}" Margin="0,0,0,10">
-                    <TextBlock Text="Prompt for installer selection when multiple options are found" TextWrapping="Wrap" 
+                    <TextBlock x:Name="PromptForInstallerSelectionLabel" 
+                             Text="Prompt for installer selection when multiple options are found" 
+                             TextWrapping="Wrap" 
                              ToolTip="When enabled, you will be asked to choose which installer to run&#x0a;when multiple executable options are found in an archive."/>
                 </CheckBox>
                 
                 <CheckBox IsChecked="{Binding PromptForInstallLocation, Mode=TwoWay}" Margin="0,0,0,10">
-                    <TextBlock Text="Prompt for installation location after installation" TextWrapping="Wrap" 
+                    <TextBlock x:Name="PromptForInstallLocationLabel"
+                             Text="Prompt for installation location after installation" 
+                             TextWrapping="Wrap" 
                              ToolTip="When enabled, you will be asked to specify where the game was installed&#x0a;if automatic detection fails."/>
                 </CheckBox>
                 
