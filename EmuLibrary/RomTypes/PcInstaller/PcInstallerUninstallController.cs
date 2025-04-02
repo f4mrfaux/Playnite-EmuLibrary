@@ -44,7 +44,7 @@ namespace EmuLibrary.RomTypes.PcInstaller
                     {
                         _logger.Info($"Running uninstaller: {uninstallerPath}");
                         
-                        _emuLibrary.Playnite.Notifications.Add(
+                        SafelyAddNotification(
                             Guid.NewGuid().ToString(),
                             $"Uninstalling {Game.Name}... This may take a while.",
                             NotificationType.Info);
@@ -85,7 +85,7 @@ namespace EmuLibrary.RomTypes.PcInstaller
                         {
                             _logger.Error(ex, $"Failed to delete directory: {installDir}");
                             
-                            _emuLibrary.Playnite.Notifications.Add(
+                            SafelyAddNotification(
                                 Game.GameId,
                                 $"Failed to uninstall {Game.Name}. The directory could not be deleted.",
                                 NotificationType.Error);
@@ -101,7 +101,7 @@ namespace EmuLibrary.RomTypes.PcInstaller
                 {
                     _logger.Error(ex, $"Error uninstalling game {Game.Name}");
                     
-                    _emuLibrary.Playnite.Notifications.Add(
+                    SafelyAddNotification(
                         Game.GameId,
                         $"Failed to uninstall {Game.Name}.{Environment.NewLine}{Environment.NewLine}{ex.Message}",
                         NotificationType.Error);

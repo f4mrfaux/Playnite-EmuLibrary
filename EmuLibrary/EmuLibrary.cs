@@ -141,6 +141,12 @@ namespace EmuLibrary
 
                 foreach (var g in scanner.GetGames(mapping, args))
                 {
+                    // If metadata download is enabled, set a flag to request metadata from Playnite
+                    if (Settings.EnableMetadataDownload)
+                    {
+                        g.IsMetadataRequestSourced = true;
+                    }
+                    
                     yield return g;
                 }
             }

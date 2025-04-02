@@ -81,8 +81,20 @@ namespace EmuLibrary.RomTypes.PcInstaller
                     if (IsPotentialInstaller(file.FullName))
                     {
                         count++;
-                        string gameName = ExtractGameName(file.Name);
                         string relativePath = file.FullName.Replace(srcPath, "").TrimStart('\\', '/');
+                        
+                        // If we should use folder names for better metadata matching
+                        string gameName;
+                        if (EmuLibrary.Settings.UseSourceFolderNamesForMetadata)
+                        {
+                            // Try to use parent folder name for better metadata matching
+                            gameName = ExtractGameNameFromPath(file.FullName, srcPath);
+                        }
+                        else
+                        {
+                            // Use traditional filename-based extraction
+                            gameName = ExtractGameName(file.Name);
+                        }
                         
                         var info = new PcInstallerGameInfo()
                         {
@@ -251,6 +263,62 @@ namespace EmuLibrary.RomTypes.PcInstaller
             name = textInfo.ToTitleCase(name.ToLower());
             
             return name;
+        }
+        
+        /// <summary>
+        /// Extracts game name from folder path instead of just the filename
+        /// This provides better metadata matching since folder names often contain
+        /// cleaner game titles than installer filenames
+        /// </summary>
+        private string ExtractGameNameFromPath(string filePath, string basePath)
+        {
+            try
+            {
+                // Get path relative to scan directory
+                var relativePath = filePath.Replace(basePath, "").TrimStart('\\', '/');
+                var pathParts = relativePath.Split(new[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries);
+                
+                // No folders in path, fall back to filename
+                if (pathParts.Length <= 1)
+                {
+                    return ExtractGameName(Path.GetFileName(filePath));
+                }
+                
+                // Try to use parent directory name first as it's often the game name
+                string parentDir = pathParts[0];
+                
+                // Clean up folder name
+                string name = parentDir;
+                
+                // Remove bracketed content like [GOG], [Steam], etc.
+                name = Regex.Replace(name, @"\s*\[.*?\]\s*", " ");
+                
+                // Remove parenthesized content like (v1.2), (Complete Edition), etc.
+                name = Regex.Replace(name, @"\s*\(.*?\)\s*", " ");
+                
+                // Replace underscores and dashes with spaces
+                name = name.Replace('_', ' ').Replace('-', ' ');
+                
+                // Clean up multiple spaces
+                name = Regex.Replace(name, @"\s+", " ").Trim();
+                
+                // Title case
+                var textInfo = new System.Globalization.CultureInfo("en-US", false).TextInfo;
+                name = textInfo.ToTitleCase(name.ToLower());
+                
+                // If after cleanup we have an empty or very short name, fall back to file-based name
+                if (string.IsNullOrWhiteSpace(name) || name.Length < 3)
+                {
+                    return ExtractGameName(Path.GetFileName(filePath));
+                }
+                
+                return name;
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, $"Error extracting game name from path: {filePath}");
+                return ExtractGameName(Path.GetFileName(filePath));
+            }
         }
     }
 }

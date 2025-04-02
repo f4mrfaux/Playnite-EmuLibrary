@@ -34,6 +34,8 @@ namespace EmuLibrary.Settings
         public bool AutoDetectPcInstallers { get; set; } = true;
         public string DefaultInstallLocation { get; set; } = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Playnite Games");
         public bool CreateGameSpecificInstallDirectories { get; set; } = true;
+        public bool EnableMetadataDownload { get; set; } = true;
+        public bool UseSourceFolderNamesForMetadata { get; set; } = true;
 
         // Hidden settings
         public int Version { get; set; }

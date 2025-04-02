@@ -388,6 +388,30 @@ namespace EmuLibrary.RomTypes.PcInstaller.Handlers
                     }
                 }
                 
+                // Check if UnRAR is in PATH - more defensive for 4.6.2
+                string pathRar = null;
+                string pathEnv = Environment.GetEnvironmentVariable("PATH");
+                if (!string.IsNullOrEmpty(pathEnv))
+                {
+                    foreach (var p in pathEnv.Split(Path.PathSeparator))
+                    {
+                        if (!string.IsNullOrEmpty(p))
+                        {
+                            string testPath = Path.Combine(p, "UnRAR.exe");
+                            if (File.Exists(testPath))
+                            {
+                                pathRar = testPath;
+                                break;
+                            }
+                        }
+                    }
+                }
+                    
+                if (!string.IsNullOrEmpty(pathRar))
+                {
+                    return pathRar;
+                }
+                
                 _logger.Error("UnRAR.exe not found. Please download and place in the Tools directory.");
                 return null;
             }

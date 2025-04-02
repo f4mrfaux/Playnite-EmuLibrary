@@ -60,7 +60,7 @@ namespace EmuLibrary.RomTypes.PcInstaller
                         {
                             Directory.CreateDirectory(tempPath);
                             
-                            _emuLibrary.Playnite.Notifications.Add(
+                            SafelyAddNotification(
                                 Guid.NewGuid().ToString(),
                                 $"Extracting {Game.Name}... This may take a while.",
                                 NotificationType.Info);
@@ -129,7 +129,7 @@ namespace EmuLibrary.RomTypes.PcInstaller
                             {
                                 Directory.CreateDirectory(tempPath);
                                 
-                                _emuLibrary.Playnite.Notifications.Add(
+                                SafelyAddNotification(
                                     Guid.NewGuid().ToString(),
                                     $"Extracting ISO {Game.Name}... This may take a while.",
                                     NotificationType.Info);
@@ -181,7 +181,7 @@ namespace EmuLibrary.RomTypes.PcInstaller
                     
                     if (!installSuccess)
                     {
-                        _emuLibrary.Playnite.Notifications.Add(
+                        SafelyAddNotification(
                             Game.GameId, 
                             $"Failed to install {Game.Name}. The installer did not complete successfully.", 
                             NotificationType.Error);
@@ -194,7 +194,7 @@ namespace EmuLibrary.RomTypes.PcInstaller
                     
                     if (string.IsNullOrEmpty(executablePath))
                     {
-                        _emuLibrary.Playnite.Notifications.Add(
+                        SafelyAddNotification(
                             Game.GameId, 
                             $"Game {Game.Name} was installed, but no executable could be found.", 
                             NotificationType.Warning);
@@ -223,22 +223,40 @@ namespace EmuLibrary.RomTypes.PcInstaller
                     }
                     
                     // Update the game in Playnite
-                    InvokeOnInstalled(new GameInstalledEventArgs(new GameInstallationData()
+                    var installData = new GameInstallationData()
                     {
                         InstallDirectory = adjustedInstallDir,
                         Roms = !string.IsNullOrEmpty(adjustedExePath) 
                             ? new List<GameRom>() { new GameRom(Game.Name, adjustedExePath) }
                             : new List<GameRom>()
-                    }));
+                    };
+                    
+                    // Explicitly mark as installed
+                    Game.IsInstalled = true;
+                    
+                    // Invoke the installed event
+                    InvokeOnInstalled(new GameInstalledEventArgs(installData));
                     
                     // Update the GameId with the updated PcInstallerGameInfo
                     Game.GameId = info.AsGameId();
-                    _emuLibrary.Playnite.Database.Games.Update(Game);
+                    
+                    // Make sure to run this on the UI thread
+                    if (_emuLibrary?.Playnite?.MainView?.UIDispatcher != null)
+                    {
+                        _emuLibrary.Playnite.MainView.UIDispatcher.Invoke(() =>
+                        {
+                            _emuLibrary.Playnite.Database.Games.Update(Game);
+                        });
+                    }
+                    else
+                    {
+                        _emuLibrary.Playnite.Database.Games.Update(Game);
+                    }
                 }
                 catch (Exception ex)
                 {
                     _logger.Error(ex, $"Error installing game {Game.Name}");
-                    _emuLibrary.Playnite.Notifications.Add(
+                    SafelyAddNotification(
                         Game.GameId, 
                         $"Failed to install {Game.Name}.{Environment.NewLine}{Environment.NewLine}{ex.Message}", 
                         NotificationType.Error);
@@ -266,7 +284,7 @@ namespace EmuLibrary.RomTypes.PcInstaller
                     }
                 };
                 
-                _emuLibrary.Playnite.Notifications.Add(
+                SafelyAddNotification(
                     Guid.NewGuid().ToString(),
                     $"Installing {Game.Name}... This may take a while. Please wait for the installation to complete.",
                     NotificationType.Info);
@@ -301,6 +319,8 @@ namespace EmuLibrary.RomTypes.PcInstaller
                         }
                     }, ct);
                     
+                    // Wait for the task to complete with proper exception handling
+                    bool isCancelled = false;
                     try
                     {
                         await tcs.Task;
@@ -308,7 +328,13 @@ namespace EmuLibrary.RomTypes.PcInstaller
                     catch (TaskCanceledException)
                     {
                         _logger.Info("Installation was cancelled by user");
-                        throw;
+                        isCancelled = true;
+                    }
+                    
+                    // If cancelled, throw after all resources are cleaned up
+                    if (isCancelled)
+                    {
+                        throw new OperationCanceledException("Installation was cancelled");
                     }
                     await tcs.Task;
                 }
@@ -528,7 +554,7 @@ namespace EmuLibrary.RomTypes.PcInstaller
                 }).ToList();
                 
                 if (possibleInstallers.Count > 0)
-                    return possibleInstallers.First();
+                    return possibleInstallers[0]; // Using indexer is safer than First() in 4.6.2
                     
                 // If all else fails, return the first .exe file
                 if (exeFiles.Length > 0)

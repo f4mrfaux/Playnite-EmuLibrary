@@ -1,15 +1,22 @@
 ## [Unreleased]
 ### Security
 - Updated Newtonsoft.Json from 10.0.1 to 13.0.3 to address high severity vulnerability (GHSA-5crp-9r3c-p9vr)
-- Updated LibHac to version 0.16.0 for better compatibility with .NET Framework 4.6.2
+- Reverted to the original LibHac version 0.7.0 which is compatible with .NET Framework 4.6.2
+- Downgraded protobuf-net from 3.1.25 to 2.4.6 for better .NET Framework 4.6.2 compatibility
 
 ### Fixed
 - Fixed compatibility issues with .NET Framework 4.6.2 in archive handling code
+- Addressed thread safety issues by properly using UIDispatcher for UI updates
+- Added missing BaseUninstallController implementation
+- Fixed plugin ID format in extension.yaml to follow Playnite conventions
 - Improved error handling in file extraction and installation process
-- Added fallback methods for finding 7z.exe and UnRAR.exe in various locations
+- Added fallback methods for finding 7z.exe and UnRAR.exe in various locations including PATH
 - Enhanced installer detection for better success rates with different archive types
 - Added timeout protection for installer processes that might hang
 - Improved robustness of directory copying with better error handling
+- Strengthened LINQ usage patterns for better .NET Framework 4.6.2 compatibility
+- Fixed potential issues with FirstOrDefault() by using safer collection access patterns
+- Enhanced cancellation handling in long-running processes
 ### Added
 - Added generic PC game installer support to allow management of PC game installers
 - New PcInstaller ROM type that can detect and handle various installer types (.exe, .msi)
@@ -19,6 +26,9 @@
 - Automatic game executable detection after installation
 - Support for network shares via SMB as sources for game installers
 - Settings for customizing PC installer behavior and installation locations
+- Added metadata integration with Playnite to enable automatic metadata downloads
+- Enhanced game title extraction for better metadata matching with Steam/GOG databases
+- Added option to use folder names instead of installer filenames for improved metadata matching
 
 ### Notes
 - The PC Installer functionality allows managing a collection of PC game installers stored on network shares
@@ -34,6 +44,8 @@
 3. Set the destination path to where you want games to be installed
 4. Games will appear in your library and can be installed by clicking "Play"
 5. After installation, the game will launch using the detected executable
+6. Enable "Metadata Settings" options in the plugin settings to automatically download metadata for your games
+7. Use the "Use folder names for metadata matching" option for better metadata matches when your folder structure contains clean game titles
 
 ### Advanced Archive Support
 - ISO files: The plugin can extract ISO files and run installers found inside them

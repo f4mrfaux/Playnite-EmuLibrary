@@ -2,17 +2,50 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using Playnite.SDK;
-using EmuLibrary.Util;
+using Playnite.SDK.Models;
+using Playnite.SDK.Plugins;
+using System.Threading.Tasks;
 
 namespace EmuLibrary.RomTypes.GogInstaller
 {
     public class GogInstallerUninstallController : BaseUninstallController
     {
-        public GogInstallerUninstallController(ILogger logger) : base(logger)
+        public GogInstallerUninstallController(Game game, IEmuLibrary emuLibrary) : base(game, emuLibrary)
         {
         }
 
-        public override bool UninstallRom(ELGameInfo gameInfo, string installDir)
+        public override void Uninstall(UninstallActionArgs args)
+        {
+            Task.Run(() =>
+            {
+                try
+                {
+                    var info = Game.GetELGameInfo() as GogInstallerGameInfo;
+                    string installDir = Game.InstallDirectory;
+                    
+                    if (string.IsNullOrEmpty(installDir) || !Directory.Exists(installDir))
+                    {
+                        _logger.Warning($"Install directory not found for {Game.Name}");
+                        InvokeOnUninstalled(new GameUninstalledEventArgs());
+                        return;
+                    }
+                    
+                    UninstallRom(info, installDir);
+                    InvokeOnUninstalled(new GameUninstalledEventArgs());
+                }
+                catch (Exception ex)
+                {
+                    _logger.Error(ex, $"Error uninstalling game {Game.Name}");
+                    SafelyAddNotification(
+                        Game.GameId,
+                        $"Failed to uninstall {Game.Name}.{Environment.NewLine}{Environment.NewLine}{ex.Message}",
+                        NotificationType.Error);
+                    Game.IsUninstalling = false;
+                }
+            });
+        }
+        
+        private bool UninstallRom(ELGameInfo gameInfo, string installDir)
         {
             Logger.Info($"Uninstalling GOG game: {gameInfo.Name}");
             

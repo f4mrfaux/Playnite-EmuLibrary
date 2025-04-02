@@ -181,6 +181,16 @@
                 <CheckBox IsChecked="{Binding CreateGameSpecificInstallDirectories, Mode=TwoWay}" Margin="0,0,0,10">
                     <TextBlock Text="Create game-specific installation directories" TextWrapping="Wrap"/>
                 </CheckBox>
+                
+                <Label Content="Metadata Settings" FontWeight="Bold" Margin="0,10,0,0" />
+                <Separator Margin="0,5,0,10" />
+                <CheckBox IsChecked="{Binding EnableMetadataDownload, Mode=TwoWay}" Margin="0,0,0,10">
+                    <TextBlock Text="Enable automatic metadata download for detected games" TextWrapping="Wrap"/>
+                </CheckBox>
+                <CheckBox IsChecked="{Binding UseSourceFolderNamesForMetadata, Mode=TwoWay}" Margin="0,0,0,10">
+                    <TextBlock Text="Use folder names for metadata matching (better matches with Steam/GOG)" TextWrapping="Wrap" 
+                              ToolTip="Uses parent folder names instead of installer filenames for better metadata matching. This improves results when folder names contain clean game titles."/>
+                </CheckBox>
             </StackPanel>
         </ScrollViewer>
     </DockPanel>

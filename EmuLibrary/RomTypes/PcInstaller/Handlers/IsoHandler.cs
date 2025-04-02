@@ -331,7 +331,7 @@ namespace EmuLibrary.RomTypes.PcInstaller.Handlers
                 if (potentialInstallers.Count > 0)
                 {
                     _logger.Info($"Found installer by name matching: {potentialInstallers[0]}");
-                    return potentialInstallers.FirstOrDefault();
+                    return potentialInstallers[0]; // Using indexer is safer than FirstOrDefault() in 4.6.2
                 }
 
                 // Check if there's an autorun.inf file that might point to an installer
@@ -438,11 +438,24 @@ namespace EmuLibrary.RomTypes.PcInstaller.Handlers
                     }
                 }
                 
-                // Check if 7z is in PATH
-                string path7z = Environment.GetEnvironmentVariable("PATH")
-                    ?.Split(Path.PathSeparator)
-                    .Select(p => Path.Combine(p, "7z.exe"))
-                    .FirstOrDefault(File.Exists);
+                // Check if 7z is in PATH - more defensive for 4.6.2
+                string path7z = null;
+                string pathEnv = Environment.GetEnvironmentVariable("PATH");
+                if (!string.IsNullOrEmpty(pathEnv))
+                {
+                    foreach (var p in pathEnv.Split(Path.PathSeparator))
+                    {
+                        if (!string.IsNullOrEmpty(p))
+                        {
+                            string testPath = Path.Combine(p, "7z.exe");
+                            if (File.Exists(testPath))
+                            {
+                                path7z = testPath;
+                                break;
+                            }
+                        }
+                    }
+                }
                     
                 if (!string.IsNullOrEmpty(path7z))
                 {
