@@ -1,53 +1,73 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using Playnite.SDK;
 using Playnite.SDK.Models;
-using EmuLibrary.Util;
+using Playnite.SDK.Plugins;
 
 namespace EmuLibrary.RomTypes.GogInstaller
 {
-    public class GogInstallerInstallController : BaseInstallController
+    internal sealed class GogInstallerInstallController : BaseInstallController
     {
-        public GogInstallerInstallController(ILogger logger, FileSystemWatcherFactory fileSystemWatcherFactory) 
-            : base(logger, fileSystemWatcherFactory)
+        private readonly ILogger _logger;
+
+        internal GogInstallerInstallController(Game game, IEmuLibrary emuLibrary) 
+            : base(game, emuLibrary)
         {
+            _logger = emuLibrary.Logger;
         }
 
-        public override bool InstallRom(ELGameInfo gameInfo, string destDir, Game game)
+        public override void Install(InstallActionArgs args)
         {
-            Logger.Info($"Installing GOG game: {gameInfo.Name} from {gameInfo.Path}");
-            
-            try
+            System.Threading.Tasks.Task.Run(() =>
             {
-                // Ensure destination directory exists
-                Directory.CreateDirectory(destDir);
-                
-                // Run the installer with silent parameters
-                bool installResult = RunInstaller(gameInfo.Path, destDir);
-                
-                if (!installResult)
+                try
                 {
-                    Logger.Error($"Installation failed for {gameInfo.Name}");
-                    return false;
+                    var gameInfo = Game.GetELGameInfo() as GogInstallerGameInfo;
+                    if (gameInfo == null)
+                    {
+                        _logger.Error($"Failed to get game info for {Game.Name}");
+                        InvokeOnInstalled(new GameInstalledEventArgs { Error = $"Failed to get game info" });
+                        return;
+                    }
+
+                    string destDir = args.InstallDirectory;
+                    _logger.Info($"Installing GOG game: {gameInfo.Name} from {gameInfo.Path}");
+
+                    // Ensure destination directory exists
+                    Directory.CreateDirectory(destDir);
+
+                    // Run the installer with silent parameters
+                    bool installResult = RunInstaller(gameInfo.Path, destDir);
+
+                    if (!installResult)
+                    {
+                        _logger.Error($"Installation failed for {gameInfo.Name}");
+                        InvokeOnInstalled(new GameInstalledEventArgs { Error = $"Installation failed" });
+                        return;
+                    }
+
+                    // Find the game executable in the installation directory
+                    string exePath = FindGameExecutable(destDir);
+
+                    if (!string.IsNullOrEmpty(exePath))
+                    {
+                        Game.GameImagePath = exePath;
+                    }
+
+                    InvokeOnInstalled(new GameInstalledEventArgs());
                 }
-                
-                // Find the game executable in the installation directory
-                string exePath = FindGameExecutable(destDir);
-                
-                if (!string.IsNullOrEmpty(exePath))
+                catch (Exception ex)
                 {
-                    // Update game with executable path
-                    game.GameImagePath = exePath;
+                    _logger.Error(ex, $"Error installing game {Game.Name}");
+                    SafelyAddNotification(
+                        Game.GameId,
+                        $"Failed to install {Game.Name}.{Environment.NewLine}{Environment.NewLine}{ex.Message}",
+                        NotificationType.Error);
+                    InvokeOnInstalled(new GameInstalledEventArgs { Error = ex.Message });
                 }
-                
-                return true;
-            }
-            catch (Exception ex)
-            {
-                Logger.Error($"Error installing game: {ex.Message}");
-                return false;
-            }
+            });
         }
 
         /// <summary>
@@ -57,7 +77,7 @@ namespace EmuLibrary.RomTypes.GogInstaller
         {
             try
             {
-                Logger.Info($"Running installer: {installerPath} with destination: {destinationDir}");
+                _logger.Info($"Running installer: {installerPath} with destination: {destinationDir}");
                 
                 var process = new Process
                 {
@@ -73,7 +93,7 @@ namespace EmuLibrary.RomTypes.GogInstaller
                 process.Start();
                 process.WaitForExit();
                 
-                Logger.Info($"Installer completed with exit code: {process.ExitCode}");
+                _logger.Info($"Installer completed with exit code: {process.ExitCode}");
                 
                 // Check if the destination directory now exists and has files
                 if (Directory.Exists(destinationDir) && 
@@ -86,7 +106,7 @@ namespace EmuLibrary.RomTypes.GogInstaller
             }
             catch (Exception ex)
             {
-                Logger.Error($"Error running installer: {ex.Message}");
+                _logger.Error(ex, $"Error running installer: {ex.Message}");
                 return false;
             }
         }
@@ -145,7 +165,7 @@ namespace EmuLibrary.RomTypes.GogInstaller
             }
             catch (Exception ex)
             {
-                Logger.Error($"Error finding game executable: {ex.Message}");
+                _logger.Error(ex, $"Error finding game executable: {ex.Message}");
                 return null;
             }
         }

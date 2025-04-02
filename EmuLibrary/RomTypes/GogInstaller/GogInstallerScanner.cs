@@ -4,12 +4,18 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Threading;
 using Playnite.SDK;
-using EmuLibrary.RomTypes;
+using Playnite.SDK.Models;
+using Playnite.SDK.Plugins;
+using EmuLibrary.Settings;
 
 namespace EmuLibrary.RomTypes.GogInstaller
 {
-    public class GogInstallerScanner : RomTypeScanner
+    // Define delegate for progress updates
+    internal delegate void RomScanProgressUpdate(string status, int current, int total);
+
+    internal sealed class GogInstallerScanner : RomTypeScanner
     {
         // Patterns to identify GOG installers
         private readonly string[] _gogPatterns = new[]
@@ -20,25 +26,33 @@ namespace EmuLibrary.RomTypes.GogInstaller
             @"installer_.*"
         };
 
-        public GogInstallerScanner(ILogger logger) : base(logger)
+        private readonly ILogger _logger;
+        private readonly IEmuLibrary _emuLibrary;
+
+        public override Guid LegacyPluginId => Guid.Parse("e4ac81a0-1025-4415-9c0e-5df6a4d53f68");
+        public override RomType RomType => RomType.GogInstaller;
+
+        internal GogInstallerScanner(IEmuLibrary emuLibrary) : base(emuLibrary)
         {
+            _emuLibrary = emuLibrary;
+            _logger = emuLibrary.Logger;
         }
 
-        public override List<string> GetSupportedExtensions()
+        private List<string> GetSupportedExtensions()
         {
             return new List<string> { ".exe", ".msi" };
         }
 
-        public override List<ELGameInfo> ScanSource(string sourceDir, RomScanProgressUpdate progressCallback)
+        internal List<ELGameInfo> ScanSource(string sourceDir, RomScanProgressUpdate progressCallback)
         {
-            Logger.Info($"Scanning for GOG installers in {sourceDir}");
+            _logger.Info($"Scanning for GOG installers in {sourceDir}");
             var results = new List<ELGameInfo>();
 
             try
             {
                 if (!Directory.Exists(sourceDir))
                 {
-                    Logger.Error($"Source directory does not exist: {sourceDir}");
+                    _logger.Error($"Source directory does not exist: {sourceDir}");
                     return results;
                 }
 
@@ -48,10 +62,13 @@ namespace EmuLibrary.RomTypes.GogInstaller
                     .Where(f => extensions.Contains(Path.GetExtension(f).ToLower()))
                     .ToList();
 
-                Logger.Info($"Found {files.Count} potential installer files");
+                _logger.Info($"Found {files.Count} potential installer files");
+                int current = 0;
 
                 foreach (var file in files)
                 {
+                    progressCallback?.Invoke($"Scanning {Path.GetFileName(file)}", current++, files.Count);
+                    
                     if (IsGogInstaller(file))
                     {
                         string name = ExtractGameName(file);
@@ -59,16 +76,52 @@ namespace EmuLibrary.RomTypes.GogInstaller
                         var gameInfo = new GogInstallerGameInfo(name, file);
                         
                         results.Add(gameInfo);
-                        Logger.Info($"Added GOG installer: {name} from {file}");
+                        _logger.Info($"Added GOG installer: {name} from {file}");
                     }
                 }
             }
             catch (Exception ex)
             {
-                Logger.Error($"Error scanning source directory: {ex.Message}");
+                _logger.Error(ex, $"Error scanning source directory: {ex.Message}");
             }
 
             return results;
+        }
+
+        public override IEnumerable<GameMetadata> GetGames(EmulatorMapping mapping, LibraryGetGamesArgs args)
+        {
+            if (string.IsNullOrEmpty(mapping?.SourcePath) || !Directory.Exists(mapping.SourcePath))
+            {
+                yield break;
+            }
+
+            var gameInfoList = ScanSource(mapping.SourcePath, null);
+            foreach (var gameInfo in gameInfoList)
+            {
+                var gogGameInfo = gameInfo as GogInstallerGameInfo;
+                if (gogGameInfo != null)
+                {
+                    gogGameInfo.MappingId = mapping.MappingId;
+                    
+                    yield return new GameMetadata
+                    {
+                        Name = gogGameInfo.Name,
+                        GameId = gogGameInfo.AsGameId(),
+                        Source = "GOG Installer"
+                    };
+                }
+            }
+        }
+
+        public override bool TryGetGameInfoBaseFromLegacyGameId(Game game, EmulatorMapping mapping, out ELGameInfo gameInfo)
+        {
+            gameInfo = null;
+            return false; // No legacy support for GOG installers
+        }
+
+        public override IEnumerable<Game> GetUninstalledGamesMissingSourceFiles(CancellationToken ct)
+        {
+            yield break; // Not implemented for GOG installers
         }
 
         /// <summary>

@@ -8,10 +8,13 @@ using System.Threading.Tasks;
 
 namespace EmuLibrary.RomTypes.GogInstaller
 {
-    public class GogInstallerUninstallController : BaseUninstallController
+    internal sealed class GogInstallerUninstallController : BaseUninstallController
     {
-        public GogInstallerUninstallController(Game game, IEmuLibrary emuLibrary) : base(game, emuLibrary)
+        private readonly ILogger _logger;
+
+        internal GogInstallerUninstallController(Game game, IEmuLibrary emuLibrary) : base(game, emuLibrary)
         {
+            _logger = emuLibrary.Logger;
         }
 
         public override void Uninstall(UninstallActionArgs args)
@@ -47,13 +50,13 @@ namespace EmuLibrary.RomTypes.GogInstaller
         
         private bool UninstallRom(ELGameInfo gameInfo, string installDir)
         {
-            Logger.Info($"Uninstalling GOG game: {gameInfo.Name}");
+            _logger.Info($"Uninstalling GOG game: {gameInfo.Name}");
             
             try
             {
                 if (string.IsNullOrEmpty(installDir) || !Directory.Exists(installDir))
                 {
-                    Logger.Warning($"Install directory not found for {gameInfo.Name}");
+                    _logger.Warning($"Install directory not found for {gameInfo.Name}");
                     return false;
                 }
                 
@@ -63,7 +66,7 @@ namespace EmuLibrary.RomTypes.GogInstaller
                 if (!string.IsNullOrEmpty(uninstallerPath))
                 {
                     // Run the uninstaller
-                    Logger.Info($"Running uninstaller: {uninstallerPath}");
+                    _logger.Info($"Running uninstaller: {uninstallerPath}");
                     
                     var process = new Process
                     {
@@ -78,21 +81,21 @@ namespace EmuLibrary.RomTypes.GogInstaller
                     process.Start();
                     process.WaitForExit();
                     
-                    Logger.Info($"Uninstaller completed with exit code: {process.ExitCode}");
+                    _logger.Info($"Uninstaller completed with exit code: {process.ExitCode}");
                 }
                 else
                 {
-                    Logger.Warning($"No uninstaller found, attempting manual deletion");
+                    _logger.Warning($"No uninstaller found, attempting manual deletion");
                     
                     // Try to manually delete the directory
                     try
                     {
                         Directory.Delete(installDir, true);
-                        Logger.Info($"Manually deleted installation directory: {installDir}");
+                        _logger.Info($"Manually deleted installation directory: {installDir}");
                     }
                     catch (Exception ex)
                     {
-                        Logger.Error($"Failed to delete directory: {ex.Message}");
+                        _logger.Error(ex, $"Failed to delete directory: {ex.Message}");
                         return false;
                     }
                 }
@@ -101,7 +104,7 @@ namespace EmuLibrary.RomTypes.GogInstaller
             }
             catch (Exception ex)
             {
-                Logger.Error($"Error uninstalling game: {ex.Message}");
+                _logger.Error(ex, $"Error uninstalling game: {ex.Message}");
                 return false;
             }
         }
@@ -132,7 +135,7 @@ namespace EmuLibrary.RomTypes.GogInstaller
             }
             catch (Exception ex)
             {
-                Logger.Error($"Error finding uninstaller: {ex.Message}");
+                _logger.Error(ex, $"Error finding uninstaller: {ex.Message}");
                 return null;
             }
         }

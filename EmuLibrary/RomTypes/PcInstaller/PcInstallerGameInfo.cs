@@ -1,5 +1,7 @@
 using Playnite.SDK.Models;
+using Playnite.SDK.Plugins;
 using ProtoBuf;
+using System;
 using System.Collections.Generic;
 using System.IO;
 
