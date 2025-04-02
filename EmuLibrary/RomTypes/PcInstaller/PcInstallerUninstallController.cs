@@ -28,7 +28,7 @@ namespace EmuLibrary.RomTypes.PcInstaller
                     
                     if (string.IsNullOrEmpty(info.InstallDirectory) || !Directory.Exists(info.InstallDirectory))
                     {
-                        _logger.Warning($"Can't uninstall {Game.Name}: Installation directory not found");
+                        _logger.Warn($"Can't uninstall {Game.Name}: Installation directory not found");
                         InvokeOnUninstalled(new GameUninstalledEventArgs());
                         return;
                     }

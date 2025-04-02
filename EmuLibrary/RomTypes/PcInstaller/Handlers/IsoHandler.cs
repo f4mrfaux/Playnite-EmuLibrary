@@ -379,7 +379,7 @@ namespace EmuLibrary.RomTypes.PcInstaller.Handlers
                     return safeExeFiles[0];
                 }
 
-                _logger.Warning("No suitable installer found in extracted content");
+                _logger.Warn("No suitable installer found in extracted content");
                 return null;
             }
             catch (Exception ex)

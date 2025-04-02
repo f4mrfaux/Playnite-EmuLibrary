@@ -94,7 +94,7 @@ namespace EmuLibrary.RomTypes.PcInstaller
                         
                         // If we should use folder names for better metadata matching
                         string gameName;
-                        if (EmuLibrary.Settings.UseSourceFolderNamesForMetadata)
+                        if (_emuLibrary.Settings.UseSourceFolderNamesForMetadata)
                         {
                             // Try to use parent folder name for better metadata matching
                             gameName = ExtractGameNameFromPath(file.FullName, srcPath);
@@ -117,7 +117,7 @@ namespace EmuLibrary.RomTypes.PcInstaller
                             Name = gameName,
                             IsInstalled = false,
                             GameId = info.AsGameId(),
-                            Platforms = new HashSet<MetadataProperty>() { new MetadataNameProperty(mapping.Platform.Name) },
+                            Platforms = new HashSet<MetadataProperty>() { mapping.Platform.Name },
                             InstallSize = (ulong)new FileInfo(file.FullName).Length,
                             GameActions = new List<GameAction>() { new GameAction()
                             {
@@ -217,7 +217,7 @@ namespace EmuLibrary.RomTypes.PcInstaller
                 }
                 
                 // Try to check file properties for clues
-                if (extension == ".exe" && EmuLibrary.Settings.AutoDetectPcInstallers)
+                if (extension == ".exe" && _emuLibrary.Settings.AutoDetectPcInstallers)
                 {
                     try
                     {

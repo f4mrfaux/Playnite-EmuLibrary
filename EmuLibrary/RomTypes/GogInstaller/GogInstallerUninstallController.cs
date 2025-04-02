@@ -28,7 +28,7 @@ namespace EmuLibrary.RomTypes.GogInstaller
                     
                     if (string.IsNullOrEmpty(installDir) || !Directory.Exists(installDir))
                     {
-                        _logger.Warning($"Install directory not found for {Game.Name}");
+                        _logger.Warn($"Install directory not found for {Game.Name}");
                         InvokeOnUninstalled(new GameUninstalledEventArgs());
                         return;
                     }
@@ -56,7 +56,7 @@ namespace EmuLibrary.RomTypes.GogInstaller
             {
                 if (string.IsNullOrEmpty(installDir) || !Directory.Exists(installDir))
                 {
-                    _logger.Warning($"Install directory not found for {gameInfo.Name}");
+                    _logger.Warn($"Install directory not found for {gameInfo.Name}");
                     return false;
                 }
                 
@@ -85,7 +85,7 @@ namespace EmuLibrary.RomTypes.GogInstaller
                 }
                 else
                 {
-                    _logger.Warning($"No uninstaller found, attempting manual deletion");
+                    _logger.Warn($"No uninstaller found, attempting manual deletion");
                     
                     // Try to manually delete the directory
                     try

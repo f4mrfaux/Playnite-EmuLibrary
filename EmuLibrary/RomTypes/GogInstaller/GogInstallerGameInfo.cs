@@ -33,7 +33,7 @@ namespace EmuLibrary.RomTypes.GogInstaller
         {
             Name = name;
             Path = path;
-            RomExtension = Path.GetExtension(path);
+            RomExtension = System.IO.Path.GetExtension(path);
             LastModified = File.GetLastWriteTime(path);
         }
 
@@ -49,6 +49,11 @@ namespace EmuLibrary.RomTypes.GogInstaller
             yield return $"Path: {Path}";
             yield return $"LastModified: {LastModified}";
         }
+
+        /// <summary>
+        /// Property to get the Name for easy access
+        /// </summary>
+        public string Name { get; set; }
 
         public override void BrowseToSource()
         {

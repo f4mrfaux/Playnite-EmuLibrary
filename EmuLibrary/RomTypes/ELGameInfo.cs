@@ -56,7 +56,11 @@ namespace EmuLibrary.RomTypes
             Debug.Assert(gameId.Length > 2, $"GameId is too short ({gameId.Length} chars)");
             Debug.Assert(gameId[1] == '0', $"GameId is marked as being serialized ProtoBuf, but of invalid version. (Expected 0, got {gameId[1]})");
 
-            return Serializer.Deserialize<T>(Convert.FromBase64String(gameId.Substring(2)).AsSpan());
+            byte[] data = Convert.FromBase64String(gameId.Substring(2));
+            using (var stream = new System.IO.MemoryStream(data))
+            {
+                return Serializer.Deserialize<T>(stream);
+            }
         }
 
         public abstract InstallController GetInstallController(Game game, IEmuLibrary emuLibrary);

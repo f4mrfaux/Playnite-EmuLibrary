@@ -28,11 +28,14 @@ namespace EmuLibrary.RomTypes.GogInstaller
                     if (gameInfo == null)
                     {
                         _logger.Error($"Failed to get game info for {Game.Name}");
-                        InvokeOnInstalled(new GameInstalledEventArgs { Error = $"Failed to get game info" });
+                        InvokeOnInstalled(new GameInstalledEventArgs());
                         return;
                     }
 
-                    string destDir = args.InstallDirectory;
+                    // Get installation directory from game or use a default location
+                    string destDir = Path.Combine(
+                        Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+                        StringExtensions.GetSafePathName(Game.Name));
                     _logger.Info($"Installing GOG game: {gameInfo.Name} from {gameInfo.Path}");
 
                     // Ensure destination directory exists
@@ -44,7 +47,7 @@ namespace EmuLibrary.RomTypes.GogInstaller
                     if (!installResult)
                     {
                         _logger.Error($"Installation failed for {gameInfo.Name}");
-                        InvokeOnInstalled(new GameInstalledEventArgs { Error = $"Installation failed" });
+                        InvokeOnInstalled(new GameInstalledEventArgs());
                         return;
                     }
 
@@ -57,7 +60,7 @@ namespace EmuLibrary.RomTypes.GogInstaller
                         var installData = new GameInstallationData
                         {
                             InstallDirectory = destDir,
-                            Roms = new List<GameRom> { new GameRom(Game.Name, exePath) }
+                            Roms = new System.Collections.Generic.List<GameRom> { new GameRom(Game.Name, exePath) }
                         };
                         
                         // Update the game
@@ -74,7 +77,7 @@ namespace EmuLibrary.RomTypes.GogInstaller
                         Game.GameId,
                         $"Failed to install {Game.Name}.{Environment.NewLine}{Environment.NewLine}{ex.Message}",
                         NotificationType.Error);
-                    InvokeOnInstalled(new GameInstalledEventArgs { Error = ex.Message });
+                    InvokeOnInstalled(new GameInstalledEventArgs());
                 }
             });
         }

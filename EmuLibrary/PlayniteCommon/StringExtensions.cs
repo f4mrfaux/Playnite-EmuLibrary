@@ -2,9 +2,32 @@
 using System.Text;
 using System.Text.RegularExpressions;
 
+using System.Linq;
+
 namespace System
 {
     public static class StringExtensions
+    {
+        
+        /// <summary>
+        /// Creates a safe file path name from a string by removing invalid characters
+        /// </summary>
+        public static string GetSafePathName(this string str)
+        {
+            if (string.IsNullOrEmpty(str))
+            {
+                return string.Empty;
+            }
+
+            // Remove invalid file path characters
+            var invalidChars = System.IO.Path.GetInvalidFileNameChars();
+            var result = new string(str.Where(c => !invalidChars.Contains(c)).ToArray());
+            
+            // Replace multiple spaces with single space
+            result = System.Text.RegularExpressions.Regex.Replace(result, @"\s+", " ");
+            
+            return result.Trim();
+        }
     {
         private static readonly CultureInfo enUSCultInfo = new CultureInfo("en-US", false);
 

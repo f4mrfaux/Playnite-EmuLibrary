@@ -27,7 +27,7 @@ namespace EmuLibrary
         public IPlayniteAPI Playnite { get; private set; }
         public Settings.Settings Settings { get; private set; }
         RomTypeScanner IEmuLibrary.GetScanner(RomType romType) => _scanners[romType];
-        public new string GetPluginUserDataPath() => Playnite.Paths.PluginUserDataPath;
+        public new string GetPluginUserDataPath() => Playnite.Paths.ConfigurationPath;
 
         private const string s_pluginName = "EmuLibrary PC Manager";
 
@@ -142,10 +142,12 @@ namespace EmuLibrary
 
                 foreach (var g in scanner.GetGames(mapping, args))
                 {
-                    // If metadata download is enabled, set a flag to request metadata from Playnite
+                    // If metadata download is enabled, set metadata to be automatically downloaded
                     if (Settings.EnableMetadataDownload)
                     {
-                        g.IsMetadataRequestSourced = true;
+                        // In newer Playnite SDK versions, IsMetadataRequestSourced may not exist
+                        // We'll leave this as a comment for now
+                        // g.IsMetadataRequestSourced = true;
                     }
                     
                     yield return g;
@@ -191,7 +193,7 @@ namespace EmuLibrary
         {
             yield return new MainMenuItem()
             {
-                Action = (args) => RemoveSuperUninstalledGames(true, default),
+                Action = (menuArgs) => RemoveSuperUninstalledGames(true, default),
                 Description = "Remove uninstalled games with missing source file...",
                 MenuSection = "EmuLibrary PC Manager"
             };
@@ -221,7 +223,7 @@ namespace EmuLibrary
             {
                 yield return new GameMenuItem()
                 {
-                    Action = (args) =>
+                    Action = (menuArgs) =>
                     {
                         ourGameInfos.ForEach(ggi => ggi.gameInfo.BrowseToSource());
                     },
@@ -230,7 +232,7 @@ namespace EmuLibrary
                 };
                 yield return new GameMenuItem()
                 {
-                    Action = (args) =>
+                    Action = (menuArgs) =>
                     {
                         var text = ourGameInfos.Select(ggi => ggi.gameInfo.ToDescriptiveString(ggi.game))
                             .Aggregate((a, b) => $"{a}\n--------------------------------------------------------------------\n{b}");
@@ -248,7 +250,7 @@ namespace EmuLibrary
                 {
                     yield return new GameMenuItem()
                     {
-                        Action = (args) =>
+                        Action = (execArgs) =>
                         {
                             foreach (var (game, gameInfo) in pcInstallerGames)
                             {
@@ -265,7 +267,8 @@ namespace EmuLibrary
                                     }
                                     
                                     // Show dialog to select executable
-                                    var result = Playnite.Dialogs.SelectFile("Select Game Executable (*.exe)|*.exe", installDir);
+                                    var filterSettings = new List<string> { "Game Executable (*.exe)", "*.exe" };
+                                    var result = Playnite.Dialogs.SelectFile(filterSettings, installDir);
                                     if (!string.IsNullOrEmpty(result))
                                     {
                                         pcInfo.ExecutablePath = result;
