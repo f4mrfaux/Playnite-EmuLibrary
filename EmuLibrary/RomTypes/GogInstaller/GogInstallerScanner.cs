@@ -15,7 +15,7 @@ namespace EmuLibrary.RomTypes.GogInstaller
     // Define delegate for progress updates
     internal delegate void RomScanProgressUpdate(string status, int current, int total);
 
-    internal sealed class GogInstallerScanner : RomTypeScanner
+    internal class GogInstallerScanner : RomTypeScanner
     {
         // Patterns to identify GOG installers
         private readonly string[] _gogPatterns = new[]
@@ -32,7 +32,7 @@ namespace EmuLibrary.RomTypes.GogInstaller
         public override Guid LegacyPluginId => Guid.Parse("e4ac81a0-1025-4415-9c0e-5df6a4d53f68");
         public override RomType RomType => RomType.GogInstaller;
 
-        internal GogInstallerScanner(IEmuLibrary emuLibrary) : base(emuLibrary)
+        public GogInstallerScanner(IEmuLibrary emuLibrary) : base(emuLibrary)
         {
             _emuLibrary = emuLibrary;
             _logger = emuLibrary.Logger;
@@ -43,7 +43,7 @@ namespace EmuLibrary.RomTypes.GogInstaller
             return new List<string> { ".exe", ".msi" };
         }
 
-        internal List<ELGameInfo> ScanSource(string sourceDir, RomScanProgressUpdate progressCallback)
+        public List<ELGameInfo> ScanSource(string sourceDir, RomScanProgressUpdate progressCallback)
         {
             _logger.Info($"Scanning for GOG installers in {sourceDir}");
             var results = new List<ELGameInfo>();
