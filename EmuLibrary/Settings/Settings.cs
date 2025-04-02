@@ -29,6 +29,11 @@ namespace EmuLibrary.Settings
         public bool UseWindowsCopyDialogInDesktopMode { get; set; } = false;
         public bool UseWindowsCopyDialogInFullscreenMode { get; set; } = false;
         public ObservableCollection<EmulatorMapping> Mappings { get; set; }
+        
+        // PC Installer Settings
+        public bool AutoDetectPcInstallers { get; set; } = true;
+        public string DefaultInstallLocation { get; set; } = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Playnite Games");
+        public bool CreateGameSpecificInstallDirectories { get; set; } = true;
 
         // Hidden settings
         public int Version { get; set; }

@@ -13,6 +13,7 @@
         Yuzu = 4,
         [RomTypeInfo(typeof(GogInstaller.GogInstallerGameInfo), typeof(GogInstaller.GogInstallerScanner))]
         GogInstaller = 5,
-
+        [RomTypeInfo(typeof(PcInstaller.PcInstallerGameInfo), typeof(PcInstaller.PcInstallerScanner))]
+        PcInstaller = 6,
     }
 }

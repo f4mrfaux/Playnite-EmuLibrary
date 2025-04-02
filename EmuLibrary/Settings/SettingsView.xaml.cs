@@ -86,5 +86,18 @@ namespace EmuLibrary.Settings
             Process.Start(e.Uri.AbsoluteUri);
             e.Handled = true;
         }
+        
+        private void Click_BrowseDefaultInstallLocation(object sender, RoutedEventArgs e)
+        {
+            string path;
+            if ((path = GetSelectedFolderPath()) != null)
+            {
+                var settings = DataContext as Settings;
+                if (settings != null)
+                {
+                    settings.DefaultInstallLocation = path;
+                }
+            }
+        }
     }
 }
