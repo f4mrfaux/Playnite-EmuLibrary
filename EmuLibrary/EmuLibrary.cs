@@ -64,14 +64,31 @@ namespace EmuLibrary
                 // Starts at field number 10 to not conflict with ELGameInfo's fields
                 RuntimeTypeModel.Default[typeof(ELGameInfo)].AddSubType((int)rt + 10, romInfo.GameInfoType);
 
-                var scanner = romInfo.ScannerType.GetConstructor(new Type[] { typeof(IEmuLibrary) })?.Invoke(new object[] { this });
-                if (scanner == null)
+                try 
                 {
-                    Logger.Error($"Failed to instantiate scanner for RomType {rt} (using {romInfo.ScannerType}).");
+                    Logger.Info($"Attempting to instantiate scanner for RomType {rt} (using {romInfo.ScannerType})");
+                    var constructorInfo = romInfo.ScannerType.GetConstructor(new Type[] { typeof(IEmuLibrary) });
+                    if (constructorInfo == null)
+                    {
+                        Logger.Error($"Failed to find constructor for RomType {rt} (using {romInfo.ScannerType}).");
+                        continue;
+                    }
+                    
+                    var scanner = constructorInfo.Invoke(new object[] { this });
+                    if (scanner == null)
+                    {
+                        Logger.Error($"Failed to instantiate scanner for RomType {rt} (using {romInfo.ScannerType}).");
+                        continue;
+                    }
+                    
+                    Logger.Info($"Successfully instantiated scanner for RomType {rt}.");
+                    _scanners.Add(rt, scanner as RomTypeScanner);
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error(ex, $"Exception while instantiating scanner for RomType {rt} (using {romInfo.ScannerType}): {ex.Message}");
                     continue;
                 }
-
-                _scanners.Add(rt, scanner as RomTypeScanner);
             }
         }
 
