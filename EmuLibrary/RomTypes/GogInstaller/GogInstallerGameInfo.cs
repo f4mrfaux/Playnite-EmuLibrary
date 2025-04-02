@@ -17,7 +17,15 @@ namespace EmuLibrary.RomTypes.GogInstaller
         public string Path { get; set; }
 
         [ProtoMember(2)]
-        public override string Name { get; set; }
+        // We use a backing field for the Name property
+        private string _name;
+        
+        // Override the Name property with a custom getter that returns our field
+        public override string Name 
+        { 
+            get => _name; 
+            protected set => _name = value;
+        }
 
         [ProtoMember(3)]
         public string RomExtension { get; set; }
@@ -31,7 +39,7 @@ namespace EmuLibrary.RomTypes.GogInstaller
 
         public GogInstallerGameInfo(string name, string path)
         {
-            Name = name;
+            _name = name; // Set the backing field directly
             Path = path;
             RomExtension = System.IO.Path.GetExtension(path);
             LastModified = File.GetLastWriteTime(path);

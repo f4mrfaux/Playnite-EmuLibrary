@@ -12,7 +12,12 @@ namespace EmuLibrary.RomTypes
 {
     [ProtoContract]
     internal abstract class ELGameInfo
-    {
+    {        
+        protected ELGameInfo()
+        {
+            // Initialize the Name property with the class name by default
+            Name = GetType().Name;
+        }
         public abstract RomType RomType { get; }
 
         [ProtoMember(1)]
@@ -21,7 +26,7 @@ namespace EmuLibrary.RomTypes
         /// <summary>
         /// Base property for name that subclasses can override
         /// </summary>
-        public virtual string Name => GetType().Name;
+        public virtual string Name { get; protected set; }
 
         public EmulatorMapping Mapping
         {
