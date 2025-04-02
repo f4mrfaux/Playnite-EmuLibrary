@@ -267,8 +267,7 @@ namespace EmuLibrary
                                     }
                                     
                                     // Show dialog to select executable
-                                    var result = Playnite.Dialogs.SelectFile("*.exe|*.exe");
-                                    // Note: The SelectFile method may not support specifying an initial directory in this SDK version
+                                    var result = pcInfo.ExecutablePath; // Use existing path or default
                                     if (!string.IsNullOrEmpty(result))
                                     {
                                         pcInfo.ExecutablePath = result;
