@@ -148,7 +148,7 @@ namespace EmuLibrary.RomTypes.PcInstaller
                                                                         selectedOption = _emuLibrary.Playnite.Dialogs.SelectString(
                                                             "Multiple installers found. Please select which one to use:",
                                                             "Select Installer",
-                                                            selectionOptions.Keys.ToArray());
+                                                            string.Join("\n", selectionOptions.Keys));
                                                     }
                                                     catch (Exception ex)
                                                     {
@@ -355,8 +355,8 @@ namespace EmuLibrary.RomTypes.PcInstaller
                                                     // Then ask for the specific executable 
                                                     if (!string.IsNullOrEmpty(installDir) && Directory.Exists(installDir))
                                                     {
-                                                        var filterSettings = new System.Collections.Generic.List<string> { "Game Executable (*.exe)", "*.exe" };
-                                                        execPath = _emuLibrary.Playnite.Dialogs.SelectFile(filterSettings, installDir);
+                                                        execPath = _emuLibrary.Playnite.Dialogs.SelectFile("*.exe|*.exe");
+                                                        // Note: The SelectFile method may not support specifying an initial directory in this SDK version
                                                     }
                                                 }
                                                 catch (Exception ex)
@@ -882,7 +882,7 @@ namespace EmuLibrary.RomTypes.PcInstaller
                                     selectedOption = _emuLibrary.Playnite.Dialogs.SelectString(
                                         "Multiple potential installers found. Please select which one to use:",
                                         "Select Installer",
-                                        selectionOptions.Keys.ToArray());
+                                        string.Join("\n", selectionOptions.Keys));
                                 }
                                 catch (Exception ex)
                                 {
