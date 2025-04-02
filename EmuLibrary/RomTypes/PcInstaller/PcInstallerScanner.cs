@@ -17,6 +17,7 @@ namespace EmuLibrary.RomTypes.PcInstaller
     {
         private readonly IPlayniteAPI _playniteAPI;
         private readonly ILogger _logger;
+        private readonly IEmuLibrary _emuLibrary;
         private readonly Handlers.ArchiveHandlerFactory _archiveHandlerFactory;
         
         public override RomType RomType => RomType.PcInstaller;
@@ -97,7 +98,7 @@ namespace EmuLibrary.RomTypes.PcInstaller
                         
                         // If we should use folder names for better metadata matching
                         string gameName;
-                        if (_emuLibrary.Settings.UseSourceFolderNamesForMetadata)
+                        if (EmuLibrary.Settings.UseSourceFolderNamesForMetadata)
                         {
                             // Try to use parent folder name for better metadata matching
                             gameName = ExtractGameNameFromPath(file.FullName, srcPath);
@@ -246,7 +247,7 @@ namespace EmuLibrary.RomTypes.PcInstaller
                 }
                 
                 // Try to check file properties for clues
-                if (extension == ".exe" && _emuLibrary.Settings.AutoDetectPcInstallers)
+                if (extension == ".exe" && EmuLibrary.Settings.AutoDetectPcInstallers)
                 {
                     try
                     {

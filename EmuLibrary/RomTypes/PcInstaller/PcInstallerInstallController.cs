@@ -145,10 +145,11 @@ namespace EmuLibrary.RomTypes.PcInstaller
                                                 {
                                                     try
                                                     {
-                                                        selectedOption = _emuLibrary.Playnite.Dialogs.SelectString(
+                                                        var selectionResult = _emuLibrary.Playnite.Dialogs.SelectString(
                                                             "Multiple installers found. Please select which one to use:",
                                                             "Select Installer",
-                                                            string.Join(";", selectionOptions.Keys));
+                                                            selectionOptions.Keys.ToList());
+                                                        selectedOption = selectionResult.SelectedItem;
                                                     }
                                                     catch (Exception ex)
                                                     {
@@ -325,7 +326,7 @@ namespace EmuLibrary.RomTypes.PcInstaller
                                 {
                                     if (_emuLibrary?.Playnite?.MainView?.UIDispatcher != null)
                                     {
-                                        string selectedExe = null;
+                                        string execPath = null;
                                         
                                         try
                                         {
@@ -355,7 +356,7 @@ namespace EmuLibrary.RomTypes.PcInstaller
                                                     // Then ask for the specific executable 
                                                     if (!string.IsNullOrEmpty(installDir) && Directory.Exists(installDir))
                                                     {
-                                                        string selectedExe = _emuLibrary.Playnite.Dialogs.SelectFile("Game Executable", "*.exe", installDir);
+                                                        execPath = _emuLibrary.Playnite.Dialogs.SelectFile("*.exe", installDir);
                                                     }
                                                 }
                                                 catch (Exception ex)
@@ -370,9 +371,9 @@ namespace EmuLibrary.RomTypes.PcInstaller
                                         }
                                     }
                                     
-                                    if (!string.IsNullOrEmpty(selectedExe))
+                                    if (!string.IsNullOrEmpty(execPath))
                                     {
-                                        executablePath = selectedExe;
+                                        executablePath = execPath;
                                         info.IsExecutablePathManuallySet = true;
                                         
                                         _logger.Info($"User selected executable: {executablePath}");
@@ -878,10 +879,11 @@ namespace EmuLibrary.RomTypes.PcInstaller
                             {
                                 try
                                 {
-                                    selectedOption = _emuLibrary.Playnite.Dialogs.SelectString(
+                                    var selectionResult = _emuLibrary.Playnite.Dialogs.SelectString(
                                         "Multiple potential installers found. Please select which one to use:",
                                         "Select Installer",
-                                        string.Join(";", selectionOptions.Keys));
+                                        selectionOptions.Keys.ToList());
+                                    selectedOption = selectionResult.SelectedItem;
                                 }
                                 catch (Exception ex)
                                 {
