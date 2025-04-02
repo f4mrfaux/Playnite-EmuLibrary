@@ -122,7 +122,8 @@ namespace System
             newName = newName.Replace("_", " ");
             newName = newName.Replace(".", " ");
             newName = RemoveTrademarks(newName);
-            newName = newName.Replace(''', '\'');
+            // Replace smart quotes/apostrophes with standard ones
+            newName = Regex.Replace(newName, "['']", "'");
             newName = Regex.Replace(newName, @"\[.*?\]", "");
             newName = Regex.Replace(newName, @"\(.*?\)", "");
             newName = Regex.Replace(newName, @"\s*:\s*", ": ");
