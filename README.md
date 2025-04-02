@@ -1,3 +1,191 @@
+# Current fork goals:
+
+PC Game Installation Support Implementation Plan
+Overview
+This plan focuses on extending EmuLibrary to handle PC games in various formats:
+
+GOG installers (typically .exe files)
+ISO files containing game installers
+Multi-RAR archives that need extraction before installation
+
+The goal is to maintain the same repository paradigm that EmuLibrary uses for ROMs: store the installation files on your NAS, and "install" them to your local machine when you want to play them.
+Implementation Approach
+1. New Game Types
+We'll extend the existing "RomType" concept to include new types for PC games:
+
+GogInstaller: For GOG and other standalone installers (.exe, .msi)
+IsoImage: For games distributed as ISO files
+ArchiveInstaller: For games distributed as multi-part archives (RAR, ZIP, 7z)
+
+2. Required Libraries/Tools
+To handle these formats, we'll need to integrate with:
+
+7-Zip for archive extraction (via 7z.dll or process invocation)
+Virtual Drive Tool for ISO mounting (WinCDEmu, ImDisk, or similar)
+Process Management for running installers with parameters
+
+Specific Implementations
+
+GogInstallerHandler
+
+Detects GOG and other executable installers
+Runs installers with appropriate parameters (silent, destination path)
+Tracks installation files and shortcuts
+
+
+IsoImageHandler
+
+Mounts ISO files to virtual drives
+Detects and runs installers within the ISO
+Unmounts after installation
+
+
+ArchiveInstallerHandler
+
+Extracts multi-part archives
+Handles various archive formats (RAR, ZIP, 7z)
+Detects and processes the extracted content (ISO or installer)
+
+
+
+4. Installation Process
+For each type, the installation process will follow this pattern:
+
+Preparation
+
+Verify source files
+Create temporary working directory if needed
+For archives: extract to temp directory
+For ISOs: mount to virtual drive
+
+
+Installation
+
+Detect installer within prepared content
+Generate installation parameters
+Execute installer with progress monitoring
+Capture installation path and created files
+
+
+Cleanup
+
+Remove temporary files
+Unmount ISO if mounted
+Update game metadata with installation path
+
+
+Verification
+
+Verify that executable exists at expected location
+Test launch if configured to do so
+
+
+
+5. UI Enhancements
+Add UI elements to support these new game types:
+
+New mapping configuration
+
+Game type selection (GOG, ISO, Archive)
+Installation parameters (silent, custom args)
+Post-installation actions
+
+
+Installation progress UI
+
+Multi-stage progress (extraction, mounting, installation)
+Better error reporting and recovery options
+
+
+Game metadata enhancements
+
+Installation type indicator
+Installation size tracking
+Install date/time
+
+
+
+Implementation Steps
+Phase 1: Framework and GOG Handler (2-3 weeks)
+
+Create the base GameInstallerHandler class
+Implement GogInstallerHandler
+
+Simple .exe detection and execution
+Basic parameter handling
+Installation tracking
+
+
+Update UI to support the new handler type
+Test with simple GOG installers
+
+Phase 2: ISO Support (2-3 weeks)
+
+Research and implement ISO mounting solution
+
+Evaluate WinCDEmu, ImDisk, PowerShell virtual mount
+Implement selected solution
+
+
+Create IsoImageHandler
+
+Mount/unmount functionality
+Installer detection within ISO
+Installation process
+
+
+Update UI for ISO configuration
+Test with various ISO files
+
+Phase 3: Archive Support (3-4 weeks)
+
+Implement 7-Zip integration
+
+Add 7z.dll reference or process invocation
+Create extraction utilities
+
+
+Create ArchiveInstallerHandler
+
+Multi-part RAR detection
+Extraction process
+Content processing (detect ISO or installer)
+
+
+Update UI for archive configuration
+Test with various archive formats and structures
+
+Phase 4: Integration and Polish (2-3 weeks)
+
+Integrate all handlers into the main plugin
+Enhance error handling and recovery
+Add detailed logging
+Improve UI experience
+Comprehensive testing
+
+Testing Strategy
+For each implementation phase:
+
+Unit Testing
+
+Test detection and handling of each file type
+Test parameter generation
+Test progress reporting
+
+
+Integration Testing
+
+Test complete installation flow for each game type
+Test with various real-world examples
+Test error conditions and recovery
+
+
+User Acceptance Testing
+
+Test the full process from the user's perspective
+Verify UI clarity and usability
+Test on different Windows versions
+
 # EmuLibrary
 
 EmuLibrary is a library extension for [Playnite](https://www.playnite.link), an open source video game library manager, focused on emulator ROM management.
