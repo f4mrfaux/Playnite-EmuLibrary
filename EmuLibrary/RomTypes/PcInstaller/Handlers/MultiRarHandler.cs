@@ -149,7 +149,8 @@ namespace EmuLibrary.RomTypes.PcInstaller.Handlers
                         catch { /* Ignore errors during cancellation */ }
                     });
 
-                    await process.WaitForExitAsync(cancellationToken);
+                    // Compatible with .NET Framework 4.6.2
+                    await Task.Run(() => process.WaitForExit(), cancellationToken);
 
                     if (process.ExitCode != 0)
                     {
@@ -217,7 +218,8 @@ namespace EmuLibrary.RomTypes.PcInstaller.Handlers
                         catch { /* Ignore errors during cancellation */ }
                     });
 
-                    await process.WaitForExitAsync(cancellationToken);
+                    // Compatible with .NET Framework 4.6.2
+                    await Task.Run(() => process.WaitForExit(), cancellationToken);
 
                     if (process.ExitCode != 0)
                     {
@@ -350,20 +352,50 @@ namespace EmuLibrary.RomTypes.PcInstaller.Handlers
 
         private string GetUnrarPath()
         {
-            // Get the directory where the plugin is installed
-            string assemblyLocation = System.Reflection.Assembly.GetExecutingAssembly().Location;
-            string pluginDirectory = Path.GetDirectoryName(assemblyLocation);
-            
-            // Path to UnRAR.exe relative to the plugin directory
-            string unrarPath = Path.Combine(pluginDirectory, RAR_EXE_PATH);
-            
-            if (!File.Exists(unrarPath))
+            try
             {
-                _logger.Error($"UnRAR.exe not found at: {unrarPath}");
+                // Get the directory where the plugin is installed
+                string assemblyLocation = System.Reflection.Assembly.GetExecutingAssembly().Location;
+                string pluginDirectory = Path.GetDirectoryName(assemblyLocation);
+                
+                // First check if UnRAR.exe exists in expected location
+                string unrarPath = Path.Combine(pluginDirectory, RAR_EXE_PATH);
+                
+                if (File.Exists(unrarPath))
+                {
+                    return unrarPath;
+                }
+                
+                // Fallback options - check in different locations
+                string toolsDir = Path.Combine(pluginDirectory, "Tools");
+                if (Directory.Exists(toolsDir))
+                {
+                    string fallbackPath = Path.Combine(toolsDir, "UnRAR.exe");
+                    if (File.Exists(fallbackPath))
+                    {
+                        return fallbackPath;
+                    }
+                }
+                
+                // Check in parent directory's Tools folder
+                string parentToolsDir = Path.Combine(Directory.GetParent(pluginDirectory).FullName, "Tools");
+                if (Directory.Exists(parentToolsDir))
+                {
+                    string fallbackPath = Path.Combine(parentToolsDir, "UnRAR.exe");
+                    if (File.Exists(fallbackPath))
+                    {
+                        return fallbackPath;
+                    }
+                }
+                
+                _logger.Error("UnRAR.exe not found. Please download and place in the Tools directory.");
                 return null;
             }
-            
-            return unrarPath;
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Error finding UnRAR.exe");
+                return null;
+            }
         }
 
         #endregion

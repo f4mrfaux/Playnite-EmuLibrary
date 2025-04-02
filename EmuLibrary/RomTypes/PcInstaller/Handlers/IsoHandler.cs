@@ -139,7 +139,8 @@ namespace EmuLibrary.RomTypes.PcInstaller.Handlers
                         catch { /* Ignore errors during cancellation */ }
                     });
 
-                    await process.WaitForExitAsync(cancellationToken);
+                    // Compatible with .NET Framework 4.6.2
+                    await Task.Run(() => process.WaitForExit(), cancellationToken);
 
                     if (process.ExitCode != 0)
                     {
@@ -194,7 +195,8 @@ namespace EmuLibrary.RomTypes.PcInstaller.Handlers
                         catch { /* Ignore errors during cancellation */ }
                     });
 
-                    await process.WaitForExitAsync(cancellationToken);
+                    // Compatible with .NET Framework 4.6.2
+                    await Task.Run(() => process.WaitForExit(), cancellationToken);
 
                     if (process.ExitCode != 0)
                     {
@@ -254,12 +256,41 @@ namespace EmuLibrary.RomTypes.PcInstaller.Handlers
                 if (!Directory.Exists(extractedPath))
                     return null;
 
+                _logger.Info($"Looking for installer in {extractedPath}");
+                
+                // Collect all executables first to avoid multiple directory scans
+                var allExeFiles = new List<string>();
+                try
+                {
+                    allExeFiles = Directory.GetFiles(extractedPath, "*.exe", SearchOption.AllDirectories).ToList();
+                    _logger.Info($"Found {allExeFiles.Count} .exe files in extracted content");
+                }
+                catch (Exception ex)
+                {
+                    _logger.Error(ex, "Error enumerating .exe files, using fallback search method");
+                }
+                
+                // MSI files as secondary option
+                var allMsiFiles = new List<string>();
+                try
+                {
+                    allMsiFiles = Directory.GetFiles(extractedPath, "*.msi", SearchOption.AllDirectories).ToList();
+                    _logger.Info($"Found {allMsiFiles.Count} .msi files in extracted content");
+                }
+                catch (Exception ex)
+                {
+                    _logger.Error(ex, "Error enumerating .msi files");
+                }
+
                 // First, check for common installer names at the root
                 foreach (var installerName in CommonInstallerNames)
                 {
                     string installerPath = Path.Combine(extractedPath, installerName);
                     if (File.Exists(installerPath))
+                    {
+                        _logger.Info($"Found common installer at root: {installerPath}");
                         return installerPath;
+                    }
                 }
 
                 // Then check for common installer names in common installer directories
@@ -272,46 +303,83 @@ namespace EmuLibrary.RomTypes.PcInstaller.Handlers
                         {
                             string installerPath = Path.Combine(dirPath, installerName);
                             if (File.Exists(installerPath))
+                            {
+                                _logger.Info($"Found common installer in {directory} directory: {installerPath}");
                                 return installerPath;
+                            }
                         }
                     }
                 }
 
                 // If not found, look for any .exe file that might be an installer
-                var exeFiles = Directory.GetFiles(extractedPath, "*.exe", SearchOption.AllDirectories);
-                var potentialInstallers = exeFiles.Where(path => 
+                var potentialInstallers = allExeFiles.Where(path => 
                 {
                     var fileName = Path.GetFileName(path).ToLower();
                     return (fileName.Contains("setup") || 
                             fileName.Contains("install") || 
-                            fileName.Contains("start")) && 
-                           !fileName.Contains("unins");
+                            fileName.Contains("start") ||
+                            fileName.Contains("launch")) && 
+                           !fileName.Contains("unins") &&
+                           !fileName.Contains("uninst") &&
+                           !fileName.Contains("update") &&
+                           !fileName.Contains("redist") &&
+                           !fileName.Contains("vcredist") &&
+                           !fileName.Contains("directx") &&
+                           !fileName.Contains("dxsetup");
                 }).ToList();
 
                 if (potentialInstallers.Count > 0)
+                {
+                    _logger.Info($"Found installer by name matching: {potentialInstallers[0]}");
                     return potentialInstallers.FirstOrDefault();
+                }
 
                 // Check if there's an autorun.inf file that might point to an installer
                 string autorunPath = Path.Combine(extractedPath, "autorun.inf");
                 if (File.Exists(autorunPath))
                 {
-                    var autorunLines = File.ReadAllLines(autorunPath);
-                    var openLine = autorunLines.FirstOrDefault(line => line.StartsWith("open=", StringComparison.OrdinalIgnoreCase));
-                    
-                    if (!string.IsNullOrEmpty(openLine))
+                    try
                     {
-                        var openCommand = openLine.Substring(5).Trim();
-                        var openPath = Path.Combine(extractedPath, openCommand);
+                        var autorunLines = File.ReadAllLines(autorunPath);
+                        var openLine = autorunLines.FirstOrDefault(line => line.StartsWith("open=", StringComparison.OrdinalIgnoreCase));
                         
-                        if (File.Exists(openPath))
-                            return openPath;
+                        if (!string.IsNullOrEmpty(openLine))
+                        {
+                            var openCommand = openLine.Substring(5).Trim();
+                            var openPath = Path.Combine(extractedPath, openCommand);
+                            
+                            if (File.Exists(openPath))
+                            {
+                                _logger.Info($"Found installer via autorun.inf: {openPath}");
+                                return openPath;
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.Error(ex, "Error reading autorun.inf");
                     }
                 }
 
-                // If all else fails, just return the first .exe file found
-                if (exeFiles.Length > 0)
-                    return exeFiles.FirstOrDefault();
+                // If no EXE installers found, try MSI files
+                if (allMsiFiles.Count > 0)
+                {
+                    _logger.Info($"Falling back to MSI file: {allMsiFiles[0]}");
+                    return allMsiFiles[0];
+                }
 
+                // If all else fails, just return the first .exe file found that's not an uninstaller
+                var safeExeFiles = allExeFiles.Where(f => 
+                    !Path.GetFileName(f).ToLower().Contains("unins") && 
+                    !Path.GetFileName(f).ToLower().Contains("uninst")).ToList();
+                    
+                if (safeExeFiles.Count > 0)
+                {
+                    _logger.Info($"Last resort: using first non-uninstaller EXE: {safeExeFiles[0]}");
+                    return safeExeFiles[0];
+                }
+
+                _logger.Warning("No suitable installer found in extracted content");
                 return null;
             }
             catch (Exception ex)
@@ -334,20 +402,61 @@ namespace EmuLibrary.RomTypes.PcInstaller.Handlers
 
         private string Get7ZipPath()
         {
-            // Get the directory where the plugin is installed
-            string assemblyLocation = System.Reflection.Assembly.GetExecutingAssembly().Location;
-            string pluginDirectory = Path.GetDirectoryName(assemblyLocation);
-            
-            // Path to 7z.exe relative to the plugin directory
-            string sevenZipPath = Path.Combine(pluginDirectory, SEVEN_ZIP_EXE_PATH);
-            
-            if (!File.Exists(sevenZipPath))
+            try
             {
-                _logger.Error($"7z.exe not found at: {sevenZipPath}");
+                // Get the directory where the plugin is installed
+                string assemblyLocation = System.Reflection.Assembly.GetExecutingAssembly().Location;
+                string pluginDirectory = Path.GetDirectoryName(assemblyLocation);
+                
+                // First check if 7z.exe exists in expected location
+                string sevenZipPath = Path.Combine(pluginDirectory, SEVEN_ZIP_EXE_PATH);
+                
+                if (File.Exists(sevenZipPath))
+                {
+                    return sevenZipPath;
+                }
+                
+                // Fallback options - check in different locations
+                string toolsDir = Path.Combine(pluginDirectory, "Tools");
+                if (Directory.Exists(toolsDir))
+                {
+                    string fallbackPath = Path.Combine(toolsDir, "7z.exe");
+                    if (File.Exists(fallbackPath))
+                    {
+                        return fallbackPath;
+                    }
+                }
+                
+                // Check in parent directory's Tools folder
+                string parentToolsDir = Path.Combine(Directory.GetParent(pluginDirectory).FullName, "Tools");
+                if (Directory.Exists(parentToolsDir))
+                {
+                    string fallbackPath = Path.Combine(parentToolsDir, "7z.exe");
+                    if (File.Exists(fallbackPath))
+                    {
+                        return fallbackPath;
+                    }
+                }
+                
+                // Check if 7z is in PATH
+                string path7z = Environment.GetEnvironmentVariable("PATH")
+                    ?.Split(Path.PathSeparator)
+                    .Select(p => Path.Combine(p, "7z.exe"))
+                    .FirstOrDefault(File.Exists);
+                    
+                if (!string.IsNullOrEmpty(path7z))
+                {
+                    return path7z;
+                }
+                
+                _logger.Error("7z.exe not found. Please download and place in the Tools directory.");
                 return null;
             }
-            
-            return sevenZipPath;
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Error finding 7z.exe");
+                return null;
+            }
         }
 
         #endregion

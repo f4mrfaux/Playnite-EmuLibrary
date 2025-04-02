@@ -2,6 +2,14 @@
 ### Security
 - Updated Newtonsoft.Json from 10.0.1 to 13.0.3 to address high severity vulnerability (GHSA-5crp-9r3c-p9vr)
 - Updated LibHac to version 0.16.0 for better compatibility with .NET Framework 4.6.2
+
+### Fixed
+- Fixed compatibility issues with .NET Framework 4.6.2 in archive handling code
+- Improved error handling in file extraction and installation process
+- Added fallback methods for finding 7z.exe and UnRAR.exe in various locations
+- Enhanced installer detection for better success rates with different archive types
+- Added timeout protection for installer processes that might hang
+- Improved robustness of directory copying with better error handling
 ### Added
 - Added generic PC game installer support to allow management of PC game installers
 - New PcInstaller ROM type that can detect and handle various installer types (.exe, .msi)
@@ -31,5 +39,10 @@
 - ISO files: The plugin can extract ISO files and run installers found inside them
 - Multi-part RAR archives: The plugin can handle multi-part RAR archives (e.g., game.part1.rar, game.part2.rar)
 - Nested archives: The plugin can handle RAR archives containing ISO files with installers
-- Required tools: Place 7z.exe and UnRAR.exe in the Tools directory of the plugin
-- The plugin will automatically detect and use the most appropriate method for each archive type
+- Required tools: Place 7z.exe and UnRAR.exe in the Tools directory of the plugin or other detected locations
+- The plugin will automatically detect tools from multiple possible locations:
+  - The Tools directory inside the plugin folder (recommended)
+  - The plugin's root directory
+  - The parent directory's Tools folder
+  - Your system PATH
+- Improved error handling ensures successful operation even in challenging scenarios

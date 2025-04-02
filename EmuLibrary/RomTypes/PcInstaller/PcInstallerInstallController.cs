@@ -287,6 +287,29 @@ namespace EmuLibrary.RomTypes.PcInstaller
                     tcs.TrySetCanceled();
                 }))
                 {
+                    // Use a background thread to wait for process exit (compatible with .NET 4.6.2)
+                    await Task.Run(() => 
+                    {
+                        if (!process.WaitForExit(600000)) // 10 minute timeout
+                        {
+                            try { process.Kill(); } catch { }
+                            tcs.TrySetException(new TimeoutException("Installer process timed out after 10 minutes"));
+                        }
+                        else if (!tcs.Task.IsCompleted)
+                        {
+                            tcs.TrySetResult(true);
+                        }
+                    }, ct);
+                    
+                    try
+                    {
+                        await tcs.Task;
+                    }
+                    catch (TaskCanceledException)
+                    {
+                        _logger.Info("Installation was cancelled by user");
+                        throw;
+                    }
                     await tcs.Task;
                 }
                 
@@ -522,23 +545,59 @@ namespace EmuLibrary.RomTypes.PcInstaller
         
         private void CopyDirectory(string sourceDir, string destDir)
         {
-            // Create the destination directory if it doesn't exist
-            Directory.CreateDirectory(destDir);
-            
-            // Copy all files
-            foreach (string filePath in Directory.GetFiles(sourceDir))
+            try
             {
-                string fileName = Path.GetFileName(filePath);
-                string destPath = Path.Combine(destDir, fileName);
-                File.Copy(filePath, destPath, true);
+                // Create the destination directory if it doesn't exist
+                Directory.CreateDirectory(destDir);
+                
+                // Copy all files
+                foreach (string filePath in Directory.GetFiles(sourceDir))
+                {
+                    try
+                    {
+                        string fileName = Path.GetFileName(filePath);
+                        string destPath = Path.Combine(destDir, fileName);
+                        
+                        // Make sure destination directory exists (in case path is too long)
+                        Directory.CreateDirectory(Path.GetDirectoryName(destPath));
+                        
+                        File.Copy(filePath, destPath, true);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.Error(ex, $"Error copying file {filePath}");
+                        // Continue with other files
+                    }
+                }
+                
+                // Copy all subdirectories
+                foreach (string dirPath in Directory.GetDirectories(sourceDir))
+                {
+                    try
+                    {
+                        string dirName = Path.GetFileName(dirPath);
+                        string destPath = Path.Combine(destDir, dirName);
+                        
+                        // Skip likely system or hidden directories
+                        if (dirName.StartsWith(".") || dirName.Equals("$RECYCLE.BIN") || 
+                            dirName.Equals("System Volume Information"))
+                        {
+                            continue;
+                        }
+                        
+                        CopyDirectory(dirPath, destPath);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.Error(ex, $"Error copying directory {dirPath}");
+                        // Continue with other directories
+                    }
+                }
             }
-            
-            // Copy all subdirectories
-            foreach (string dirPath in Directory.GetDirectories(sourceDir))
+            catch (Exception ex)
             {
-                string dirName = Path.GetFileName(dirPath);
-                string destPath = Path.Combine(destDir, dirName);
-                CopyDirectory(dirPath, destPath);
+                _logger.Error(ex, $"Error in CopyDirectory from {sourceDir} to {destDir}");
+                throw;
             }
         }
     }
