@@ -20,9 +20,9 @@ cp "$OUTPUT_DIR/extension.yaml" "$EXT_DIR/"
 cp "$OUTPUT_DIR/icon.png" "$EXT_DIR/"
 
 # For required third-party dependencies that are not provided by Playnite
-# cp "$OUTPUT_DIR/ZstdSharp.dll" "$EXT_DIR/"
-# cp "$OUTPUT_DIR/ini-parser.dll" "$EXT_DIR/"
-# cp "$OUTPUT_DIR/LibHac.dll" "$EXT_DIR/"
+cp "$OUTPUT_DIR/ZstdSharp.dll" "$EXT_DIR/"
+cp "$OUTPUT_DIR/INIFileParser.dll" "$EXT_DIR/"
+cp "$OUTPUT_DIR/LibHac.dll" "$EXT_DIR/"
 
 # Get version and plugin ID from extension.yaml
 VERSION=$(grep -oP 'Version: \K.+' "$OUTPUT_DIR/extension.yaml")

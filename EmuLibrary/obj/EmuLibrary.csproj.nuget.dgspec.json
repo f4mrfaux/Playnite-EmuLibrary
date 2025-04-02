@@ -52,10 +52,14 @@
               "version": "[2.0.3, )"
             },
             "Newtonsoft.Json": {
+              "include": "Compile, Build, Native, ContentFiles, Analyzers, BuildTransitive",
+              "suppressParent": "All",
               "target": "Package",
-              "version": "[13.0.3, )"
+              "version": "[10.0.3, )"
             },
             "PlayniteSDK": {
+              "include": "Compile, Build, Native, ContentFiles, Analyzers, BuildTransitive",
+              "suppressParent": "All",
               "target": "Package",
               "version": "[6.4.0, )"
             },

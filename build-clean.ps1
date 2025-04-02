@@ -19,9 +19,9 @@ Copy-Item "$outputDir/extension.yaml" "$extDir/"
 Copy-Item "$outputDir/icon.png" "$extDir/"
 
 # For required third-party dependencies that are not provided by Playnite
-# Copy-Item "$outputDir/ZstdSharp.dll" "$extDir/"
-# Copy-Item "$outputDir/ini-parser.dll" "$extDir/"
-# Copy-Item "$outputDir/LibHac.dll" "$extDir/"
+Copy-Item "$outputDir/ZstdSharp.dll" "$extDir/"
+Copy-Item "$outputDir/INIFileParser.dll" "$extDir/"
+Copy-Item "$outputDir/LibHac.dll" "$extDir/"
 
 # Create the extension package (.pext is just a .zip file)
 $version = (Get-Content "$outputDir/extension.yaml" | Select-String 'Version: (.+)').Matches.Groups[1].Value
