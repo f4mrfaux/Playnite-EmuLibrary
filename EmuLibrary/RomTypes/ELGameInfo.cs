@@ -17,6 +17,11 @@ namespace EmuLibrary.RomTypes
 
         [ProtoMember(1)]
         public Guid MappingId { get; set; }
+        
+        /// <summary>
+        /// Base property for name that subclasses can override
+        /// </summary>
+        public virtual string Name => GetType().Name;
 
         public EmulatorMapping Mapping
         {

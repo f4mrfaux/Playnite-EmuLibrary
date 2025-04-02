@@ -107,7 +107,8 @@ namespace EmuLibrary.RomTypes.GogInstaller
                     {
                         Name = gogGameInfo.Name,
                         GameId = gogGameInfo.AsGameId(),
-                        Source = "GOG Installer"
+                        Source = EmuLibrary.SourceName,
+                        Platforms = new HashSet<MetadataProperty>() { new MetadataNameProperty(mapping.Platform.Name) }
                     };
                 }
             }

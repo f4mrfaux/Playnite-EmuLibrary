@@ -1,4 +1,9 @@
 ## [Unreleased]
+
+## [0.8.1] - 2025-04-02
+### Changed
+- Renamed plugin to EmuLibrary PC Manager to better reflect its purpose
+
 ### Fixed
 - Fixed build errors in GogInstaller and PcInstaller classes
 - Fixed class accessibility inconsistencies between implementation and base classes

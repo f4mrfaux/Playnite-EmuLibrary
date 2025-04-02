@@ -75,16 +75,19 @@ namespace EmuLibrary.RomTypes.PcInstaller
             
             _logger.Info($"Scanning for PC game installers in {srcPath}");
             
+            // Create a list to store the results first, then we'll yield them after the try-catch
+            var results = new List<GameMetadata>();
+            int count = 0;
+            
             try
             {
                 // Use SafeFileEnumerator to handle network paths better
                 var fileEnumerator = new SafeFileEnumerator(srcPath, "*.*", SearchOption.AllDirectories);
-                int count = 0;
                 
                 foreach (var file in fileEnumerator)
                 {
                     if (args.CancelToken.IsCancellationRequested)
-                        yield break;
+                        break;
                         
                     // Check if the file is a potential installer
                     if (IsPotentialInstaller(file.FullName))
@@ -94,7 +97,7 @@ namespace EmuLibrary.RomTypes.PcInstaller
                         
                         // If we should use folder names for better metadata matching
                         string gameName;
-                        if (_emuLibrary.Settings.UseSourceFolderNamesForMetadata)
+                        if (EmuLibrary.Settings.UseSourceFolderNamesForMetadata)
                         {
                             // Try to use parent folder name for better metadata matching
                             gameName = ExtractGameNameFromPath(file.FullName, srcPath);
@@ -111,13 +114,13 @@ namespace EmuLibrary.RomTypes.PcInstaller
                             SourcePath = relativePath
                         };
                         
-                        yield return new GameMetadata()
+                        results.Add(new GameMetadata()
                         {
                             Source = EmuLibrary.SourceName,
                             Name = gameName,
                             IsInstalled = false,
                             GameId = info.AsGameId(),
-                            Platforms = new HashSet<MetadataProperty>() { mapping.Platform.Name },
+                            Platforms = new HashSet<MetadataProperty>() { new MetadataNameProperty(mapping.Platform.Name) },
                             InstallSize = (ulong)new FileInfo(file.FullName).Length,
                             GameActions = new List<GameAction>() { new GameAction()
                             {
@@ -127,76 +130,95 @@ namespace EmuLibrary.RomTypes.PcInstaller
                                 EmulatorProfileId = mapping.EmulatorProfileId,
                                 IsPlayAction = true
                             }}
-                        };
+                        });
                     }
                 }
                 
-                _logger.Info($"Found {count} PC game installers in {srcPath}");
+                _logger.Info($"Found {count} PC game installer(s)");
             }
             catch (Exception ex)
             {
-                _logger.Error(ex, $"Error scanning for PC game installers in {srcPath}");
+                _logger.Error(ex, $"Error scanning for PC game installers: {ex.Message}");
+            }
+            
+            // Now yield the results outside the try-catch block
+            foreach (var result in results)
+            {
+                yield return result;
             }
         }
         
         public override bool TryGetGameInfoBaseFromLegacyGameId(Game game, EmulatorMapping mapping, out ELGameInfo gameInfo)
         {
-            // No legacy format for PC installers
             gameInfo = null;
-            return false;
+            return false; // No legacy support for PC installers
         }
         
         public override IEnumerable<Game> GetUninstalledGamesMissingSourceFiles(CancellationToken ct)
         {
-            return _playniteAPI.Database.Games.TakeWhile(g => !ct.IsCancellationRequested)
-                .Where(g =>
+            var relevantGames = _playniteAPI.Database.Games
+                .Where(g => !g.IsInstalled && g.PluginId == EmuLibrary.PluginId && g.GameId.Contains(RomType.ToString()));
+
+            foreach (var game in relevantGames)
+            {
+                if (ct.IsCancellationRequested)
+                    break;
+
+                try
                 {
-                    if (g.PluginId != EmuLibrary.PluginId || g.IsInstalled)
-                        return false;
-                        
-                    var info = g.GetELGameInfo();
-                    if (info == null || info.RomType != RomType.PcInstaller)
-                        return false;
-                        
-                    return !File.Exists((info as PcInstallerGameInfo).SourceFullPath);
-                });
+                    var info = game.GetELGameInfo() as PcInstallerGameInfo;
+                    if (info != null)
+                    {
+                        var mapping = info.Mapping;
+                        if (mapping == null)
+                        {
+                            _logger.Warn($"Mapping {info.MappingId} was not found. Will clean up the game {game.Name} [{game.GameId}]");
+                            yield return game;
+                            continue;
+                        }
+
+                        string sourceFullPath = info.SourceFullPath;
+                        if (!File.Exists(sourceFullPath))
+                        {
+                            _logger.Warn($"Source file {sourceFullPath} no longer exists. Will clean up the game {game.Name} [{game.GameId}]");
+                            yield return game;
+                        }
+                    }
+                }
+                catch (Exception e)
+                {
+                    _logger.Error(e, $"Error checking PC installer game {game.Name} [{game.GameId}]");
+                }
+            }
         }
         
         private bool IsPotentialInstaller(string path)
         {
+            // Check cache first to improve performance
+            if (_installerDetectionCache.TryGetValue(path, out bool result))
+            {
+                return result;
+            }
+            
             try
             {
-                // Use cache if result exists
-                if (_installerDetectionCache.TryGetValue(path, out bool result))
-                    return result;
-                
-                // Limit cache size to prevent memory issues
+                // Clean cache if it's getting too large
                 if (_installerDetectionCache.Count > CACHE_SIZE_LIMIT)
                 {
-                    // Clear half the cache when limit is reached
-                    var keysToRemove = _installerDetectionCache.Keys.Take(CACHE_SIZE_LIMIT / 2).ToList();
-                    foreach (var key in keysToRemove)
-                        _installerDetectionCache.Remove(key);
+                    _installerDetectionCache.Clear();
                 }
                 
-                string extension = Path.GetExtension(path).ToLower();
-                string filename = Path.GetFileName(path).ToLower();
+                var filename = Path.GetFileName(path).ToLower();
+                var extension = Path.GetExtension(path).ToLower();
                 
-                // Check if it's an archive type we can handle (ISO, RAR, etc.)
-                if (_archiveHandlerFactory.CanHandleFile(path))
-                {
-                    _installerDetectionCache[path] = true;
-                    return true;
-                }
-                
-                // Check file extension
+                // Quickly reject extensions we don't support
                 if (!_installerExtensions.Contains(extension))
                 {
                     _installerDetectionCache[path] = false;
                     return false;
                 }
-                    
-                // Exclude obvious non-installers
+                
+                // Check against exclude patterns first
                 foreach (var pattern in _excludePatterns)
                 {
                     if (Regex.IsMatch(filename, pattern, RegexOptions.IgnoreCase))
@@ -217,7 +239,7 @@ namespace EmuLibrary.RomTypes.PcInstaller
                 }
                 
                 // Try to check file properties for clues
-                if (extension == ".exe" && _emuLibrary.Settings.AutoDetectPcInstallers)
+                if (extension == ".exe" && EmuLibrary.Settings.AutoDetectPcInstallers)
                 {
                     try
                     {
@@ -235,144 +257,129 @@ namespace EmuLibrary.RomTypes.PcInstaller
                     }
                     catch
                     {
-                        // Ignore file property reading errors, especially on network paths
+                        // Ignore errors reading file version info
                     }
                 }
                 
+                // For ISO files, we support these as potential game installers
+                if (extension == ".iso")
+                {
+                    _installerDetectionCache[path] = true;
+                    return true;
+                }
+                
+                // For RAR files, we need to check if they might contain an ISO or installer
+                if (extension == ".rar")
+                {
+                    // Check if it's part of a multi-part RAR archive
+                    if (Regex.IsMatch(filename, @"\.part\d+\.rar$", RegexOptions.IgnoreCase) ||
+                        (filename.Contains(".r") && Regex.IsMatch(filename, @"\.r\d+$", RegexOptions.IgnoreCase)))
+                    {
+                        _installerDetectionCache[path] = true;
+                        return true;
+                    }
+                    
+                    // For regular RAR files, check if they're supported by our handler
+                    var handler = _archiveHandlerFactory.GetHandler(path);
+                    if (handler != null)
+                    {
+                        _installerDetectionCache[path] = true;
+                        return true;
+                    }
+                }
+                
+                // If we get here, it's not a supported installer
                 _installerDetectionCache[path] = false;
                 return false;
             }
             catch (Exception ex)
             {
-                _logger.Error(ex, $"Error checking if {path} is an installer");
-                _installerDetectionCache[path] = false;
+                _logger.Error(ex, $"Error checking if file is a potential installer: {path}");
                 return false;
             }
         }
         
-        private string ExtractGameName(string filePath)
+        private string ExtractGameName(string fileName)
         {
-            // Use cache if result exists
-            if (_gameNameCache.TryGetValue(filePath, out string cachedName))
+            // Check cache first
+            if (_gameNameCache.TryGetValue(fileName, out string cachedName))
+            {
                 return cachedName;
-            
-            // Limit cache size to prevent memory issues
-            if (_gameNameCache.Count > CACHE_SIZE_LIMIT)
-            {
-                // Clear half the cache when limit is reached
-                var keysToRemove = _gameNameCache.Keys.Take(CACHE_SIZE_LIMIT / 2).ToList();
-                foreach (var key in keysToRemove)
-                    _gameNameCache.Remove(key);
             }
             
-            // Check if it's an archive we can handle
-            var handler = _archiveHandlerFactory.GetHandler(filePath);
-            if (handler != null)
+            try
             {
-                var displayName = handler.GetArchiveDisplayName(filePath);
-                if (!string.IsNullOrEmpty(displayName))
+                // Clean cache if it's getting too large
+                if (_gameNameCache.Count > CACHE_SIZE_LIMIT)
                 {
-                    _gameNameCache[filePath] = displayName;
-                    return displayName;
+                    _gameNameCache.Clear();
                 }
+                
+                // Remove file extension
+                string nameWithoutExt = Path.GetFileNameWithoutExtension(fileName);
+                
+                // Remove common installer prefixes/suffixes
+                nameWithoutExt = Regex.Replace(nameWithoutExt, @"(?i)setup[_\-\s]", "");
+                nameWithoutExt = Regex.Replace(nameWithoutExt, @"(?i)install[_\-\s]", "");
+                nameWithoutExt = Regex.Replace(nameWithoutExt, @"(?i)[_\-\s]setup$", "");
+                nameWithoutExt = Regex.Replace(nameWithoutExt, @"(?i)[_\-\s]install(er)?$", "");
+                
+                // Replace underscores and periods with spaces
+                nameWithoutExt = nameWithoutExt.Replace('_', ' ').Replace('.', ' ');
+                
+                // Remove version numbers
+                nameWithoutExt = Regex.Replace(nameWithoutExt, @"\b[vV]?\d+(\.\d+)*[a-z]?\b", "");
+                
+                // Clean up extra spaces
+                nameWithoutExt = Regex.Replace(nameWithoutExt, @"\s+", " ").Trim();
+                
+                // Apply title casing
+                nameWithoutExt = System.Threading.Thread.CurrentThread.CurrentCulture.TextInfo.ToTitleCase(nameWithoutExt.ToLower());
+                
+                // Cache the result
+                _gameNameCache[fileName] = nameWithoutExt;
+                
+                return nameWithoutExt;
             }
-            
-            // If not a special archive or the handler failed, process the filename
-            string fileName = Path.GetFileName(filePath);
-            
-            // Remove extension
-            string name = Path.GetFileNameWithoutExtension(fileName);
-            
-            // Remove common prefixes/suffixes
-            string[] prefixes = { "setup_", "setup-", "install_", "installer_" };
-            foreach (var prefix in prefixes)
+            catch (Exception ex)
             {
-                if (name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
-                {
-                    name = name.Substring(prefix.Length);
-                }
+                _logger.Error(ex, $"Error extracting game name from filename: {fileName}");
+                return fileName; // Return original as fallback
             }
-            
-            string[] suffixes = { "_setup", "-setup", "_install", "-install", "_installer", "-installer" };
-            foreach (var suffix in suffixes)
-            {
-                if (name.EndsWith(suffix, StringComparison.OrdinalIgnoreCase))
-                {
-                    name = name.Substring(0, name.Length - suffix.Length);
-                }
-            }
-            
-            // Remove version numbers
-            name = Regex.Replace(name, @"[_\-\s]v?\d+(\.\d+)*[_\-\s]?$", "");
-            
-            // Replace underscores and dashes with spaces
-            name = name.Replace('_', ' ').Replace('-', ' ');
-            
-            // Clean up multiple spaces
-            name = Regex.Replace(name, @"\s+", " ").Trim();
-            
-            // Title case
-            var textInfo = new System.Globalization.CultureInfo("en-US", false).TextInfo;
-            name = textInfo.ToTitleCase(name.ToLower());
-            
-            // Store result in cache
-            _gameNameCache[filePath] = name;
-            return name;
         }
         
-        /// <summary>
-        /// Extracts game name from folder path instead of just the filename
-        /// This provides better metadata matching since folder names often contain
-        /// cleaner game titles than installer filenames
-        /// </summary>
         private string ExtractGameNameFromPath(string filePath, string basePath)
         {
             try
             {
-                // Get path relative to scan directory
-                var relativePath = filePath.Replace(basePath, "").TrimStart('\\', '/');
-                var pathParts = relativePath.Split(new[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries);
+                // Get the directory path
+                string dirPath = Path.GetDirectoryName(filePath);
                 
-                // No folders in path, fall back to filename
-                if (pathParts.Length <= 1)
+                // If it's in the base directory, use the file name
+                if (dirPath.Equals(basePath, StringComparison.OrdinalIgnoreCase))
                 {
                     return ExtractGameName(Path.GetFileName(filePath));
                 }
                 
-                // Try to use parent directory name first as it's often the game name
-                string parentDir = pathParts[0];
+                // Get the relative path from the base
+                string relativePath = dirPath.Substring(basePath.Length).TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
                 
-                // Clean up folder name
-                string name = parentDir;
+                // Get the parent folder name
+                string parentFolder = relativePath.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)[0];
                 
-                // Remove bracketed content like [GOG], [Steam], etc.
-                name = Regex.Replace(name, @"\s*\[.*?\]\s*", " ");
+                // Clean up the parent folder name
+                parentFolder = parentFolder.Replace('_', ' ').Replace('.', ' ');
+                parentFolder = Regex.Replace(parentFolder, @"\s+", " ").Trim();
                 
-                // Remove parenthesized content like (v1.2), (Complete Edition), etc.
-                name = Regex.Replace(name, @"\s*\(.*?\)\s*", " ");
+                // Apply title casing
+                parentFolder = System.Threading.Thread.CurrentThread.CurrentCulture.TextInfo.ToTitleCase(parentFolder.ToLower());
                 
-                // Replace underscores and dashes with spaces
-                name = name.Replace('_', ' ').Replace('-', ' ');
-                
-                // Clean up multiple spaces
-                name = Regex.Replace(name, @"\s+", " ").Trim();
-                
-                // Title case
-                var textInfo = new System.Globalization.CultureInfo("en-US", false).TextInfo;
-                name = textInfo.ToTitleCase(name.ToLower());
-                
-                // If after cleanup we have an empty or very short name, fall back to file-based name
-                if (string.IsNullOrWhiteSpace(name) || name.Length < 3)
-                {
-                    return ExtractGameName(Path.GetFileName(filePath));
-                }
-                
-                return name;
+                return parentFolder;
             }
             catch (Exception ex)
             {
                 _logger.Error(ex, $"Error extracting game name from path: {filePath}");
-                return ExtractGameName(Path.GetFileName(filePath));
+                return Path.GetFileNameWithoutExtension(filePath); // Fallback to filename
             }
         }
     }

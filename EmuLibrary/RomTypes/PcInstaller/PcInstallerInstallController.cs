@@ -315,7 +315,7 @@ namespace EmuLibrary.RomTypes.PcInstaller
                             SafelyAddNotification(
                                 Game.GameId, 
                                 $"Game {Game.Name} was installed, but no executable could be found.", 
-                                NotificationType.Warning);
+                                NotificationType.Info);
                                 
                             // If the prompt setting is enabled, ask user to locate the installed executable
                             if (_emuLibrary.Settings.PromptForInstallLocation)
@@ -342,8 +342,9 @@ namespace EmuLibrary.RomTypes.PcInstaller
                                                     string installDir = gameInstallDir;
                                                     if (!Directory.Exists(gameInstallDir) || Directory.GetFiles(gameInstallDir, "*.*", SearchOption.AllDirectories).Length == 0)
                                                     {
-                                                        var options = new System.Collections.Generic.List<string> { $"Please select the folder where {Game.Name} was installed" };
-                                                        installDir = _emuLibrary.Playnite.Dialogs.SelectFolder(options);
+                                                        // Create folder browse dialog settings
+                                                        var folderTitle = $"Please select the folder where {Game.Name} was installed";
+                                                        installDir = _emuLibrary.Playnite.Dialogs.SelectFolder(folderTitle);
                                                             
                                                         // Update the installation directory if user selected one
                                                         if (!string.IsNullOrEmpty(installDir) && Directory.Exists(installDir))
@@ -389,7 +390,7 @@ namespace EmuLibrary.RomTypes.PcInstaller
                                         SafelyAddNotification(
                                             Guid.NewGuid().ToString(),
                                             $"No executable selected. Right-click the game and select 'Select Custom Executable' to set it manually.", 
-                                            NotificationType.Error);
+                                            NotificationType.Info);
                                     }
                                 }
                                 catch (Exception ex)

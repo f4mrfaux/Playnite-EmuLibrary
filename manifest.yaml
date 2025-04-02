@@ -1,5 +1,14 @@
-AddonId: PCGameInstaller_87cab450-8935-4fa9-be88-e60d8a4ed9e1
+AddonId: EmuLibraryPCManager_87cab450-8935-4fa9-be88-e60d8a4ed9e1
 Packages:
+  - Version: 0.8.1
+    RequiredApiVersion: 6.4.0
+    ReleaseDate: '2025-04-02'
+    PackageUrl: https://github.com/f4mrfaux/Playnite-EmuLibrary/releases/download/v0.8.1/EmuLibrary_87cab450-8935-4fa9-be88-e60d8a4ed9e1_0_8_1.pext
+    Changelog:
+      - Renamed plugin to EmuLibrary PC Manager to better reflect its purpose
+      - Fixed build errors in GogInstaller and PcInstaller classes
+      - Fixed class accessibility inconsistencies and implemented missing abstract methods
+      - Improved thread safety and error handling across all controllers
   - Version: 3.4.1
     RequiredApiVersion: 6.4.0
     ReleaseDate: '2024-01-13'
