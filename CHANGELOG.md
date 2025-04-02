@@ -1,4 +1,11 @@
 ## [Unreleased]
+### Improvements
+- Enhanced user interface with informative panels and tooltips for better guidance
+- Added detailed plugin description in extension.yaml for better discoverability
+- Improved notifications during installation process with more helpful messages
+- Performance optimizations with caching for installer detection and game name extraction
+- Added comprehensive troubleshooting guide in README.md
+- Improved documentation with a Quick Start guide and folder structure recommendations
 ### Security
 - Updated Newtonsoft.Json from 10.0.1 to 13.0.3 to address high severity vulnerability (GHSA-5crp-9r3c-p9vr)
 - Reverted to the original LibHac version 0.7.0 which is compatible with .NET Framework 4.6.2

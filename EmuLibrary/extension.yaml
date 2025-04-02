@@ -5,6 +5,18 @@ Version: 999.999.999
 Module: EmuLibrary.dll
 Type: GameLibrary
 Icon: icon.png
+Description: |
+  EmuLibrary is a versatile plugin that allows you to manage both ROM files and PC game installers. 
+  It can scan network shares for game files, add them to Playnite, and install them on demand.
+  
+  Key features:
+  • Scan network or local folders for ROM files and PC game installers (.exe, .msi, .iso, .rar)
+  • Install games on-demand when you want to play them, saving local disk space
+  • Automatically detect the correct executable after installation
+  • Support for various installers including GOG, Steam, and generic PC installers
+  • Advanced archive handling for ISO and RAR files
 Links:
     - Name: Source Code
       Url: https://github.com/psychonic/Playnite-EmuLibrary
+    - Name: Wiki & Documentation
+      Url: https://github.com/psychonic/Playnite-EmuLibrary/wiki

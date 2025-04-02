@@ -44,6 +44,15 @@ namespace EmuLibrary.RomTypes.PcInstaller
             @"update.*\.exe"
         };
         
+        // Cache for installer detection to improve performance
+        private readonly Dictionary<string, bool> _installerDetectionCache = new Dictionary<string, bool>();
+        
+        // Cache for game name extraction to improve performance
+        private readonly Dictionary<string, string> _gameNameCache = new Dictionary<string, string>();
+        
+        // Limit on cache size to prevent memory issues
+        private const int CACHE_SIZE_LIMIT = 10000;
+        
         public PcInstallerScanner(IEmuLibrary emuLibrary) : base(emuLibrary)
         {
             _playniteAPI = emuLibrary.Playnite;
@@ -157,29 +166,54 @@ namespace EmuLibrary.RomTypes.PcInstaller
         {
             try
             {
+                // Use cache if result exists
+                if (_installerDetectionCache.TryGetValue(path, out bool result))
+                    return result;
+                
+                // Limit cache size to prevent memory issues
+                if (_installerDetectionCache.Count > CACHE_SIZE_LIMIT)
+                {
+                    // Clear half the cache when limit is reached
+                    var keysToRemove = _installerDetectionCache.Keys.Take(CACHE_SIZE_LIMIT / 2).ToList();
+                    foreach (var key in keysToRemove)
+                        _installerDetectionCache.Remove(key);
+                }
+                
                 string extension = Path.GetExtension(path).ToLower();
                 string filename = Path.GetFileName(path).ToLower();
                 
                 // Check if it's an archive type we can handle (ISO, RAR, etc.)
                 if (_archiveHandlerFactory.CanHandleFile(path))
+                {
+                    _installerDetectionCache[path] = true;
                     return true;
+                }
                 
                 // Check file extension
                 if (!_installerExtensions.Contains(extension))
+                {
+                    _installerDetectionCache[path] = false;
                     return false;
+                }
                     
                 // Exclude obvious non-installers
                 foreach (var pattern in _excludePatterns)
                 {
                     if (Regex.IsMatch(filename, pattern, RegexOptions.IgnoreCase))
+                    {
+                        _installerDetectionCache[path] = false;
                         return false;
+                    }
                 }
                 
                 // Check if filename matches installer patterns
                 foreach (var pattern in _installerPatterns)
                 {
                     if (Regex.IsMatch(filename, pattern, RegexOptions.IgnoreCase))
+                    {
+                        _installerDetectionCache[path] = true;
                         return true;
+                    }
                 }
                 
                 // Try to check file properties for clues
@@ -195,6 +229,7 @@ namespace EmuLibrary.RomTypes.PcInstaller
                             versionInfo.ProductName?.IndexOf("setup", StringComparison.OrdinalIgnoreCase) >= 0 ||
                             versionInfo.ProductName?.IndexOf("install", StringComparison.OrdinalIgnoreCase) >= 0)
                         {
+                            _installerDetectionCache[path] = true;
                             return true;
                         }
                     }
@@ -204,24 +239,42 @@ namespace EmuLibrary.RomTypes.PcInstaller
                     }
                 }
                 
+                _installerDetectionCache[path] = false;
                 return false;
             }
             catch (Exception ex)
             {
                 _logger.Error(ex, $"Error checking if {path} is an installer");
+                _installerDetectionCache[path] = false;
                 return false;
             }
         }
         
         private string ExtractGameName(string filePath)
         {
+            // Use cache if result exists
+            if (_gameNameCache.TryGetValue(filePath, out string cachedName))
+                return cachedName;
+            
+            // Limit cache size to prevent memory issues
+            if (_gameNameCache.Count > CACHE_SIZE_LIMIT)
+            {
+                // Clear half the cache when limit is reached
+                var keysToRemove = _gameNameCache.Keys.Take(CACHE_SIZE_LIMIT / 2).ToList();
+                foreach (var key in keysToRemove)
+                    _gameNameCache.Remove(key);
+            }
+            
             // Check if it's an archive we can handle
             var handler = _archiveHandlerFactory.GetHandler(filePath);
             if (handler != null)
             {
                 var displayName = handler.GetArchiveDisplayName(filePath);
                 if (!string.IsNullOrEmpty(displayName))
+                {
+                    _gameNameCache[filePath] = displayName;
                     return displayName;
+                }
             }
             
             // If not a special archive or the handler failed, process the filename
@@ -262,6 +315,8 @@ namespace EmuLibrary.RomTypes.PcInstaller
             var textInfo = new System.Globalization.CultureInfo("en-US", false).TextInfo;
             name = textInfo.ToTitleCase(name.ToLower());
             
+            // Store result in cache
+            _gameNameCache[filePath] = name;
             return name;
         }
         

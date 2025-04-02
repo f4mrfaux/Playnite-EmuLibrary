@@ -35,16 +35,44 @@ This project transforms the original EmuLibrary from a ROM management tool into 
 
 ## Setup Guide
 
-### Basic Setup
+### Quick Start (5-Minute Setup)
 
-1. Install the plugin in Playnite
-2. Go to Settings → EmuLibrary PC Game Manager
-3. Add a new mapping with the following settings:
-   - **ROM Type**: Choose "PcInstaller" or "GogInstaller" based on your needs
-   - **Source Path**: Path to your network share containing game installers
-   - **Destination Path**: Where you want games to be installed locally
-   - **Extensions**: File extensions to scan for (e.g., .exe, .msi, .iso, .rar)
-4. Click "Save" and refresh your library
+1. **Install the plugin** in Playnite (Extensions → Browse → EmuLibrary PC Game Manager)
+2. **Open the settings**:
+   - Go to Settings → EmuLibrary PC Game Manager
+   - You'll see a helpful guide panel with setup instructions
+3. **Add a new mapping**:
+   - **Emulator**: Select any emulator from the dropdown (it doesn't matter which one)
+   - **Profile**: Select any profile from the dropdown
+   - **Platform**: Select "PC" (or create it if it doesn't exist)
+   - **Rom Type**: Choose "PcInstaller" for generic installers or "GogInstaller" for GOG installers
+   - **Source Path**: Browse to your network share or folder containing game installers
+   - **Destination Path**: Choose where you want games to be installed locally
+   - **Enabled**: Make sure this is checked
+4. **Click "Save" and restart Playnite**
+5. **Your games will appear** in your library as uninstalled games
+
+### Folder Structure Tips
+
+For best results, organize your game installers in folders like this:
+
+```
+/Games/
+  ├── PC/
+  │   ├── The Witcher 3/
+  │   │   └── setup_the_witcher_3_goty_2.0.0.47.exe
+  │   ├── Cyberpunk 2077/
+  │   │   └── setup_cyberpunk_2077_1.63.exe
+  │   └── Baldur's Gate 3/
+  │       └── setup_baldurs_gate_3_patch_6.exe
+  ├── GOG/
+  │   ├── Disco Elysium/
+  │   │   └── setup_disco_elysium_the_final_cut_2.0.0.13.exe
+  │   └── Pathfinder Wrath of the Righteous/
+  │       └── setup_pathfinder_wrath_of_the_righteous_2.1.5.exe
+```
+
+The plugin will use folder names for better game identification!
 
 ### Advanced Features
 
@@ -107,12 +135,19 @@ The project has successfully implemented:
 - ✅ Multi-RAR archive handling
 - ✅ ISO file support
 
+Current enhancements include:
+
+- ✅ Improved user interface with helpful guides
+- ✅ Enhanced error handling and user notifications
+- ✅ Performance optimizations with caching
+- ✅ Better folder-based game naming
+
 Future plans include:
 
-- Improved installation progress reporting
+- Interactive installation progress reporting
 - Better error recovery options
 - Support for more archive formats
-- Game metadata scraping integration
+- Additional metadata integration improvements
 
 ## Testing Status
 
@@ -138,6 +173,27 @@ Future plans include:
 
 - Original EmuLibrary by [psychonic](https://github.com/psychonic)
 - This fork includes contributions from [Claude AI](https://claude.ai/code)
+
+## Troubleshooting
+
+### Common Issues and Solutions
+
+| Issue | Solution |
+|-------|----------|
+| **No games appear in library** | - Verify your Source Path is correct<br>- Check that the mapping is enabled<br>- Restart Playnite<br>- Make sure you have suitable installer files (.exe, .msi, etc.) |
+| **Installation fails silently** | - Check if you have enough disk space<br>- Ensure the network share is accessible<br>- Try running the installer manually to see if it has specific requirements |
+| **"Archive tools not found" error** | - Download 7z.exe and UnRAR.exe<br>- Place them in the Tools folder of the plugin<br>- Restart Playnite |
+| **Cannot detect game executable** | - The plugin will still install the game but may not find the launcher<br>- Right-click the game in Playnite → Properties → Add the path to the executable manually |
+| **Slow scanning of network shares** | - Organize games in folders for faster scanning<br>- Use a wired network connection for better performance<br>- Consider setting up a local cache on a faster drive |
+
+### Log Files
+
+If you're experiencing issues, check the Playnite log files:
+1. Open Playnite
+2. Press F12 to open the diagnostic tools
+3. Click "Open application directory"
+4. Open the "Extensions" folder and then the EmuLibrary folder
+5. Check playnite.log for error messages
 
 ## Support
 

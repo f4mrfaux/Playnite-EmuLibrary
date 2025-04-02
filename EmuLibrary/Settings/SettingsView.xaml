@@ -169,7 +169,31 @@
                 </CheckBox>
 
                 <Label Content="PC Installer Settings" FontWeight="Bold" Margin="0,10,0,0" />
+                <TextBlock HorizontalAlignment="Right" Margin="0,-16,0,0">
+                    <Hyperlink NavigateUri="https://github.com/psychonic/Playnite-EmuLibrary/wiki/PC-Installer-Guide" RequestNavigate="Hyperlink_RequestNavigate">
+                        Help🔗
+                    </Hyperlink>
+                </TextBlock>
                 <Separator Margin="0,5,0,10" />
+                
+                <Border Background="#FFF5F9FF" BorderBrush="#FFADD8E6" BorderThickness="1" Padding="10" Margin="0,0,0,10">
+                    <StackPanel>
+                        <TextBlock TextWrapping="Wrap" FontWeight="SemiBold">
+                            📌 PC Installer Guide
+                        </TextBlock>
+                        <TextBlock TextWrapping="Wrap" Margin="0,5,0,0">
+                            This plugin allows you to scan network shares for game installers and install them on demand. 
+                            Follow these steps to get started:
+                        </TextBlock>
+                        <TextBlock TextWrapping="Wrap" Margin="10,5,0,0">
+                            1. Add a new mapping above with "PcInstaller" as the Rom Type<LineBreak/>
+                            2. Set the source path to your network folder with game installers<LineBreak/>
+                            3. Set the destination path to where you want games installed<LineBreak/>
+                            4. Click Save and restart Playnite to see your games
+                        </TextBlock>
+                    </StackPanel>
+                </Border>
+                
                 <CheckBox IsChecked="{Binding AutoDetectPcInstallers, Mode=TwoWay}" Margin="0,0,0,10">
                     <TextBlock Text="Auto-detect installer executables (scan file properties)" TextWrapping="Wrap"/>
                 </CheckBox>
@@ -179,8 +203,22 @@
                     <TextBox Text="{Binding DefaultInstallLocation}" />
                 </DockPanel>
                 <CheckBox IsChecked="{Binding CreateGameSpecificInstallDirectories, Mode=TwoWay}" Margin="0,0,0,10">
-                    <TextBlock Text="Create game-specific installation directories" TextWrapping="Wrap"/>
+                    <TextBlock Text="Create game-specific installation directories" TextWrapping="Wrap" 
+                             ToolTip="When enabled, games will be installed in a subfolder named after the game.&#x0a;For example: [Install Location]/The Witcher 3/"/>
                 </CheckBox>
+                
+                <Border Background="#FFFFF5F0" BorderBrush="#FFFFD0B0" BorderThickness="1" Padding="10" Margin="0,0,0,10">
+                    <StackPanel>
+                        <TextBlock TextWrapping="Wrap" FontWeight="SemiBold">
+                            ⚠️ Archive Support
+                        </TextBlock>
+                        <TextBlock TextWrapping="Wrap" Margin="0,5,0,0">
+                            For ISO and RAR archive support, you need to place 7z.exe and UnRAR.exe in the Tools folder.
+                            <LineBreak/>
+                            This enables handling of ISOs, multi-part RAR archives, and nested archives.
+                        </TextBlock>
+                    </StackPanel>
+                </Border>
                 
                 <Label Content="Metadata Settings" FontWeight="Bold" Margin="0,10,0,0" />
                 <Separator Margin="0,5,0,10" />

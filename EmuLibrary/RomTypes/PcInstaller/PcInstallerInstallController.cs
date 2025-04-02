@@ -62,7 +62,13 @@ namespace EmuLibrary.RomTypes.PcInstaller
                             
                             SafelyAddNotification(
                                 Guid.NewGuid().ToString(),
-                                $"Extracting {Game.Name}... This may take a while.",
+                                $"Extracting {Game.Name}... This may take a while depending on archive size.",
+                                NotificationType.Info);
+                                
+                            // Add detailed extraction notification
+                            SafelyAddNotification(
+                                Guid.NewGuid().ToString(),
+                                $"EmuLibrary is extracting {Path.GetFileName(info.SourceFullPath)}. Large archives may take several minutes.",
                                 NotificationType.Info);
                                 
                             var extractedPath = await archiveHandler.ExtractAsync(info.SourceFullPath, tempPath, _watcherToken.Token);
@@ -204,6 +210,15 @@ namespace EmuLibrary.RomTypes.PcInstaller
                     info.InstallDirectory = gameInstallDir;
                     info.ExecutablePath = executablePath;
                     
+                    // Notify user about executable detection
+                    if (!string.IsNullOrEmpty(executablePath))
+                    {
+                        SafelyAddNotification(
+                            Guid.NewGuid().ToString(),
+                            $"Detected game executable: {Path.GetFileName(executablePath)}",
+                            NotificationType.Info);
+                    }
+                    
                     // Adjust paths for portable mode if needed
                     string adjustedInstallDir = gameInstallDir;
                     string adjustedExePath = executablePath;
@@ -287,6 +302,13 @@ namespace EmuLibrary.RomTypes.PcInstaller
                 SafelyAddNotification(
                     Guid.NewGuid().ToString(),
                     $"Installing {Game.Name}... This may take a while. Please wait for the installation to complete.",
+                    NotificationType.Info);
+                    
+                // Add more detailed installation information
+                SafelyAddNotification(
+                    Guid.NewGuid().ToString(),
+                    $"Running installer: {Path.GetFileName(installerPath)}\nDestination: {destDir}\n" +
+                    $"Note: If installation windows appear, you may need to interact with them.",
                     NotificationType.Info);
                     
                 process.Start();
