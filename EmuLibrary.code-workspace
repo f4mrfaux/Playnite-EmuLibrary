@@ -1,0 +1,43 @@
+{
+    "folders": [
+        {
+            "path": "."
+        }
+    ],
+    "settings": {
+        "omnisharp.useModernNet": false,
+        "omnisharp.useGlobalMono": "always",
+        "omnisharp.monoPath": "/usr/bin",
+        "csharp.suppressDotnetRestoreNotification": true,
+        "editor.formatOnSave": true
+    },
+    "tasks": {
+        "version": "2.0.0",
+        "tasks": [
+            {
+                "label": "Build with Mono",
+                "type": "shell",
+                "command": "./build.sh",
+                "group": {
+                    "kind": "build",
+                    "isDefault": true
+                },
+                "presentation": {
+                    "reveal": "always",
+                    "panel": "new"
+                },
+                "problemMatcher": "$msCompile"
+            },
+            {
+                "label": "Check Syntax Only",
+                "type": "shell",
+                "command": "./check-syntax.sh",
+                "group": "build",
+                "presentation": {
+                    "reveal": "always",
+                    "panel": "new"
+                }
+            }
+        ]
+    }
+}

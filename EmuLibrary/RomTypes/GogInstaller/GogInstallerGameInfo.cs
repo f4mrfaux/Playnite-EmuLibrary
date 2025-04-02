@@ -50,10 +50,8 @@ namespace EmuLibrary.RomTypes.GogInstaller
             yield return $"LastModified: {LastModified}";
         }
 
-        /// <summary>
-        /// Property to get the Name for easy access
-        /// </summary>
-        public string Name { get; set; }
+        // Name property is already defined on line 19
+        // public string Name { get; set; }
 
         public override void BrowseToSource()
         {

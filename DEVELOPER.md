@@ -71,6 +71,58 @@ When testing the plugin:
 3. Use DEBUG compilation for detailed logging
 4. Check Playnite logs for errors (`F12` → `Open application directory` → check log files)
 
+## Building on Linux
+
+If you're developing on a Linux machine, you can still build and syntax-check the project using Mono:
+
+1. Install the required packages:
+   ```bash
+   # For Arch Linux
+   sudo pacman -S mono mono-msbuild mono-addins nuget
+   
+   # For Ubuntu/Debian
+   sudo apt-get install mono-complete nuget msbuild
+   ```
+
+2. Use the provided build scripts:
+   - `./build.sh` - Full build using Mono's MSBuild
+   - `./check-syntax.sh` - Fast syntax validation of C# files without full build
+
+3. For VS Code integration, open the provided workspace file:
+   ```bash
+   code EmuLibrary.code-workspace
+   ```
+   
+   Install the C# extension to get intellisense and syntax highlighting.
+
+Note: The Windows-specific post-build steps will be skipped when building on Linux.
+
+## Building on Linux
+
+If you're developing on a Linux machine, you can still build and syntax-check the project using Mono:
+
+1. Install the required packages:
+   ```bash
+   # For Arch Linux
+   sudo pacman -S mono mono-msbuild mono-addins nuget
+   
+   # For Ubuntu/Debian
+   sudo apt-get install mono-complete nuget msbuild
+   ```
+
+2. Use the provided build scripts:
+   - `./build.sh` - Full build using Mono's MSBuild
+   - `./check-syntax.sh` - Fast syntax validation of C# files without full build
+
+3. For VS Code integration, open the provided workspace file:
+   ```bash
+   code EmuLibrary.code-workspace
+   ```
+   
+   Install the C# extension to get intellisense and syntax highlighting.
+
+Note: The Windows-specific post-build steps will be skipped when building on Linux.
+
 ## Directory Documentation
 
 Each directory contains a `DIRECTORY.md` file with specific information about the files and their purposes. Refer to these files for detailed documentation about each component.

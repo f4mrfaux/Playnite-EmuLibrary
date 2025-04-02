@@ -1,0 +1,3 @@
+/home/bob/projects/Playnite-EmuLibrary/EmuLibrary/obj/Debug/net462/EmuLibrary.csproj.AssemblyReference.cache
+/home/bob/projects/Playnite-EmuLibrary/EmuLibrary/obj/Debug/net462/EmuLibrary.dll.config
+/home/bob/projects/Playnite-EmuLibrary/EmuLibrary/obj/Debug/net462/EmuLibrary.csproj.CoreCompileInputs.cache

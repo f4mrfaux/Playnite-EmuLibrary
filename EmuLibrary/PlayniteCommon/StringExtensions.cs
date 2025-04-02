@@ -1,13 +1,13 @@
-﻿using System.Globalization;
+using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
-
 using System.Linq;
 
 namespace System
 {
     public static class StringExtensions
     {
+        private static readonly CultureInfo enUSCultInfo = new CultureInfo("en-US", false);
         
         /// <summary>
         /// Creates a safe file path name from a string by removing invalid characters
@@ -28,8 +28,6 @@ namespace System
             
             return result.Trim();
         }
-    {
-        private static readonly CultureInfo enUSCultInfo = new CultureInfo("en-US", false);
 
         public static string MD5(this string s)
         {
@@ -124,7 +122,7 @@ namespace System
             newName = newName.Replace("_", " ");
             newName = newName.Replace(".", " ");
             newName = RemoveTrademarks(newName);
-            newName = newName.Replace('’', '\'');
+            newName = newName.Replace(''', '\'');
             newName = Regex.Replace(newName, @"\[.*?\]", "");
             newName = Regex.Replace(newName, @"\(.*?\)", "");
             newName = Regex.Replace(newName, @"\s*:\s*", ": ");
