@@ -1,4 +1,25 @@
 ## [Unreleased]
+### Fixed
+- Fixed build errors in GogInstaller and PcInstaller classes
+- Fixed class accessibility inconsistencies between implementation and base classes
+- Implemented missing abstract methods in GogInstaller classes
+- Added proper delegate definition for progress updates
+- Fixed duplicate logger field declarations with 'new' keyword
+- Added missing namespace imports for System types
+- Implemented missing GetPluginUserDataPath method in EmuLibrary class
+- Fixed missing catch block in PcInstallerInstallController.cs
+- Fixed Game.GameImagePath usage in GogInstallerInstallController to properly create GameInstallationData
+- Fixed misspelled parameter name 'arags' to 'args' in action delegates
+- Improved thread safety in notification system across all controllers
+- Enhanced error handling in installer execution process
+
+## [0.8.0] - 2025-04-02
+### Major Improvements
+- Fixed critical build errors preventing compilation
+- Resolved compatibility issues with Playnite plugin architecture
+- Enhanced threading model and error handling
+- Updated codebase to follow Playnite SDK best practices
+
 ### Improvements
 - Enhanced user interface with informative panels and tooltips for better guidance
 - Added detailed plugin description in extension.yaml for better discoverability

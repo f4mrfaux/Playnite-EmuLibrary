@@ -11,7 +11,7 @@ namespace EmuLibrary.RomTypes.PcInstaller
 {
     internal class PcInstallerUninstallController : BaseUninstallController
     {
-        private readonly new ILogger _logger;
+        private readonly ILogger _logger;
         
         public PcInstallerUninstallController(Game game, IEmuLibrary emuLibrary) : base(game, emuLibrary)
         {

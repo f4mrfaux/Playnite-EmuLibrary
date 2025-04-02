@@ -53,7 +53,16 @@ namespace EmuLibrary.RomTypes.GogInstaller
 
                     if (!string.IsNullOrEmpty(exePath))
                     {
-                        Game.GameImagePath = exePath;
+                        // Create installation data with Rom
+                        var installData = new GameInstallationData
+                        {
+                            InstallDirectory = destDir,
+                            Roms = new List<GameRom> { new GameRom(Game.Name, exePath) }
+                        };
+                        
+                        // Update the game
+                        InvokeOnInstalled(new GameInstalledEventArgs(installData));
+                        return;
                     }
 
                     InvokeOnInstalled(new GameInstalledEventArgs());

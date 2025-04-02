@@ -145,10 +145,38 @@ Current enhancements include:
 
 Future plans include:
 
-- Interactive installation progress reporting
-- Better error recovery options
-- Support for more archive formats
-- Additional metadata integration improvements
+- Interactive installation progress reporting with percentage completed
+- Better error recovery options with retry mechanisms
+- Support for more archive formats (7z, ZIP, ACE)
+- Additional metadata integration improvements with IGDB/Steam databases
+- Custom plugin themes and UI enhancements
+- Improved network performance with download resume capabilities
+- Installation size estimation before starting process
+- Multi-language support for installer handling
+
+## Development Roadmap (Updated April 2025)
+
+| Milestone | Status | Target Date | Features |
+|-----------|--------|-------------|----------|
+| **0.8.0** | ✅ Complete | April 2025 | Build fixes, compatibility patches, threading improvements |
+| **0.9.0** | 🔄 In Progress | June 2025 | Progress reporting, advanced metadata integration |
+| **1.0.0** | 📅 Planned | August 2025 | Multi-language support, UI enhancements, additional archive formats |
+| **1.1.0** | 📅 Planned | October 2025 | Cloud storage integration, download resume capabilities |
+
+### Next Development Steps
+
+1. **For Milestone 0.9.0**:
+   - Add real-time installation progress reporting
+   - Implement installation size estimation
+   - Enhance metadata matching with improved game name extraction
+   - Add IGDB/MobyGames integration for better metadata
+   - Improve installer detection heuristics
+
+2. **Technical Improvements**:
+   - Create comprehensive unit test suite
+   - Implement CI/CD pipeline for automated builds
+   - Add installer type detection using file signatures
+   - Improve performance with parallel scanning
 
 ## Testing Status
 

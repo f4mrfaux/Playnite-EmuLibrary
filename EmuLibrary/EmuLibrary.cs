@@ -27,6 +27,7 @@ namespace EmuLibrary
         public IPlayniteAPI Playnite { get; private set; }
         public Settings.Settings Settings { get; private set; }
         RomTypeScanner IEmuLibrary.GetScanner(RomType romType) => _scanners[romType];
+        public string GetPluginUserDataPath() => Playnite.Paths.PluginUserDataPath;
 
         private const string s_pluginName = "EmuLibrary PC Manager";
 
@@ -190,7 +191,7 @@ namespace EmuLibrary
         {
             yield return new MainMenuItem()
             {
-                Action = (arags) => RemoveSuperUninstalledGames(true, default),
+                Action = (args) => RemoveSuperUninstalledGames(true, default),
                 Description = "Remove uninstalled games with missing source file...",
                 MenuSection = "EmuLibrary PC Manager"
             };
@@ -220,7 +221,7 @@ namespace EmuLibrary
             {
                 yield return new GameMenuItem()
                 {
-                    Action = (arags) =>
+                    Action = (args) =>
                     {
                         ourGameInfos.ForEach(ggi => ggi.gameInfo.BrowseToSource());
                     },
@@ -229,7 +230,7 @@ namespace EmuLibrary
                 };
                 yield return new GameMenuItem()
                 {
-                    Action = (arags) =>
+                    Action = (args) =>
                     {
                         var text = ourGameInfos.Select(ggi => ggi.gameInfo.ToDescriptiveString(ggi.game))
                             .Aggregate((a, b) => $"{a}\n--------------------------------------------------------------------\n{b}");
@@ -247,7 +248,7 @@ namespace EmuLibrary
                 {
                     yield return new GameMenuItem()
                     {
-                        Action = (arags) =>
+                        Action = (args) =>
                         {
                             foreach (var (game, gameInfo) in pcInstallerGames)
                             {

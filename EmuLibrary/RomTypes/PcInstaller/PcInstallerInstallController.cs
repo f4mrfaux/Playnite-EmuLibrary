@@ -16,7 +16,7 @@ namespace EmuLibrary.RomTypes.PcInstaller
 {
     internal class PcInstallerInstallController : BaseInstallController
     {
-        private readonly new ILogger _logger;
+        private readonly ILogger _logger;
         private readonly Handlers.ArchiveHandlerFactory _archiveHandlerFactory;
         
         public PcInstallerInstallController(Game game, IEmuLibrary emuLibrary) : base(game, emuLibrary)
@@ -392,6 +392,10 @@ namespace EmuLibrary.RomTypes.PcInstaller
                                             $"No executable selected. Right-click the game and select 'Select Custom Executable' to set it manually.", 
                                             NotificationType.Warning);
                                     }
+                                }
+                                catch (Exception ex)
+                                {
+                                    _logger.Error(ex, "Error in executable selection process");
                                 }
                             }
                             else
