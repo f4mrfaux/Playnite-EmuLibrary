@@ -1,5 +1,31 @@
 ## [Unreleased]
 
+## [0.8.2] - 2025-04-02
+### Fixed
+- **GogInstallerScanner initialization errors**
+  - Changed class from 'internal sealed' to 'internal' to match scanner patterns
+  - Changed constructor from 'internal' to 'public' to allow instantiation via reflection
+  - Made ScanSource method public for consistency with other implementations
+  - Added detailed error logging and exception handling for scanner instantiation
+
+- **Dependency reference issues**
+  - Fixed Newtonsoft.Json version conflicts (downgraded from 13.0.3 to 10.0.3)
+  - Added assembly binding redirects for Newtonsoft.Json in app.config
+  - Properly configured LibHac dependency to be included in package
+  - Modified EmuLibrary.csproj to properly handle package references
+
+### Improved
+- **Build and packaging**
+  - Created custom clean build scripts (PowerShell and bash) that generate valid packages
+  - Added packaging of required third-party dependencies (ZstdSharp, INIFileParser, LibHac)
+  - Improved dependency management with proper IncludeAssets and PrivateAssets settings
+  - Set CopyLocalLockFileAssemblies to false to prevent including forbidden dependencies
+
+### Known Issues
+- Package file size may be larger than necessary due to included dependencies
+- Some "Title info not available" errors from XboxLibrary (not related to our code)
+- Ubisoft Connect client initialization warnings (external dependency)
+
 ## [0.8.1] - 2025-04-02
 ### Changed
 - Renamed plugin to EmuLibrary PC Manager to better reflect its purpose
