@@ -195,15 +195,35 @@ namespace EmuLibrary.RomTypes.PcInstaller
                         return;
                     }
                     
-                    // Find the game executable
-                    string executablePath = FindGameExecutable(gameInstallDir);
+                    // Only find game executable if not already manually set by user
+                    string executablePath;
                     
-                    if (string.IsNullOrEmpty(executablePath))
+                    if (info.IsExecutablePathManuallySet && !string.IsNullOrEmpty(info.ExecutablePath) && File.Exists(info.ExecutablePath))
                     {
+                        // Keep the manually selected executable
+                        executablePath = info.ExecutablePath;
+                        _logger.Info($"Using manually selected executable: {executablePath}");
+                        
                         SafelyAddNotification(
-                            Game.GameId, 
-                            $"Game {Game.Name} was installed, but no executable could be found.", 
-                            NotificationType.Warning);
+                            Guid.NewGuid().ToString(),
+                            $"Using custom executable for {Game.Name}: {Path.GetFileName(executablePath)}",
+                            NotificationType.Info);
+                    }
+                    else
+                    {
+                        // Auto-detect the executable
+                        executablePath = FindGameExecutable(gameInstallDir);
+                        
+                        if (string.IsNullOrEmpty(executablePath))
+                        {
+                            SafelyAddNotification(
+                                Game.GameId, 
+                                $"Game {Game.Name} was installed, but no executable could be found. Right-click the game and select 'Select Custom Executable' to set it manually.", 
+                                NotificationType.Warning);
+                        }
+                        
+                        // Reset the manual flag as we're auto-detecting
+                        info.IsExecutablePathManuallySet = false;
                     }
                     
                     // Update the game info

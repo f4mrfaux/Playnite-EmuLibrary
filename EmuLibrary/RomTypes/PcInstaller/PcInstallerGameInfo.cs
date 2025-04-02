@@ -22,6 +22,10 @@ namespace EmuLibrary.RomTypes.PcInstaller
         [ProtoMember(3)]
         public string ExecutablePath { get; set; }
         
+        // Flag indicating whether executable path was manually selected by user
+        [ProtoMember(4)]
+        public bool IsExecutablePathManuallySet { get; set; }
+        
         // Full path to the installer
         public string SourceFullPath => Path.Combine(Mapping?.SourcePath ?? "", SourcePath);
 
@@ -40,7 +44,11 @@ namespace EmuLibrary.RomTypes.PcInstaller
                 yield return $"{nameof(InstallDirectory)}: {InstallDirectory}";
                 
             if (!string.IsNullOrEmpty(ExecutablePath))
+            {
                 yield return $"{nameof(ExecutablePath)}: {ExecutablePath}";
+                if (IsExecutablePathManuallySet)
+                    yield return $"{nameof(IsExecutablePathManuallySet)}: True (User selected)";
+            }
         }
 
         public override void BrowseToSource()

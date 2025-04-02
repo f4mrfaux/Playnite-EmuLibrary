@@ -6,6 +6,7 @@
 - Performance optimizations with caching for installer detection and game name extraction
 - Added comprehensive troubleshooting guide in README.md
 - Improved documentation with a Quick Start guide and folder structure recommendations
+- Added ability to select custom executables for games with launchers or when auto-detection selects the wrong file
 ### Security
 - Updated Newtonsoft.Json from 10.0.1 to 13.0.3 to address high severity vulnerability (GHSA-5crp-9r3c-p9vr)
 - Reverted to the original LibHac version 0.7.0 which is compatible with .NET Framework 4.6.2

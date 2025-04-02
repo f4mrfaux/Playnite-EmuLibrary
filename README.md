@@ -29,6 +29,7 @@ This project transforms the original EmuLibrary from a ROM management tool into 
    - Handle archives (RAR, ISO) automatically if needed
    - Run the installer silently with the appropriate parameters
    - Detect the installed game executable using intelligent pattern matching
+   - Allow manual selection of the correct executable when needed
    - Update Playnite with the installation information
 6. **Launch the game** directly from Playnite
 7. **Error handling** ensures graceful recovery if problems occur
@@ -158,6 +159,7 @@ Future plans include:
 | Silent installation parameters | ✅ | Confirmed working with InnoSetup, NSIS, MSI |
 | Network share access | ✅ | Tested with SMB shares |
 | Post-installation executable detection | ✅ | Successfully finds main game EXEs |
+| Custom executable selection | ✅ | Right-click → EmuLibrary → Select Custom Executable |
 | Multi-part RAR extraction | ⚠️ | Requires external UnRAR.exe in Tools directory or PATH |
 | ISO file handling | ⚠️ | Requires external 7z.exe in Tools directory or PATH |
 | Nested archives (RAR → ISO → installer) | ⚠️ | Basic support implemented, needs more testing |
@@ -183,7 +185,8 @@ Future plans include:
 | **No games appear in library** | - Verify your Source Path is correct<br>- Check that the mapping is enabled<br>- Restart Playnite<br>- Make sure you have suitable installer files (.exe, .msi, etc.) |
 | **Installation fails silently** | - Check if you have enough disk space<br>- Ensure the network share is accessible<br>- Try running the installer manually to see if it has specific requirements |
 | **"Archive tools not found" error** | - Download 7z.exe and UnRAR.exe<br>- Place them in the Tools folder of the plugin<br>- Restart Playnite |
-| **Cannot detect game executable** | - The plugin will still install the game but may not find the launcher<br>- Right-click the game in Playnite → Properties → Add the path to the executable manually |
+| **Cannot detect game executable** | - The plugin will still install the game but may not find the launcher<br>- Right-click the game in Playnite → EmuLibrary → Select Custom Executable<br>- Browse to the correct executable (often in a subfolder of the installation) |
+| **Game requires a specific launcher** | - After installation, right-click the game → EmuLibrary → Select Custom Executable<br>- Browse to the launcher executable instead of the main game executable<br>- The selected executable will be remembered even after reinstallation |
 | **Slow scanning of network shares** | - Organize games in folders for faster scanning<br>- Use a wired network connection for better performance<br>- Consider setting up a local cache on a faster drive |
 
 ### Log Files

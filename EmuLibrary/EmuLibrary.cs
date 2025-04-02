@@ -238,6 +238,69 @@ namespace EmuLibrary
                     Description = "Show Debug Info...",
                     MenuSection = "EmuLibrary"
                 };
+                
+                // Only show the "Select Executable" option for installed PC installer games
+                var pcInstallerGames = ourGameInfos.Where(ggi => ggi.game.IsInstalled && 
+                                                         (ggi.gameInfo.RomType == RomType.PcInstaller || 
+                                                          ggi.gameInfo.RomType == RomType.GogInstaller)).ToList();
+                if (pcInstallerGames.Any())
+                {
+                    yield return new GameMenuItem()
+                    {
+                        Action = (arags) =>
+                        {
+                            foreach (var (game, gameInfo) in pcInstallerGames)
+                            {
+                                // Handle PC Installer games
+                                if (gameInfo is RomTypes.PcInstaller.PcInstallerGameInfo pcInfo)
+                                {
+                                    string installDir = pcInfo.InstallDirectory;
+                                    if (string.IsNullOrEmpty(installDir) || !Directory.Exists(installDir))
+                                    {
+                                        Playnite.Notifications.Add(game.GameId, 
+                                            $"Cannot select executable for {game.Name}: Installation directory not found.", 
+                                            NotificationType.Error);
+                                        continue;
+                                    }
+                                    
+                                    // Show dialog to select executable
+                                    var result = Playnite.Dialogs.SelectFile("Select Game Executable (*.exe)|*.exe", installDir);
+                                    if (!string.IsNullOrEmpty(result))
+                                    {
+                                        pcInfo.ExecutablePath = result;
+                                        pcInfo.IsExecutablePathManuallySet = true;
+                                        
+                                        // Update game in Playnite database
+                                        game.GameId = pcInfo.AsGameId();
+                                        if (Playnite.MainView?.UIDispatcher != null)
+                                        {
+                                            Playnite.MainView.UIDispatcher.Invoke(() =>
+                                            {
+                                                Playnite.Database.Games.Update(game);
+                                                
+                                                // Update play action if needed
+                                                var gameRom = new GameRom(game.Name, result);
+                                                game.Roms = new System.Collections.ObjectModel.ObservableCollection<GameRom> { gameRom };
+                                                Playnite.Database.Games.Update(game);
+                                                
+                                                Playnite.Notifications.Add(Guid.NewGuid().ToString(), 
+                                                    $"Custom executable set for {game.Name}: {Path.GetFileName(result)}", 
+                                                    NotificationType.Info);
+                                            });
+                                        }
+                                    }
+                                }
+                                // Handle GOG Installer games if needed
+                                else if (gameInfo is RomTypes.GogInstaller.GogInstallerGameInfo)
+                                {
+                                    // Implement similar functionality for GOG games if needed
+                                }
+                            }
+                        },
+                        Description = "Select Custom Executable...",
+                        MenuSection = "EmuLibrary"
+                    };
+                }
             }
         }
 
