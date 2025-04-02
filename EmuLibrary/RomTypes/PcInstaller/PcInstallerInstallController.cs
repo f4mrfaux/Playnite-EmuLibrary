@@ -54,7 +54,11 @@ namespace EmuLibrary.RomTypes.PcInstaller
                     if (archiveHandler != null)
                     {
                         _logger.Info($"Using specialized handler for {info.SourceFullPath}");
-                        var tempPath = Path.Combine(Path.GetTempPath(), "PcInstaller_" + Path.GetRandomFileName());
+                        
+                        // Create a temporary directory with the game name for easier identification
+                        var tempPath = Path.Combine(
+                            Path.GetTempPath(), 
+                            "EmuLibrary_" + StringExtensions.GetSafePathName(Game.Name) + "_" + Path.GetRandomFileName());
                         
                         try
                         {
@@ -82,12 +86,72 @@ namespace EmuLibrary.RomTypes.PcInstaller
                             {
                                 // Check if the extracted content has an installer
                                 var installerFiles = Directory.GetFiles(extractedPath, "*.exe", SearchOption.AllDirectories)
-                                    .Where(f => !Path.GetFileName(f).ToLower().Contains("unins"));
+                                    .Where(f => !Path.GetFileName(f).ToLower().Contains("unins"))
+                                    .ToList();
                                     
                                 if (installerFiles.Any())
                                 {
-                                    var installerFile = installerFiles.First();
-                                    _logger.Info($"Found installer in extracted content: {installerFile}");
+                                    string installerFile;
+                                    
+                                    // If we have multiple installers and the setting is enabled, prompt the user
+                                    if (installerFiles.Count > 1 && _emuLibrary.Settings.PromptForInstallerSelection)
+                                    {
+                                        // Create a list of options with relative paths for cleaner display
+                                        var options = installerFiles
+                                            .Select(f => 
+                                            {
+                                                var relativePath = f.Replace(extractedPath, "").TrimStart('\\', '/');
+                                                return new { DisplayName = relativePath, FullPath = f };
+                                            })
+                                            .ToList();
+                                            
+                                        // Sort the options by path length (shorter paths first)
+                                        options = options.OrderBy(o => o.DisplayName.Length).ToList();
+                                        
+                                        // Create a dictionary for the selection dialog
+                                        var selectionOptions = options.ToDictionary(
+                                            o => o.DisplayName,
+                                            o => o.FullPath
+                                        );
+                                        
+                                        // Show selection dialog
+                                        SafelyAddNotification(
+                                            Guid.NewGuid().ToString(),
+                                            $"Multiple installers found for {Game.Name}. Please select which one to use.",
+                                            NotificationType.Info);
+                                            
+                                        // We need to use the UI thread for this
+                                        string selectedOption = null;
+                                        if (_emuLibrary?.Playnite?.MainView?.UIDispatcher != null)
+                                        {
+                                            _emuLibrary.Playnite.MainView.UIDispatcher.Invoke(() =>
+                                            {
+                                                selectedOption = _emuLibrary.Playnite.Dialogs.SelectString(
+                                                    "Multiple installers found. Please select which one to use:",
+                                                    "Select Installer",
+                                                    selectionOptions.Keys.ToList());
+                                            });
+                                        }
+                                        
+                                        if (!string.IsNullOrEmpty(selectedOption) && selectionOptions.TryGetValue(selectedOption, out string selectedPath))
+                                        {
+                                            installerFile = selectedPath;
+                                            _logger.Info($"User selected installer: {installerFile}");
+                                        }
+                                        else
+                                        {
+                                            // User cancelled or dialog failed, use the first one
+                                            installerFile = installerFiles.First();
+                                            _logger.Info($"Using default installer: {installerFile}");
+                                        }
+                                    }
+                                    else
+                                    {
+                                        // Use the first installer
+                                        installerFile = installerFiles.First();
+                                        _logger.Info($"Found installer in extracted content: {installerFile}");
+                                    }
+                                    
                                     installSuccess = await RunInstallerExecutableAsync(installerFile, gameInstallDir, _watcherToken.Token);
                                 }
                                 else
@@ -129,7 +193,10 @@ namespace EmuLibrary.RomTypes.PcInstaller
                         var isoHandler = new Handlers.IsoHandler(_logger);
                         if (isoHandler.CanHandle(info.SourceFullPath))
                         {
-                            var tempPath = Path.Combine(Path.GetTempPath(), "PcInstaller_" + Path.GetRandomFileName());
+                            // Create a temporary directory with the game name for easier identification
+                            var tempPath = Path.Combine(
+                                Path.GetTempPath(), 
+                                "EmuLibrary_ISO_" + StringExtensions.GetSafePathName(Game.Name) + "_" + Path.GetRandomFileName());
                             
                             try
                             {
@@ -218,8 +285,76 @@ namespace EmuLibrary.RomTypes.PcInstaller
                         {
                             SafelyAddNotification(
                                 Game.GameId, 
-                                $"Game {Game.Name} was installed, but no executable could be found. Right-click the game and select 'Select Custom Executable' to set it manually.", 
+                                $"Game {Game.Name} was installed, but no executable could be found.", 
                                 NotificationType.Warning);
+                                
+                            // If the prompt setting is enabled, ask user to locate the installed executable
+                            if (_emuLibrary.Settings.PromptForInstallLocation)
+                            {
+                                // We need to use the UI thread for this
+                                if (_emuLibrary?.Playnite?.MainView?.UIDispatcher != null)
+                                {
+                                    string selectedExe = null;
+                                    
+                                    _emuLibrary.Playnite.MainView.UIDispatcher.Invoke(() =>
+                                    {
+                                        SafelyAddNotification(
+                                            Guid.NewGuid().ToString(),
+                                            $"Please select the executable for {Game.Name}...",
+                                            NotificationType.Info);
+                                        
+                                        // First ask the user to provide the installation directory if we don't have one
+                                        string installDir = gameInstallDir;
+                                        if (!Directory.Exists(gameInstallDir) || Directory.GetFiles(gameInstallDir, "*.*", SearchOption.AllDirectories).Length == 0)
+                                        {
+                                            installDir = _emuLibrary.Playnite.Dialogs.SelectFolder(
+                                                $"Please select the folder where {Game.Name} was installed");
+                                                
+                                            // Update the installation directory if user selected one
+                                            if (!string.IsNullOrEmpty(installDir) && Directory.Exists(installDir))
+                                            {
+                                                gameInstallDir = installDir;
+                                                info.InstallDirectory = installDir;
+                                            }
+                                        }
+                                        
+                                        // Then ask for the specific executable 
+                                        if (!string.IsNullOrEmpty(installDir) && Directory.Exists(installDir))
+                                        {
+                                            selectedExe = _emuLibrary.Playnite.Dialogs.SelectFile(
+                                                "Select Game Executable (*.exe)|*.exe", 
+                                                installDir);
+                                        }
+                                    });
+                                    
+                                    if (!string.IsNullOrEmpty(selectedExe))
+                                    {
+                                        executablePath = selectedExe;
+                                        info.IsExecutablePathManuallySet = true;
+                                        
+                                        _logger.Info($"User selected executable: {executablePath}");
+                                        
+                                        SafelyAddNotification(
+                                            Guid.NewGuid().ToString(),
+                                            $"Using custom executable for {Game.Name}: {Path.GetFileName(executablePath)}",
+                                            NotificationType.Info);
+                                    }
+                                    else
+                                    {
+                                        SafelyAddNotification(
+                                            Guid.NewGuid().ToString(),
+                                            $"No executable selected. Right-click the game and select 'Select Custom Executable' to set it manually.", 
+                                            NotificationType.Warning);
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                SafelyAddNotification(
+                                    Guid.NewGuid().ToString(),
+                                    $"Right-click the game and select 'Select Custom Executable' to set it manually.", 
+                                    NotificationType.Info);
+                            }
                         }
                         
                         // Reset the manual flag as we're auto-detecting
@@ -586,7 +721,69 @@ namespace EmuLibrary.RomTypes.PcInstaller
                 }
                 
                 // Look for any .exe that might be an installer
-                var exeFiles = Directory.GetFiles(directory, "*.exe", SearchOption.AllDirectories);
+                var exeFiles = Directory.GetFiles(directory, "*.exe", SearchOption.AllDirectories)
+                    .Where(path => !Path.GetFileName(path).ToLower().Contains("unins"))
+                    .ToList();
+                
+                if (exeFiles.Count == 0)
+                    return null;
+                
+                // If we have multiple options and the setting is enabled, ask the user to choose
+                if (exeFiles.Count > 1 && _emuLibrary.Settings.PromptForInstallerSelection)
+                {
+                    // Create a list of options with relative paths for cleaner display
+                    var options = exeFiles
+                        .Select(f => 
+                        {
+                            var relativePath = f.Replace(directory, "").TrimStart('\\', '/');
+                            return new { DisplayName = relativePath, FullPath = f };
+                        })
+                        .ToList();
+                        
+                    // Sort the options - prioritize likely installer names
+                    options = options.OrderBy(o => {
+                        var name = Path.GetFileName(o.FullPath).ToLower();
+                        if (name.Contains("setup") || name.Contains("install"))
+                            return 0; // Highest priority
+                        else if (name.Contains("start") || name.Contains("run"))
+                            return 1; // Medium priority
+                        else
+                            return 2; // Lowest priority
+                    }).ThenBy(o => o.DisplayName.Length).ToList();
+                    
+                    // Create a dictionary for the selection dialog
+                    var selectionOptions = options.ToDictionary(
+                        o => o.DisplayName,
+                        o => o.FullPath
+                    );
+                    
+                    // Show selection dialog
+                    SafelyAddNotification(
+                        Guid.NewGuid().ToString(),
+                        $"Multiple potential installers found for {Game.Name}. Please select which one to use.",
+                        NotificationType.Info);
+                        
+                    // We need to use the UI thread for this
+                    string selectedOption = null;
+                    if (_emuLibrary?.Playnite?.MainView?.UIDispatcher != null)
+                    {
+                        _emuLibrary.Playnite.MainView.UIDispatcher.Invoke(() =>
+                        {
+                            selectedOption = _emuLibrary.Playnite.Dialogs.SelectString(
+                                "Multiple potential installers found. Please select which one to use:",
+                                "Select Installer",
+                                selectionOptions.Keys.ToList());
+                        });
+                    }
+                    
+                    if (!string.IsNullOrEmpty(selectedOption) && selectionOptions.TryGetValue(selectedOption, out string selectedPath))
+                    {
+                        _logger.Info($"User selected installer: {selectedPath}");
+                        return selectedPath;
+                    }
+                }
+                
+                // Filter for likely installers if we have multiple options
                 var possibleInstallers = exeFiles.Where(path => {
                     var fileName = Path.GetFileName(path).ToLower();
                     return (fileName.Contains("setup") || 
@@ -596,13 +793,14 @@ namespace EmuLibrary.RomTypes.PcInstaller
                 }).ToList();
                 
                 if (possibleInstallers.Count > 0)
+                {
+                    _logger.Info($"Found installer by name pattern: {possibleInstallers[0]}");
                     return possibleInstallers[0]; // Using indexer is safer than First() in 4.6.2
-                    
+                }
+                
                 // If all else fails, return the first .exe file
-                if (exeFiles.Length > 0)
-                    return exeFiles.First();
-                    
-                return null;
+                _logger.Info($"No specific installer found, using first executable: {exeFiles[0]}");
+                return exeFiles[0];
             }
             catch (Exception ex)
             {

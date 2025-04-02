@@ -36,6 +36,8 @@ namespace EmuLibrary.Settings
         public bool CreateGameSpecificInstallDirectories { get; set; } = true;
         public bool EnableMetadataDownload { get; set; } = true;
         public bool UseSourceFolderNamesForMetadata { get; set; } = true;
+        public bool PromptForInstallerSelection { get; set; } = true;
+        public bool PromptForInstallLocation { get; set; } = false;
 
         // Hidden settings
         public int Version { get; set; }

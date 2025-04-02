@@ -202,9 +202,21 @@
                     <Button DockPanel.Dock="Right" Content="Browse..." Click="Click_BrowseDefaultInstallLocation" Margin="5,0,0,0" />
                     <TextBox Text="{Binding DefaultInstallLocation}" />
                 </DockPanel>
+                
+                
                 <CheckBox IsChecked="{Binding CreateGameSpecificInstallDirectories, Mode=TwoWay}" Margin="0,0,0,10">
                     <TextBlock Text="Create game-specific installation directories" TextWrapping="Wrap" 
                              ToolTip="When enabled, games will be installed in a subfolder named after the game.&#x0a;For example: [Install Location]/The Witcher 3/"/>
+                </CheckBox>
+                
+                <CheckBox IsChecked="{Binding PromptForInstallerSelection, Mode=TwoWay}" Margin="0,0,0,10">
+                    <TextBlock Text="Prompt for installer selection when multiple options are found" TextWrapping="Wrap" 
+                             ToolTip="When enabled, you will be asked to choose which installer to run&#x0a;when multiple executable options are found in an archive."/>
+                </CheckBox>
+                
+                <CheckBox IsChecked="{Binding PromptForInstallLocation, Mode=TwoWay}" Margin="0,0,0,10">
+                    <TextBlock Text="Prompt for installation location after installation" TextWrapping="Wrap" 
+                             ToolTip="When enabled, you will be asked to specify where the game was installed&#x0a;if automatic detection fails."/>
                 </CheckBox>
                 
                 <Border Background="#FFFFF5F0" BorderBrush="#FFFFD0B0" BorderThickness="1" Padding="10" Margin="0,0,0,10">
