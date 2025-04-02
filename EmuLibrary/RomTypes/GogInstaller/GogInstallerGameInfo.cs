@@ -17,7 +17,7 @@ namespace EmuLibrary.RomTypes.GogInstaller
         public string Path { get; set; }
 
         [ProtoMember(2)]
-        public string Name { get; set; }
+        public override string Name { get; set; }
 
         [ProtoMember(3)]
         public string RomExtension { get; set; }

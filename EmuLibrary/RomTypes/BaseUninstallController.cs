@@ -10,7 +10,8 @@ namespace EmuLibrary.RomTypes
     {
         protected readonly IEmuLibrary _emuLibrary;
         protected readonly ILogger _logger;
-        protected CancellationTokenSource _watcherToken;
+        // This field is used in derived classes
+        protected CancellationTokenSource _watcherToken = null;
 
         internal BaseUninstallController(Game game, IEmuLibrary emuLibrary) : base(game)
         {

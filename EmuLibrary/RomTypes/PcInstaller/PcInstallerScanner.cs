@@ -97,7 +97,7 @@ namespace EmuLibrary.RomTypes.PcInstaller
                         
                         // If we should use folder names for better metadata matching
                         string gameName;
-                        if (EmuLibrary.Settings.UseSourceFolderNamesForMetadata)
+                        if (_emuLibrary.Settings.UseSourceFolderNamesForMetadata)
                         {
                             // Try to use parent folder name for better metadata matching
                             gameName = ExtractGameNameFromPath(file.FullName, srcPath);
@@ -157,7 +157,11 @@ namespace EmuLibrary.RomTypes.PcInstaller
         public override IEnumerable<Game> GetUninstalledGamesMissingSourceFiles(CancellationToken ct)
         {
             var relevantGames = _playniteAPI.Database.Games
-                .Where(g => !g.IsInstalled && g.PluginId == EmuLibrary.PluginId && g.GameId.Contains(RomType.ToString()));
+                .Where(g => !g.IsInstalled && g.PluginId == EmuLibrary.PluginId && g.GameId.Contains(RomType.ToString()))
+                .ToList();
+            
+            // Create a list to collect games that need to be returned
+            var gamesToCleanup = new List<Game>();
 
             foreach (var game in relevantGames)
             {
@@ -173,7 +177,7 @@ namespace EmuLibrary.RomTypes.PcInstaller
                         if (mapping == null)
                         {
                             _logger.Warn($"Mapping {info.MappingId} was not found. Will clean up the game {game.Name} [{game.GameId}]");
-                            yield return game;
+                            gamesToCleanup.Add(game);
                             continue;
                         }
 
@@ -181,7 +185,7 @@ namespace EmuLibrary.RomTypes.PcInstaller
                         if (!File.Exists(sourceFullPath))
                         {
                             _logger.Warn($"Source file {sourceFullPath} no longer exists. Will clean up the game {game.Name} [{game.GameId}]");
-                            yield return game;
+                            gamesToCleanup.Add(game);
                         }
                     }
                 }
@@ -190,6 +194,9 @@ namespace EmuLibrary.RomTypes.PcInstaller
                     _logger.Error(e, $"Error checking PC installer game {game.Name} [{game.GameId}]");
                 }
             }
+            
+            // Return the collected games outside of the try/catch block
+            return gamesToCleanup;
         }
         
         private bool IsPotentialInstaller(string path)
@@ -239,7 +246,7 @@ namespace EmuLibrary.RomTypes.PcInstaller
                 }
                 
                 // Try to check file properties for clues
-                if (extension == ".exe" && EmuLibrary.Settings.AutoDetectPcInstallers)
+                if (extension == ".exe" && _emuLibrary.Settings.AutoDetectPcInstallers)
                 {
                     try
                     {

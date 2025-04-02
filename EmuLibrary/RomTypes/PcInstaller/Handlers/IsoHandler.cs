@@ -392,12 +392,12 @@ namespace EmuLibrary.RomTypes.PcInstaller.Handlers
         /// <summary>
         /// An alternative approach to mount the ISO file using Windows APIs (for future implementation)
         /// </summary>
-        private async Task<string> MountIsoAsync(string isoPath, CancellationToken cancellationToken)
+        private Task<string> MountIsoAsync(string isoPath, CancellationToken cancellationToken)
         {
             // This would use Windows APIs to mount the ISO file
             // For now, we'll just return null as this is not implemented yet
             _logger.Info("ISO mounting via Windows APIs is not implemented yet");
-            return null;
+            return Task.FromResult<string>(null);
         }
 
         private string Get7ZipPath()
