@@ -267,7 +267,8 @@ namespace EmuLibrary
                                     }
                                     
                                     // Show dialog to select executable
-                                    var result = Playnite.Dialogs.SelectFile("*.exe", installDir);
+                                    var filterSettings = new List<string> { "Game Executable (*.exe)", "*.exe" };
+                                    var result = Playnite.Dialogs.SelectFile(filterSettings, installDir);
                                     if (!string.IsNullOrEmpty(result))
                                     {
                                         pcInfo.ExecutablePath = result;

@@ -23,6 +23,9 @@ namespace EmuLibrary.RomTypes.PcInstaller
         public override RomType RomType => RomType.PcInstaller;
         public override Guid LegacyPluginId => EmuLibrary.PluginId;
         
+        // Reference to static Settings for convenience
+        private static Settings.Settings Settings => Settings.Settings.Instance;
+        
         // File extensions for PC game installers
         private readonly string[] _installerExtensions = new[] { ".exe", ".msi", ".iso", ".rar" };
         
@@ -98,7 +101,7 @@ namespace EmuLibrary.RomTypes.PcInstaller
                         
                         // If we should use folder names for better metadata matching
                         string gameName;
-                        if (EmuLibrary.Settings.UseSourceFolderNamesForMetadata)
+                        if (Settings.UseSourceFolderNamesForMetadata)
                         {
                             // Try to use parent folder name for better metadata matching
                             gameName = ExtractGameNameFromPath(file.FullName, srcPath);
@@ -247,7 +250,7 @@ namespace EmuLibrary.RomTypes.PcInstaller
                 }
                 
                 // Try to check file properties for clues
-                if (extension == ".exe" && EmuLibrary.Settings.AutoDetectPcInstallers)
+                if (extension == ".exe" && Settings.AutoDetectPcInstallers)
                 {
                     try
                     {
