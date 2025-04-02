@@ -11,13 +11,20 @@
 	<DefaultItemExcludes>$(DefaultItemExcludes);toolbox\**</DefaultItemExcludes>
 	<AutoGenerateBindingRedirects>True</AutoGenerateBindingRedirects>
 	<GenerateBindingRedirectsOutputType>true</GenerateBindingRedirectsOutputType>
+	<AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
   </PropertyGroup>
+  
+  <ItemGroup>
+    <None Include="app.config">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
 	
   <ItemGroup>
     <PackageReference Include="ini-parser" Version="2.5.2" />
     <PackageReference Include="LibHac" Version="0.7.0" />
     <PackageReference Include="NETStandard.Library" Version="2.0.3" />
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
     <PackageReference Include="PlayniteSDK" Version="6.4.0" />
     <PackageReference Include="protobuf-net" Version="2.4.6" />
     <PackageReference Include="System.IO.Abstractions" Version="2.1.0.227" />
@@ -50,6 +57,12 @@
 	
   <ItemGroup>
     <Reference Include="Microsoft.VisualBasic" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <None Update="app.config">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 	
 </Project>
