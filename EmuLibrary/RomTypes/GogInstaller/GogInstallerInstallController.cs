@@ -10,7 +10,7 @@ namespace EmuLibrary.RomTypes.GogInstaller
 {
     internal sealed class GogInstallerInstallController : BaseInstallController
     {
-        private readonly ILogger _logger;
+        private readonly new ILogger _logger;
 
         internal GogInstallerInstallController(Game game, IEmuLibrary emuLibrary) 
             : base(game, emuLibrary)

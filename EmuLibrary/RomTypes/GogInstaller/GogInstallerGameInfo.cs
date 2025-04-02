@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Collections.Generic;
 using Playnite.SDK.Models;
+using Playnite.SDK.Plugins;
 using EmuLibrary.RomTypes;
 using ProtoBuf;
 

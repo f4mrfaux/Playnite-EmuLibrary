@@ -16,7 +16,7 @@ namespace EmuLibrary.RomTypes.PcInstaller
 {
     internal class PcInstallerInstallController : BaseInstallController
     {
-        private readonly ILogger _logger;
+        private readonly new ILogger _logger;
         private readonly Handlers.ArchiveHandlerFactory _archiveHandlerFactory;
         
         public PcInstallerInstallController(Game game, IEmuLibrary emuLibrary) : base(game, emuLibrary)
