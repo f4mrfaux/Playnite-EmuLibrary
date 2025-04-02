@@ -15,6 +15,9 @@ Description: |
   • Automatically detect the correct executable after installation
   • Support for various installers including GOG, Steam, and generic PC installers
   • Advanced archive handling for ISO and RAR files
+  
+  IMPORTANT: This extension requires LibHac.dll to be present in the extension directory.
+  If the extension fails to load, please see BUILD.md for instructions on how to fix it.
 Links:
     - Name: Source Code
       Url: https://github.com/f4mrfaux/Playnite-EmuLibrary
