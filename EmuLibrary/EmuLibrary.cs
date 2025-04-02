@@ -28,10 +28,10 @@ namespace EmuLibrary
         public Settings.Settings Settings { get; private set; }
         RomTypeScanner IEmuLibrary.GetScanner(RomType romType) => _scanners[romType];
 
-        private const string s_pluginName = "EmuLibrary";
+        private const string s_pluginName = "EmuLibrary PC Manager";
 
         internal static readonly string Icon = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), @"icon.png");
-        internal static readonly Guid PluginId = Guid.Parse("41e49490-0583-4148-94d2-940c7c74f1d9");
+        internal static readonly Guid PluginId = Guid.Parse("87cab450-8935-4fa9-be88-e60d8a4ed9e1");
         internal static readonly MetadataNameProperty SourceName = new MetadataNameProperty(s_pluginName);
 
         private readonly Dictionary<RomType, RomTypeScanner> _scanners = new Dictionary<RomType, RomTypeScanner>();
@@ -192,7 +192,7 @@ namespace EmuLibrary
             {
                 Action = (arags) => RemoveSuperUninstalledGames(true, default),
                 Description = "Remove uninstalled games with missing source file...",
-                MenuSection = "EmuLibrary"
+                MenuSection = "EmuLibrary PC Manager"
             };
         }
 
@@ -225,7 +225,7 @@ namespace EmuLibrary
                         ourGameInfos.ForEach(ggi => ggi.gameInfo.BrowseToSource());
                     },
                     Description = "Browse to Source...",
-                    MenuSection = "EmuLibrary"
+                    MenuSection = "EmuLibrary PC Manager"
                 };
                 yield return new GameMenuItem()
                 {
@@ -236,7 +236,7 @@ namespace EmuLibrary
                         Playnite.Dialogs.ShowSelectableString("Decoded GameId info for each selected game is shown below. This information can be useful for troubleshooting.", "EmuLibrary Game Info", text);
                     },
                     Description = "Show Debug Info...",
-                    MenuSection = "EmuLibrary"
+                    MenuSection = "EmuLibrary PC Manager"
                 };
                 
                 // Only show the "Select Executable" option for installed PC installer games
@@ -298,7 +298,7 @@ namespace EmuLibrary
                             }
                         },
                         Description = "Select Custom Executable...",
-                        MenuSection = "EmuLibrary"
+                        MenuSection = "EmuLibrary PC Manager"
                     };
                 }
             }

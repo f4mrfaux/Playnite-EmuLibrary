@@ -1,13 +1,13 @@
-﻿Id: 41e49490-0583-4148-94d2-940c7c74f1d9
-Name: EmuLibrary
-Author: psychonic
+﻿Id: 87cab450-8935-4fa9-be88-e60d8a4ed9e1
+Name: EmuLibrary PC Manager
+Author: f4mrfaux
 Version: 999.999.999
 Module: EmuLibrary.dll
 Type: GameLibrary
 Icon: icon.png
 Description: |
-  EmuLibrary is a versatile plugin that allows you to manage both ROM files and PC game installers. 
-  It can scan network shares for game files, add them to Playnite, and install them on demand.
+  EmuLibrary PC Manager is a specialized plugin for managing PC game installers. 
+  It can scan network shares for game installers, add them to Playnite, and install them on demand.
   
   Key features:
   • Scan network or local folders for ROM files and PC game installers (.exe, .msi, .iso, .rar)
@@ -17,6 +17,6 @@ Description: |
   • Advanced archive handling for ISO and RAR files
 Links:
     - Name: Source Code
-      Url: https://github.com/psychonic/Playnite-EmuLibrary
+      Url: https://github.com/f4mrfaux/Playnite-EmuLibrary
     - Name: Wiki & Documentation
-      Url: https://github.com/psychonic/Playnite-EmuLibrary/wiki
+      Url: https://github.com/f4mrfaux/Playnite-EmuLibrary/wiki

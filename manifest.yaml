@@ -1,4 +1,4 @@
-AddonId: ROMInstaller_41e49490-0583-4148-94d2-940c7c74f1d9
+AddonId: PCGameInstaller_87cab450-8935-4fa9-be88-e60d8a4ed9e1
 Packages:
   - Version: 3.4.1
     RequiredApiVersion: 6.4.0
