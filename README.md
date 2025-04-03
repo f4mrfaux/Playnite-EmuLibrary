@@ -17,6 +17,7 @@ This project transforms the original EmuLibrary from a ROM management tool into 
 - **Automatic Executable Detection**: Intelligently finds the correct game executable after installation
 - **Network Storage Integration**: Works with SMB shares and other network storage solutions
 - **Playnite Integration**: Adds games to your Playnite library with proper metadata
+- **UI Enhancements**: Improved contrast and readability in both light and dark themes
 
 ## How It Works
 
@@ -38,20 +39,38 @@ This project transforms the original EmuLibrary from a ROM management tool into 
 
 ### Quick Start (5-Minute Setup)
 
-1. **Install the plugin** in Playnite (Extensions → Browse → EmuLibrary PC Game Manager)
+1. **Install the plugin** in Playnite:
+   - Go to Extensions → Browse → EmuLibrary PC Game Manager
+   - Click Install and restart Playnite when prompted
+
 2. **Open the settings**:
    - Go to Settings → EmuLibrary PC Game Manager
    - You'll see a helpful guide panel with setup instructions
+
 3. **Add a new mapping**:
    - **Emulator**: Select any emulator from the dropdown (it doesn't matter which one)
    - **Profile**: Select any profile from the dropdown
    - **Platform**: Select "PC" (or create it if it doesn't exist)
-   - **Rom Type**: Choose "PcInstaller" for generic installers or "GogInstaller" for GOG installers
+   - **Rom Type**: Choose "PcInstaller" for all installers (handles both generic and GOG installers)
    - **Source Path**: Browse to your network share or folder containing game installers
    - **Destination Path**: Choose where you want games to be installed locally
    - **Enabled**: Make sure this is checked
-4. **Click "Save" and restart Playnite**
-5. **Your games will appear** in your library as uninstalled games
+
+4. **Configure additional settings** (optional):
+   - Set your preferred installation behavior
+   - Configure archive handling options
+   - Adjust UI preferences for better visibility
+
+5. **Click "Save" and restart Playnite**
+
+6. **Your games will appear** in your library as uninstalled games
+   - Games will be detected based on file patterns
+   - You can start installing and playing right away!
+
+7. **Installing your first game**:
+   - Find a game in your library
+   - Click "Play" to begin installation
+   - The plugin will handle everything and notify you when complete
 
 ### Folder Structure Tips
 
@@ -106,6 +125,7 @@ Configure default installation behavior in Settings:
 - **GOG Installers** (with special detection for GOG Galaxy games)
 - **ISO Files** containing game installers
 - **RAR Archives** (single and multi-part)
+- **Nested Archive Combinations** (e.g., RAR containing ISO containing installer)
 
 ### Installation Methods
 
@@ -129,7 +149,7 @@ The plugin supports various installation methods:
 The project has successfully implemented:
 
 - ✅ Generic PC installer support and detection
-- ✅ GOG installer specialized support
+- ✅ GOG installer specialized support (now integrated into PC installer)
 - ✅ Network share integration
 - ✅ Silent installation parameter detection
 - ✅ Post-installation executable detection
@@ -142,6 +162,9 @@ Current enhancements include:
 - ✅ Enhanced error handling and user notifications
 - ✅ Performance optimizations with caching
 - ✅ Better folder-based game naming
+- ✅ UI text contrast improvements for better readability
+- ✅ Consolidated installer types for easier maintenance
+- ✅ Comprehensive documentation for users and developers
 
 Future plans include:
 
@@ -159,6 +182,7 @@ Future plans include:
 | Milestone | Status | Target Date | Features |
 |-----------|--------|-------------|----------|
 | **0.8.0** | ✅ Complete | April 2025 | Build fixes, compatibility patches, threading improvements |
+| **0.8.3** | ✅ Complete | April 2025 | GOG/PC installer consolidation, UI contrast improvements |
 | **0.9.0** | 🔄 In Progress | June 2025 | Progress reporting, advanced metadata integration |
 | **1.0.0** | 📅 Planned | August 2025 | Multi-language support, UI enhancements, additional archive formats |
 | **1.1.0** | 📅 Planned | October 2025 | Cloud storage integration, download resume capabilities |
@@ -216,6 +240,8 @@ Future plans include:
 | **Cannot detect game executable** | - The plugin will still install the game but may not find the launcher<br>- Right-click the game in Playnite → EmuLibrary → Select Custom Executable<br>- Browse to the correct executable (often in a subfolder of the installation) |
 | **Game requires a specific launcher** | - After installation, right-click the game → EmuLibrary → Select Custom Executable<br>- Browse to the launcher executable instead of the main game executable<br>- The selected executable will be remembered even after reinstallation |
 | **Slow scanning of network shares** | - Organize games in folders for faster scanning<br>- Use a wired network connection for better performance<br>- Consider setting up a local cache on a faster drive |
+| **UI text difficult to read** | - Updated in v0.8.3 with improved contrast<br>- If still having issues, ensure you're using the latest version<br>- Report specific text contrast issues on GitHub |
+| **"Unknown emulator profile type" error** | - Fixed in v0.8.3<br>- If still encountering, please check Playnite logs for details<br>- May require full reinstallation of the plugin |
 
 ### Log Files
 

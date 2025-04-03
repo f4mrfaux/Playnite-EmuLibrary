@@ -50,7 +50,15 @@ The EmuLibrary plugin follows a modular architecture with several key layers:
                                               ┌──────▼───────┐
                                               │   Handlers   │
                                               └──────────────┘
+                                                     │
+                                        ┌────────────┴────────────┐
+                                        │                         │
+                                 ┌──────▼───────┐         ┌──────▼───────┐
+                                 │  IsoHandler  │         │ MultiRarHandler│
+                                 └──────────────┘         └──────────────┘
 ```
+
+Note: As of v0.8.3, the GogInstaller type now uses the PcInstaller implementation through attribute mapping.
 
 ## Key Design Patterns
 
