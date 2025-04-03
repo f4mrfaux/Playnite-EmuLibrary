@@ -1,257 +1,135 @@
 # EmuLibrary PC Game Manager
 
-EmuLibrary PC Game Manager is a fork of the [EmuLibrary](https://github.com/psychonic/Playnite-EmuLibrary) plugin for [Playnite](https://www.playnite.link) that has been repurposed to manage PC game installers rather than just emulator ROMs. This plugin brings GameVault-like functionality to Playnite without requiring a dedicated server.
+EmuLibrary PC Manager helps you manage PC game installers within [Playnite](https://www.playnite.link). Store your game installers on a network share and install them only when you want to play, saving local disk space.
 
-## Project Overview
+> **Documentation Index**
+> - **README.md**: Overview, features, quick setup (you are here)
+> - **USER_GUIDE.md**: Detailed usage instructions
+> - **WORKFLOW.md**: Common user workflows
+> - **MIGRATION.md**: Upgrading from previous versions
+> - **ARCHITECTURE.md**: Technical design (for developers)
+> - **BUILD.md**: Build instructions (for developers)
+> - **MAINTENANCE.md**: Development guidelines (for developers)
 
-This project transforms the original EmuLibrary from a ROM management tool into a comprehensive PC game installer management solution. The core concept remains the same: store your game installers on a network share (NAS, SMB, etc.) and only install them locally when you want to play them, saving local disk space.
+## Key Features
 
-### Key Features
-
-- **PC Game Installer Support**: Detect and manage various PC game installers (.exe, .msi)
-- **GOG Installer Integration**: Specialized support for GOG game installers with silent installation
-- **Advanced Archive Handling**:
-  - ISO file extraction and installer detection
-  - Multi-part RAR archive support (e.g., game.part1.rar, game.part2.rar)
-  - Nested archives (RAR archives containing ISO files with installers)
-- **Automatic Executable Detection**: Intelligently finds the correct game executable after installation
-- **Network Storage Integration**: Works with SMB shares and other network storage solutions
-- **Playnite Integration**: Adds games to your Playnite library with proper metadata
-- **UI Enhancements**: Improved contrast and readability in both light and dark themes
+- **PC Game Installer Management**: Detect and manage various game installers (.exe, .msi)
+- **GOG Integration**: Special handling for GOG installers with silent parameters
+- **Advanced Archive Support**: Handle ISO files, RAR archives (including multi-part), and nested archives
+- **Smart Executable Detection**: Automatically find the game executable after installation
+- **Network Storage Integration**: Works with SMB shares and other network storage
+- **UI Enhancements**: Improved contrast for better readability in all themes
 
 ## How It Works
 
 1. **Store your installers** on a network share or local folder
-2. **Configure the plugin** to scan that location for PC game installers
-3. **Browse games in Playnite** that appear as "not installed"
-4. **Install on demand** by clicking "Play" on a game you want to play
-5. The plugin will:
-   - Copy or extract the installer from your network share
-   - Handle archives (RAR, ISO) automatically if needed
-   - Run the installer silently with the appropriate parameters
-   - Detect the installed game executable using intelligent pattern matching
-   - Allow manual selection of the correct executable when needed
-   - Update Playnite with the installation information
-6. **Launch the game** directly from Playnite
-7. **Error handling** ensures graceful recovery if problems occur
+2. **Configure the plugin** to scan your installer location
+3. **Browse games** in Playnite (they appear as "not installed")
+4. **Click "Play"** on a game to install it on demand
+5. The plugin:
+   - Copies/extracts the installer
+   - Runs it silently with appropriate parameters
+   - Finds the game executable
+   - Updates Playnite with installation info
+6. **Launch and play** directly from Playnite
 
-## Setup Guide
-
-### Quick Start (5-Minute Setup)
+## Quick Start (5-Minute Setup)
 
 1. **Install the plugin** in Playnite:
-   - Go to Extensions → Browse → EmuLibrary PC Game Manager
-   - Click Install and restart Playnite when prompted
+   - Extensions → Browse → EmuLibrary PC Game Manager
+   - Click Install and restart Playnite
 
-2. **Open the settings**:
-   - Go to Settings → EmuLibrary PC Game Manager
-   - You'll see a helpful guide panel with setup instructions
+2. **Add your first mapping**:
+   - Settings → EmuLibrary PC Manager
+   - **Emulator**: Select any (e.g., "Windows")
+   - **Profile**: Select any (e.g., "Default")
+   - **Platform**: Select "PC"
+   - **ROM Type**: "PcInstaller" (handles all installers including GOG)
+   - **Source Path**: Your network/local folder with game installers
+   - **Destination Path**: Where you want games installed
+   - **Enabled**: Check this box
+   - Click Save and restart Playnite
 
-3. **Add a new mapping**:
-   - **Emulator**: Select any emulator from the dropdown (it doesn't matter which one)
-   - **Profile**: Select any profile from the dropdown
-   - **Platform**: Select "PC" (or create it if it doesn't exist)
-   - **Rom Type**: Choose "PcInstaller" for all installers (handles both generic and GOG installers)
-   - **Source Path**: Browse to your network share or folder containing game installers
-   - **Destination Path**: Choose where you want games to be installed locally
-   - **Enabled**: Make sure this is checked
+3. **Your games will appear** in your library ready to install!
 
-4. **Configure additional settings** (optional):
-   - Set your preferred installation behavior
-   - Configure archive handling options
-   - Adjust UI preferences for better visibility
+> 💡 See **USER_GUIDE.md** for detailed instructions and **WORKFLOW.md** for common tasks.
 
-5. **Click "Save" and restart Playnite**
+## Folder Organization
 
-6. **Your games will appear** in your library as uninstalled games
-   - Games will be detected based on file patterns
-   - You can start installing and playing right away!
-
-7. **Installing your first game**:
-   - Find a game in your library
-   - Click "Play" to begin installation
-   - The plugin will handle everything and notify you when complete
-
-### Folder Structure Tips
-
-For best results, organize your game installers in folders like this:
+For best results, use this structure:
 
 ```
 /Games/
   ├── PC/
   │   ├── The Witcher 3/
   │   │   └── setup_the_witcher_3_goty_2.0.0.47.exe
-  │   ├── Cyberpunk 2077/
-  │   │   └── setup_cyberpunk_2077_1.63.exe
-  │   └── Baldur's Gate 3/
-  │       └── setup_baldurs_gate_3_patch_6.exe
   ├── GOG/
   │   ├── Disco Elysium/
   │   │   └── setup_disco_elysium_the_final_cut_2.0.0.13.exe
-  │   └── Pathfinder Wrath of the Righteous/
-  │       └── setup_pathfinder_wrath_of_the_righteous_2.1.5.exe
 ```
 
-The plugin will use folder names for better game identification!
-
-### Advanced Features
-
-#### Archive Support
-
-For ISO and RAR archive support:
-
-1. Download 7z.exe and UnRAR.exe from their official sources
-2. Place them in one of these locations (checked in this order):
-   - The Tools directory inside the plugin folder (recommended)
-   - The plugin's root directory
-   - The parent directory's Tools folder
-   - Your system PATH
-3. The plugin will automatically detect and use these tools for archive handling
-4. Enhanced error handling ensures graceful fallbacks if extraction encounters problems
-
-#### Installation Options
-
-Configure default installation behavior in Settings:
-
-- **Auto-detect installers**: Automatically detect installer types based on file properties
-- **Default installation location**: Where games will be installed by default
-- **Create game-specific directories**: Create a folder for each game during installation
+The plugin uses folder names for better game identification!
 
 ## Supported Formats
 
-### Installer Types
+- **Installer Types**: .exe, .msi, GOG installers
+- **Archives**: ISO, RAR (single/multi-part), nested archives
+- **Installation Methods**:
+  - Silent installation with appropriate parameters
+  - Archive extraction with installer detection
+  - Timeout protection for installations
+  - Proper cancellation handling
 
-- **Executable Installers** (.exe, .msi)
-- **GOG Installers** (with special detection for GOG Galaxy games)
-- **ISO Files** containing game installers
-- **RAR Archives** (single and multi-part)
-- **Nested Archive Combinations** (e.g., RAR containing ISO containing installer)
+## Development Status
 
-### Installation Methods
+| Version | Status | Features |
+|---------|--------|----------|
+| **0.8.3** | ✅ Current | GOG/PC installer consolidation, UI contrast improvements |
+| **0.9.0** | 🔄 In Progress | Progress reporting, metadata integration |
+| **1.0.0** | 📅 Planned | Multi-language support, additional archive formats |
 
-The plugin supports various installation methods:
+See the roadmap in **MAINTENANCE.md** for detailed development plans.
 
-- **Silent Installation** with appropriate parameters for each installer type:
-  - InnoSetup installers: `/VERYSILENT /SP- /SUPPRESSMSGBOXES /DIR="destination" /NOICONS /NORESTART`
-  - NSIS installers: `/S /D=destination`
-  - InstallShield installers: `/s /v"/qn INSTALLDIR=\"destination\""`
-  - MSI installers: `/quiet /qn TARGETDIR="destination"`
-- **Archive Extraction** and installer detection:
-  - Automatic detection of installation executables within extracted content
-  - Advanced filtering to ignore updaters, uninstallers, and utility programs
-  - Multiple fallback methods if primary detection fails
-- **Process Management**:
-  - Timeout protection (10-minute limit) for hung installations
-  - Proper cancellation handling when user aborts installation
+## Archive Support Setup
 
-## Development Progress
+For ISO and RAR archives:
 
-The project has successfully implemented:
+1. Download 7z.exe and UnRAR.exe from their official websites
+2. Place them in the Tools directory inside the plugin folder
+3. Restart Playnite
 
-- ✅ Generic PC installer support and detection
-- ✅ GOG installer specialized support (now integrated into PC installer)
-- ✅ Network share integration
-- ✅ Silent installation parameter detection
-- ✅ Post-installation executable detection
-- ✅ Multi-RAR archive handling
-- ✅ ISO file support
+## Common Issues
 
-Current enhancements include:
+| Issue | Solution |
+|-------|----------|
+| **No games appear** | • Verify Source Path<br>• Check mapping is enabled<br>• Restart Playnite |
+| **Installation fails** | • Check disk space<br>• Verify network access<br>• See detailed log |
+| **Archive errors** | • Add 7z.exe/UnRAR.exe to Tools folder |
+| **Wrong executable** | • Right-click → EmuLibrary → Select Custom Executable |
+| **Text readability** | • Updated in v0.8.3 with contrast improvements |
+| **"Unknown profile type"** | • Fixed in v0.8.3<br>• See MIGRATION.md for details |
 
-- ✅ Improved user interface with helpful guides
-- ✅ Enhanced error handling and user notifications
-- ✅ Performance optimizations with caching
-- ✅ Better folder-based game naming
-- ✅ UI text contrast improvements for better readability
-- ✅ Consolidated installer types for easier maintenance
-- ✅ Comprehensive documentation for users and developers
+For more troubleshooting help, see the complete list in **USER_GUIDE.md**.
 
-Future plans include:
+## Finding Logs
 
-- Interactive installation progress reporting with percentage completed
-- Better error recovery options with retry mechanisms
-- Support for more archive formats (7z, ZIP, ACE)
-- Additional metadata integration improvements with IGDB/Steam databases
-- Custom plugin themes and UI enhancements
-- Improved network performance with download resume capabilities
-- Installation size estimation before starting process
-- Multi-language support for installer handling
+1. Open Playnite and press F12
+2. Click "Open application directory"
+3. Check logs in Extensions/EmuLibrary folder
 
-## Development Roadmap (Updated April 2025)
+## What's New in v0.8.3
 
-| Milestone | Status | Target Date | Features |
-|-----------|--------|-------------|----------|
-| **0.8.0** | ✅ Complete | April 2025 | Build fixes, compatibility patches, threading improvements |
-| **0.8.3** | ✅ Complete | April 2025 | GOG/PC installer consolidation, UI contrast improvements |
-| **0.9.0** | 🔄 In Progress | June 2025 | Progress reporting, advanced metadata integration |
-| **1.0.0** | 📅 Planned | August 2025 | Multi-language support, UI enhancements, additional archive formats |
-| **1.1.0** | 📅 Planned | October 2025 | Cloud storage integration, download resume capabilities |
-
-### Next Development Steps
-
-1. **For Milestone 0.9.0**:
-   - Add real-time installation progress reporting
-   - Implement installation size estimation
-   - Enhance metadata matching with improved game name extraction
-   - Add IGDB/MobyGames integration for better metadata
-   - Improve installer detection heuristics
-
-2. **Technical Improvements**:
-   - Create comprehensive unit test suite
-   - Implement CI/CD pipeline for automated builds
-   - Add installer type detection using file signatures
-   - Improve performance with parallel scanning
-
-## Testing Status
-
-| Feature | Tested | Notes |
-|---------|--------|-------|
-| Basic PC installer detection | ✅ | Tested with various setup.exe files |
-| GOG installer detection | ✅ | Works with standard GOG offline installers |
-| Silent installation parameters | ✅ | Confirmed working with InnoSetup, NSIS, MSI |
-| Network share access | ✅ | Tested with SMB shares |
-| Post-installation executable detection | ✅ | Successfully finds main game EXEs |
-| Custom executable selection | ✅ | Right-click → EmuLibrary → Select Custom Executable |
-| Multi-part RAR extraction | ⚠️ | Requires external UnRAR.exe in Tools directory or PATH |
-| ISO file handling | ⚠️ | Requires external 7z.exe in Tools directory or PATH |
-| Nested archives (RAR → ISO → installer) | ⚠️ | Basic support implemented, needs more testing |
-| Installation cancellation | ✅ | Process termination now properly handled |
-| Error recovery | ✅ | Improved with graceful fallbacks and logging |
-| Large installer support (>4GB) | ⚠️ | Should work but needs more testing |
-| Installation to different drives | ✅ | Works with various destination paths |
-| .NET Framework 4.6.2 compatibility | ✅ | Fixed compatibility issues |
-| Timeout protection | ✅ | Added 10-minute timeout for hung installers |
-| External tool detection | ✅ | Multiple fallback paths for finding required tools |
+• Consolidated GOG and PC installer functionality
+• Fixed UI text contrast issues
+• Improved error handling for nested archives
+• Added migration for existing GOG game entries
+• See CHANGELOG.md for details
 
 ## Credits
 
 - Original EmuLibrary by [psychonic](https://github.com/psychonic)
-- This fork includes contributions from [Claude AI](https://claude.ai/code)
-
-## Troubleshooting
-
-### Common Issues and Solutions
-
-| Issue | Solution |
-|-------|----------|
-| **No games appear in library** | - Verify your Source Path is correct<br>- Check that the mapping is enabled<br>- Restart Playnite<br>- Make sure you have suitable installer files (.exe, .msi, etc.) |
-| **Installation fails silently** | - Check if you have enough disk space<br>- Ensure the network share is accessible<br>- Try running the installer manually to see if it has specific requirements |
-| **"Archive tools not found" error** | - Download 7z.exe and UnRAR.exe<br>- Place them in the Tools folder of the plugin<br>- Restart Playnite |
-| **Cannot detect game executable** | - The plugin will still install the game but may not find the launcher<br>- Right-click the game in Playnite → EmuLibrary → Select Custom Executable<br>- Browse to the correct executable (often in a subfolder of the installation) |
-| **Game requires a specific launcher** | - After installation, right-click the game → EmuLibrary → Select Custom Executable<br>- Browse to the launcher executable instead of the main game executable<br>- The selected executable will be remembered even after reinstallation |
-| **Slow scanning of network shares** | - Organize games in folders for faster scanning<br>- Use a wired network connection for better performance<br>- Consider setting up a local cache on a faster drive |
-| **UI text difficult to read** | - Updated in v0.8.3 with improved contrast<br>- If still having issues, ensure you're using the latest version<br>- Report specific text contrast issues on GitHub |
-| **"Unknown emulator profile type" error** | - Fixed in v0.8.3<br>- If still encountering, please check Playnite logs for details<br>- May require full reinstallation of the plugin |
-
-### Log Files
-
-If you're experiencing issues, check the Playnite log files:
-1. Open Playnite
-2. Press F12 to open the diagnostic tools
-3. Click "Open application directory"
-4. Open the "Extensions" folder and then the EmuLibrary folder
-5. Check playnite.log for error messages
+- Enhanced by [Claude AI](https://claude.ai/code)
 
 ## Support
 
-To get help, check out the #extension-support channel on the [Playnite Discord](https://playnite.link/), or open an issue on GitHub.
+Get help in the #extension-support channel on [Playnite Discord](https://playnite.link/) or open an issue on GitHub.

@@ -1,140 +1,159 @@
-# User Workflows for EmuLibrary PC Manager
+# Common Workflows for EmuLibrary PC Manager
 
-This guide outlines common workflows for using the EmuLibrary PC Manager extension for Playnite.
+Quick reference guide for common tasks when using EmuLibrary PC Manager.
 
-## First-Time Setup
+## Initial Setup
 
-1. **Install the Extension**
-   - Open Playnite
-   - Go to Extensions → Browse
-   - Search for "EmuLibrary PC Manager"
-   - Click Install
-   - Restart Playnite when prompted
+### Adding a New Source Library
 
-2. **Configure Your First Source**
-   - Go to Settings → EmuLibrary PC Manager
-   - You'll see a helpful guide panel on the left
-   - Click "Add New Mapping" on the right
-   - Complete the following fields:
-     - Emulator: Select any (e.g., "Windows")
-     - Profile: Select any (e.g., "Default")
-     - Platform: Select "PC" (or create it)
-     - ROM Type: Select "PcInstaller" (handles both regular and GOG installers)
-     - Source Path: Your network or local folder with game installers
-     - Destination Path: Where you want games installed
-     - Enabled: Check this box
-   - Click Save and restart Playnite
+```
+Settings → EmuLibrary PC Manager → Add New Mapping
+↓
+Configure mapping (Source/Destination paths)
+↓
+Save and restart Playnite
+↓
+Games appear in library
+```
 
-3. **Install External Tools** (for archive support)
-   - If you need ISO or RAR support:
-     - Download 7z.exe and UnRAR.exe from their official websites
-     - Create a folder called "Tools" in the EmuLibrary extension directory
-     - Copy the executables into this folder
-     - Restart Playnite
+### Setting Up Archive Support
 
-## Day-to-Day Usage
+```
+Download 7z.exe and UnRAR.exe
+↓
+Place in EmuLibrary/Tools folder
+(F12 → Open application directory → Extensions → EmuLibrary → Tools)
+↓
+Restart Playnite
+```
 
-### Finding and Installing Games
+## Day-to-Day Operations
 
-1. **Browse Your Library**
-   - Open Playnite
-   - Games from your configured sources will appear in your library
-   - Uninstalled games will show a grayed-out "Install" status
+### Installing a Game
 
-2. **Install a Game**
-   - Click on a game in your library
-   - Click the "Play" button
-   - Playnite will ask if you want to install the game
-   - Click "Yes" to begin installation
-   - The plugin will:
-     - Copy the installer from your network share
-     - Extract archives if needed (RAR, ISO)
-     - Run the installer with the appropriate silent parameters
-     - Detect the main game executable
-     - Update Playnite with the installation information
+```
+Select uninstalled game in library
+↓
+Click "Play"
+↓
+Confirm installation
+↓
+Wait for automatic installation
+↓
+Game is ready to play
+```
 
-3. **Play the Game**
-   - Once installation is complete, click "Play" again
-   - The game will launch directly
+### Setting Custom Executable
 
-### Managing Your Games
+```
+Right-click game → EmuLibrary → Select Custom Executable
+↓
+Browse to correct .exe file
+↓
+Selection is remembered for future launches
+```
 
-1. **Select a Custom Executable**
-   - If the plugin doesn't find the correct executable:
-     - Right-click the game in your library
-     - Select EmuLibrary → Select Custom Executable
-     - Browse to the correct .exe file
-     - Click Open
-     - This selection will be remembered for future launches
+### Uninstalling a Game
 
-2. **Uninstall a Game**
-   - Right-click a game in your library
-   - Select Uninstall
-   - The plugin will properly uninstall the game
-   - The game will remain in your library for future installation
-
-3. **View Game Details**
-   - Click a game in your library
-   - The Details panel will show information about the game
-   - For installed games, you can see the installation path
-   - For uninstalled games, you can see the source location
+```
+Right-click game → Uninstall
+↓
+Confirm uninstallation
+↓
+Game remains in library for future reinstallation
+```
 
 ## Managing Multiple Sources
 
-1. **Add Additional Sources**
-   - Go to Settings → EmuLibrary PC Manager
-   - Add new mappings for each source folder
-   - You can configure different destination paths for each
-   - Use different platforms to organize games (e.g., "PC", "GOG Games")
+### Creating Platform-Specific Libraries
 
-2. **Disable a Source Temporarily**
-   - Go to Settings → EmuLibrary PC Manager
-   - Uncheck the "Enabled" box for any mapping
-   - Click Save and restart Playnite
-   - Games from this source will no longer appear in your library
+```
+Add separate mappings for each game collection:
+- PC Games: Source=/Games/PC, Platform=PC
+- GOG Games: Source=/Games/GOG, Platform=GOG
+- Indie Games: Source=/Games/Indie, Platform=Indie
+```
 
-3. **Update Source Paths**
-   - If your network share location changes:
-     - Go to Settings → EmuLibrary PC Manager
-     - Update the Source Path for the affected mapping
-     - Click Save and restart Playnite
-     - The plugin will use the new location
+### Disabling a Source Temporarily
+
+```
+Settings → EmuLibrary PC Manager
+↓
+Uncheck "Enabled" for specific mapping
+↓
+Save and restart Playnite
+```
+
+### Updating a Source Path
+
+```
+Settings → EmuLibrary PC Manager
+↓
+Edit Source Path for specific mapping
+↓
+Save and restart Playnite
+```
+
+## Organization Tips
+
+### Folder Structure for Best Results
+
+```
+/GameCollection/
+  ├── Game1/
+  │   └── setup_game1.exe
+  ├── Game2/
+  │   ├── game2.part1.rar
+  │   ├── game2.part2.rar
+  │   └── game2.part3.rar
+  └── Game3/
+      └── game3.iso
+```
+
+### Fixing Wrong Game Names
+
+```
+Right-click game → Edit
+↓
+Update game title and metadata
+↓
+Save changes
+```
 
 ## Troubleshooting
 
-1. **Check the Logs**
-   - If you encounter issues:
-     - Press F12 in Playnite
-     - Click "Open application directory"
-     - Check the log files in the "Extensions" subfolder
+### When Games Don't Appear
 
-2. **Common Fixes**
-   - For installation issues:
-     - Ensure your network share is accessible
-     - Check if you have enough disk space
-     - Make sure external tools (7z.exe, UnRAR.exe) are available
-   - For game detection issues:
-     - Organize games in properly named folders
-     - Ensure your game files match supported formats
+```
+Verify Source Path is accessible
+↓
+Check mapping is enabled
+↓
+Restart Playnite
+↓
+Check log files (F12 → Open application directory → Extensions → EmuLibrary)
+```
 
-## Tips and Tricks
+### When Installation Fails
 
-1. **Organize Your Installers**
-   - Create a folder for each game
-   - Use descriptive folder names (the plugin uses these for metadata)
-   - Keep related files together (installers, patches, DLCs)
+```
+Check source files accessibility
+↓
+Verify disk space at destination
+↓
+Ensure 7z.exe/UnRAR.exe available (for archives)
+↓
+Check logs for specific errors
+```
 
-2. **Optimize Network Performance**
-   - Use wired connections when possible
-   - Consider a local cache for frequently accessed games
-   - Schedule scanning during low-network-usage periods
+### For v0.8.3 Migration Issues
 
-3. **Customize the Experience**
-   - Use Playnite's filtering to organize your game collection
-   - Create custom filters for installed vs. uninstalled games
-   - Use the Details panel to see specific installation information
-
-4. **Keep Your Extension Updated**
-   - Check for updates regularly in Playnite's Extensions menu
-   - Read the CHANGELOG.md file for new features and improvements
-   - Report any issues on GitHub to help improve the extension
+```
+Update to v0.8.3+
+↓
+Restart Playnite (automatic migration occurs)
+↓
+Update ROM Type in mappings from "GogInstaller" to "PcInstaller"
+↓
+Save and restart Playnite
+```

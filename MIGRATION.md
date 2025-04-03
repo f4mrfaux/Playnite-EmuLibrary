@@ -1,104 +1,73 @@
-# Migration Guide - EmuLibrary PC Manager
+# Migration Guide - v0.8.3 Update
 
-This document explains how to migrate from previous versions of EmuLibrary PC Manager to version 0.8.3 and newer.
+## Key Changes in v0.8.3
 
-## Migrating from v0.8.2 to v0.8.3
+1. **Unified Installer System**
+   - GOG and PC installers now use the same backend
+   - All installer types handled by "PcInstaller" ROM type
+   - GOG installers automatically detected by filename patterns
 
-### Changes in v0.8.3
-
-Version 0.8.3 includes the following key changes:
-
-1. **Consolidated Installer Types**: 
-   - GOG installer functionality is now integrated into PC installer
-   - Use "PcInstaller" ROM type for all installers, including GOG games
-
-2. **UI Improvements**:
-   - Better text contrast in settings panels
+2. **UI Improvements**
+   - Better text contrast for all UI elements
    - Improved readability in both light and dark themes
-   - Consistent styling across all components
+   - Consistent styling throughout settings panels
 
-3. **Bug Fixes**:
+3. **Bug Fixes**
    - Fixed "Unknown emulator profile type" error
-   - Improved GOG installer detection
    - Better handling of nested archives
+   - Improved installation parameter detection
 
-### Automatic Migration
+## Automatic Migration Process
 
-The extension will **automatically migrate** your existing games when you update:
+Your games will migrate automatically with no data loss:
 
-1. Install version 0.8.3 or newer
-2. Restart Playnite
-3. The extension will:
-   - Detect any existing GOG installer games
-   - Convert them to use the new unified PC installer system
-   - Preserve all game data and custom settings
-   - Update your library accordingly
+1. Install v0.8.3 and restart Playnite
+2. The extension will:
+   - Find existing GOG installer games
+   - Convert them to use the unified system
+   - Preserve all game data and settings
+   - Update your library seamlessly
 
-**No manual action is required** for this migration.
+**No manual action is required** - but we recommend updating your settings (see below).
 
-### Updating Your Mappings
+## Recommended Settings Update
 
-While your existing mappings will continue to work, we recommend updating them for clarity:
+For cleaner configuration:
 
-1. Go to Settings → EmuLibrary PC Manager
-2. For any mapping using "GogInstaller" ROM type:
-   - Change the ROM Type to "PcInstaller"
-   - All other settings can remain the same
-3. Click Save and restart Playnite
+1. Open Settings → EmuLibrary PC Manager
+2. For mappings using "GogInstaller" ROM type:
+   - Change ROM Type to "PcInstaller"
+   - Leave all other settings unchanged
+3. Save and restart Playnite
 
-### Verifying Migration Success
+## Verification Checklist
 
-To verify that migration was successful:
+- [ ] All GOG games still appear in library
+- [ ] Installed GOG games launch correctly
+- [ ] New GOG games install properly
+- [ ] UI text is readable in all panels
 
-1. Check that all your GOG games still appear in your library
-2. Confirm that installed GOG games still launch correctly
-3. Try installing a previously uninstalled GOG game to ensure it works
+## Troubleshooting Common Issues
 
-## Migrating from Earlier Versions
+| Problem | Solution |
+|---------|----------|
+| **Missing games** | • Restart Playnite<br>• Library → Scan all library data |
+| **Profile type error** | • Fixed in v0.8.3<br>• If persists, recreate the mapping |
+| **Launch issues** | • Right-click → EmuLibrary → Select Custom Executable |
+| **UI problems** | • Close/reopen settings<br>• Try resetting UI cache (F12 → Debugging options) |
 
-### From v0.7.x to v0.8.x
+## Earlier Version Migrations
 
-If you're migrating from a much earlier version (0.7.x or earlier):
+Coming from v0.7.x or earlier?
 
-1. **Backup your settings first**:
-   - Go to Settings → EmuLibrary PC Manager
-   - Take screenshots or notes of your current configuration
-   
-2. **Clean installation recommended**:
-   - Uninstall the old version completely
-   - Restart Playnite
-   - Install the latest version
-   - Reconfigure your mappings based on your backup
-   
-3. **Additional steps**:
-   - You may need to re-scan your sources
-   - Custom executable selections might need to be redefined
-   - Check if external tools (7z.exe, UnRAR.exe) need updating
+1. **Backup your settings** (screenshot/notes)
+2. **Clean install recommended**
+3. **Reconfigure** mappings from backup
 
-## Known Migration Issues
+## Getting Help
 
-### Common Issues and Solutions
+Having migration issues?
 
-| Issue | Solution |
-|-------|----------|
-| **Games missing after migration** | - Restart Playnite<br>- Go to Library → Scan all library data<br>- Check if the source path is still accessible |
-| **"Unknown emulator profile type" error** | - This should be fixed by v0.8.3<br>- If it persists, try removing and recreating the mapping |
-| **Games show as installed but won't launch** | - Right-click → EmuLibrary → Select Custom Executable<br>- Browse to the correct executable |
-| **Settings UI appears empty or corrupted** | - Close and reopen the settings panel<br>- If issues persist, try resetting Playnite UI cache |
-
-## Get Help with Migration
-
-If you encounter any issues during migration:
-
-1. Check the Playnite logs for error messages:
-   - Press F12
-   - Click "Open application directory"
-   - Check the log files
-
-2. Report issues on GitHub with:
-   - Your previous version number
-   - Steps to reproduce the issue
-   - Relevant log entries
-   - Screenshots if applicable
-
-3. Join the Playnite Discord for real-time assistance in the #extension-support channel
+1. Check logs: F12 → Open application directory → Extensions → EmuLibrary
+2. Report on GitHub with version details and logs
+3. Join [Playnite Discord](https://playnite.link/) (#extension-support) for help
