@@ -120,8 +120,7 @@ namespace EmuLibrary
                 });
             });
             
-            // Migrate GOG installer games to use PC installer format
-            RomTypes.GogToPC_MigrationHelper.MigrateGogToPcInstaller(PlayniteApi, Logger);
+            // GOG installer games now use PC installer format by default (migration helper removed)
         }
 
         public override IEnumerable<GameMetadata> GetGames(LibraryGetGamesArgs args)

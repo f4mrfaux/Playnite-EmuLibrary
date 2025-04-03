@@ -32,6 +32,7 @@
       <ExcludeAssets>runtime</ExcludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
+    <!-- Note: Using version 10.0.3 to match Playnite's dependency, despite security advisory GHSA-5crp-9r3c-p9vr -->
     <PackageReference Include="Newtonsoft.Json" Version="10.0.3">
       <ExcludeAssets>runtime</ExcludeAssets>
       <PrivateAssets>all</PrivateAssets>

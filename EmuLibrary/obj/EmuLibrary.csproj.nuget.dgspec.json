@@ -44,10 +44,13 @@
           "targetAlias": "net462",
           "dependencies": {
             "LibHac": {
+              "suppressParent": "Analyzers",
               "target": "Package",
               "version": "[0.7.0, )"
             },
             "NETStandard.Library": {
+              "include": "Compile, Build, Native, ContentFiles, Analyzers, BuildTransitive",
+              "suppressParent": "All",
               "target": "Package",
               "version": "[2.0.3, )"
             },
@@ -64,6 +67,8 @@
               "version": "[6.4.0, )"
             },
             "System.IO.Abstractions": {
+              "include": "Compile, Build, Native, ContentFiles, Analyzers, BuildTransitive",
+              "suppressParent": "All",
               "target": "Package",
               "version": "[2.1.0.227, )"
             },
@@ -76,6 +81,7 @@
               "version": "[2.5.2, )"
             },
             "protobuf-net": {
+              "suppressParent": "Analyzers",
               "target": "Package",
               "version": "[2.4.6, )"
             }

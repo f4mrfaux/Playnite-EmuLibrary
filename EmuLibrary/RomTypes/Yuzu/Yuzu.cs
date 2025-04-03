@@ -450,7 +450,7 @@ namespace EmuLibrary.RomTypes.Yuzu
                                         while (i < end)
                                         {
                                             var chunkSz = (int)Math.Min(end - i, 0x100000);
-                                            var readCnt = decompressionStream.Read(inputChunk.AsSpan(0, chunkSz));
+                                            var readCnt = decompressionStream.Read(inputChunk.AsSpan(0, chunkSz)).Length;
 
                                             Debug.Assert(readCnt == chunkSz);
 
