@@ -23,6 +23,7 @@ cp "$OUTPUT_DIR/icon.png" "$EXT_DIR/"
 cp "$OUTPUT_DIR/ZstdSharp.dll" "$EXT_DIR/" 2>/dev/null || true
 cp "$OUTPUT_DIR/INIFileParser.dll" "$EXT_DIR/" 2>/dev/null || true
 cp "$OUTPUT_DIR/LibHac.dll" "$EXT_DIR/" 2>/dev/null || true
+cp "$OUTPUT_DIR/protobuf-net.dll" "$EXT_DIR/" 2>/dev/null || true
 
 # If LibHac.dll is not in the output directory, try to find it in the NuGet packages
 if [ ! -f "$EXT_DIR/LibHac.dll" ]; then

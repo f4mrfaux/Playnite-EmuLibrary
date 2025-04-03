@@ -10,14 +10,15 @@
 
 - **Dependency reference issues**
   - Fixed Newtonsoft.Json version conflicts (downgraded from 13.0.3 to 10.0.3)
-  - Added assembly binding redirects for Newtonsoft.Json in app.config
-  - Modified EmuLibrary.csproj to ensure LibHac.dll is automatically included
+  - Fixed protobuf-net version conflicts by adding binding redirects in app.config
+  - Modified EmuLibrary.csproj to ensure LibHac.dll and protobuf-net.dll are automatically included
   - Set CopyLocalLockFileAssemblies to true for proper dependency handling
   
 - **Build process improvements**
   - Created improved build scripts that check for and include all dependencies
-  - Added automatic LibHac.dll download capability for missing dependencies
+  - Added automatic dependency download capability with download-dependencies.ps1
   - Simplified packaging process to ensure consistent results
+  - Added binding redirects for all required dependencies
 
 ### Improved
 - **Build and packaging**

@@ -81,16 +81,18 @@ The build-clean.ps1 script includes logic to:
 
 ## Known Issues and Solutions
 
-### LibHac.dll Missing
+### Missing Dependencies
 
-**Issue:** Playnite cannot load the LibHac.dll dependency.
+**Issue:** Playnite cannot load required dependencies like LibHac.dll or protobuf-net.dll.
 
 **Solution:**
-1. Run the included script to automatically download and install LibHac:
+1. Run the included script to automatically download and install all dependencies:
    ```powershell
-   .\download-libhac.ps1
+   .\download-dependencies.ps1
    ```
-2. Alternatively, manually download LibHac.dll version 0.7.0 from NuGet and place it in the extension directory
+2. Alternatively, manually download these DLLs from NuGet and place them in the extension directory:
+   - LibHac.dll (version 0.7.0)
+   - protobuf-net.dll (version 2.4.6)
 3. Restart Playnite
 
 ### Newtonsoft.Json Version Conflicts

@@ -22,6 +22,7 @@ Copy-Item "$outputDir/icon.png" "$extDir/"
 Copy-Item "$outputDir/ZstdSharp.dll" "$extDir/" -ErrorAction SilentlyContinue
 Copy-Item "$outputDir/INIFileParser.dll" "$extDir/" -ErrorAction SilentlyContinue
 Copy-Item "$outputDir/LibHac.dll" "$extDir/" -ErrorAction SilentlyContinue
+Copy-Item "$outputDir/protobuf-net.dll" "$extDir/" -ErrorAction SilentlyContinue
 
 # Ensure LibHac.dll is included - it should now be copied by default due to 
 # CopyLocalLockFileAssemblies=true in the csproj file
@@ -36,7 +37,7 @@ if (-not (Test-Path "$extDir/LibHac.dll")) {
     } else {
         Write-Host "LibHac.dll not found. Running automatic download script..." -ForegroundColor Yellow
         # Run the download script
-        & "$PSScriptRoot/download-libhac.ps1"
+        & "$PSScriptRoot/download-dependencies.ps1"
         # Copy from wherever download-libhac.ps1 placed it
         if (Test-Path "./LibHac.dll") {
             Copy-Item "./LibHac.dll" "$extDir/"

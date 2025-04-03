@@ -40,8 +40,8 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="protobuf-net" Version="2.4.6">
-      <ExcludeAssets>runtime</ExcludeAssets>
-      <PrivateAssets>all</PrivateAssets>
+      <!-- Allow protobuf-net.dll to be copied to output directory -->
+      <PrivateAssets>analyzers</PrivateAssets>
     </PackageReference>
     <PackageReference Include="System.IO.Abstractions" Version="2.1.0.227">
       <ExcludeAssets>runtime</ExcludeAssets>
