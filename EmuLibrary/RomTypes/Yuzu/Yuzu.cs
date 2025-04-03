@@ -20,6 +20,22 @@ using ZstdSharp;
 
 namespace EmuLibrary.RomTypes.Yuzu
 {
+    // Removed the duplicate method definition
+    public static class StreamExtensions
+    {
+        public static void ReadExactly(this Stream stream, byte[] buffer, int offset, int count)
+        {
+            int bytesRead = 0;
+            while (bytesRead < count)
+            {
+                int read = stream.Read(buffer, offset + bytesRead, count - bytesRead);
+                if (read == 0)
+                    throw new EndOfStreamException($"End of stream reached with {count - bytesRead} bytes left to read");
+                bytesRead += read;
+            }
+        }
+    }
+
     class Yuzu
     {
         public enum ExternalGameFileType
@@ -203,7 +219,7 @@ namespace EmuLibrary.RomTypes.Yuzu
                         ExternalKeyReader.ReadKeyFile(KeySet, null, null, keyPath);
                         break;
                 }
-            }            
+            }
         }
 
         private void InitKeySet()
@@ -364,7 +380,15 @@ namespace EmuLibrary.RomTypes.Yuzu
                                 br.BaseStream.Seek(0, SeekOrigin.Begin);
 
                                 var ncaHeader = new byte[0x4000];
-                                br.BaseStream.Read(ncaHeader, 0, ncaHeader.Length);
+                                // Replace the problematic ReadExactly with our implementation
+                                int bytesRead = 0;
+                                while (bytesRead < ncaHeader.Length)
+                                {
+                                    int read = br.BaseStream.Read(ncaHeader, bytesRead, ncaHeader.Length - bytesRead);
+                                    if (read == 0)
+                                        throw new EndOfStreamException("End of stream reached unexpectedly");
+                                    bytesRead += read;
+                                }
 
                                 outStream.Write(ncaHeader, 0, ncaHeader.Length);
 
@@ -450,7 +474,7 @@ namespace EmuLibrary.RomTypes.Yuzu
                                         while (i < end)
                                         {
                                             var chunkSz = (int)Math.Min(end - i, 0x100000);
-                                            var readCnt = decompressionStream.Read(inputChunk.AsSpan(0, chunkSz)).Length;
+                                            var readCnt = decompressionStream.Read(inputChunk.AsSpan(0, chunkSz));
 
                                             Debug.Assert(readCnt == chunkSz);
 

@@ -56,7 +56,7 @@
   <!-- Add a build target to ensure dependencies are always copied -->
   <Target Name="EnsureDependenciesCopied" AfterTargets="Build">
     <Message Text="Ensuring dependencies are copied to output directory..." Importance="high" />
-    <Exec Command="PowerShell -File &quot;$(SolutionDir)download-dependencies.ps1&quot;" ContinueOnError="true" />
+    <Exec Command="PowerShell -ExecutionPolicy Bypass -File &quot;$(SolutionDir)download-dependencies.ps1&quot;" ContinueOnError="true" />
   </Target>
 	
   <ItemGroup>

@@ -103,7 +103,7 @@
           }
         }
       },
-      "protobuf-net/2.4.6": {
+      "protobuf-net/2.4.0": {
         "type": "package",
         "frameworkAssemblies": [
           "System.Configuration",
@@ -496,10 +496,10 @@
         "playnitesdk.nuspec"
       ]
     },
-    "protobuf-net/2.4.6": {
-      "sha512": "fDYwwGw9yCERTkIzxhmiGmD3i5nB5Pw4roZ9Pi+MPNbNiNbGAA9mVrSSbTjAMNQEBXtwK/HZ6btrO2YwYsVsMw==",
+    "protobuf-net/2.4.0": {
+      "sha512": "j37MD1p1s9NdX8P5+IaY2J9p2382xiL1VP3mxYu0g+G/kf2YM2grFa1jJPO+0WDJNl1XhNPO0Q5yBEcbX77hBQ==",
       "type": "package",
-      "path": "protobuf-net/2.4.6",
+      "path": "protobuf-net/2.4.0",
       "files": [
         ".nupkg.metadata",
         ".signature.p7s",
@@ -520,7 +520,7 @@
         "lib/uap10.0/protobuf-net.dll",
         "lib/uap10.0/protobuf-net.pri",
         "lib/uap10.0/protobuf-net.xml",
-        "protobuf-net.2.4.6.nupkg.sha512",
+        "protobuf-net.2.4.0.nupkg.sha512",
         "protobuf-net.nuspec"
       ]
     },
@@ -779,28 +779,36 @@
       "System.IO.Abstractions >= 2.1.0.227",
       "ZstdSharp.Port >= 0.6.5",
       "ini-parser >= 2.5.2",
-      "protobuf-net >= 2.4.6"
+      "protobuf-net >= 2.4.0"
     ]
   },
   "packageFolders": {
-    "/home/bob/.nuget/packages/": {}
+    "C:\\Users\\Bob\\.nuget\\packages\\": {},
+    "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "/home/bob/projects/Playnite-EmuLibrary/EmuLibrary/EmuLibrary.csproj",
+      "projectUniqueName": "C:\\Users\\Bob\\Source\\Repos\\Playnite-EmuLibrary\\EmuLibrary\\EmuLibrary.csproj",
       "projectName": "EmuLibrary",
-      "projectPath": "/home/bob/projects/Playnite-EmuLibrary/EmuLibrary/EmuLibrary.csproj",
-      "packagesPath": "/home/bob/.nuget/packages/",
-      "outputPath": "/home/bob/projects/Playnite-EmuLibrary/EmuLibrary/obj/",
+      "projectPath": "C:\\Users\\Bob\\Source\\Repos\\Playnite-EmuLibrary\\EmuLibrary\\EmuLibrary.csproj",
+      "packagesPath": "C:\\Users\\Bob\\.nuget\\packages\\",
+      "outputPath": "C:\\Users\\Bob\\Source\\Repos\\Playnite-EmuLibrary\\EmuLibrary\\obj\\",
       "projectStyle": "PackageReference",
+      "fallbackFolders": [
+        "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
+      ],
       "configFilePaths": [
-        "/home/bob/.config/NuGet/NuGet.Config"
+        "C:\\Users\\Bob\\AppData\\Roaming\\NuGet\\NuGet.Config",
+        "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+        "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
       ],
       "originalTargetFrameworks": [
         "net462"
       ],
       "sources": {
+        "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+        "C:\\Program Files\\dotnet\\library-packs": {},
         "https://api.nuget.org/v3/index.json": {}
       },
       "frameworks": {
@@ -818,14 +826,14 @@
         "enableAudit": "true",
         "auditLevel": "low",
         "auditMode": "direct"
-      }
+      },
+      "SdkAnalysisLevel": "9.0.200"
     },
     "frameworks": {
       "net462": {
         "targetAlias": "net462",
         "dependencies": {
           "LibHac": {
-            "suppressParent": "Analyzers",
             "target": "Package",
             "version": "[0.7.0, )"
           },
@@ -862,12 +870,11 @@
             "version": "[2.5.2, )"
           },
           "protobuf-net": {
-            "suppressParent": "Analyzers",
             "target": "Package",
-            "version": "[2.4.6, )"
+            "version": "[2.4.0, )"
           }
         },
-        "runtimeIdentifierGraphPath": "/usr/lib/mono/msbuild/Current/bin/RuntimeIdentifierGraph.json"
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.201\\RuntimeIdentifierGraph.json"
       }
     }
   },
