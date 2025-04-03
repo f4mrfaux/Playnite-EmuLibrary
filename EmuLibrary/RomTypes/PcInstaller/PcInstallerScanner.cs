@@ -35,13 +35,12 @@ namespace EmuLibrary.RomTypes.PcInstaller
             @".*[_\-\s]?installer\.exe"
         };
         
-        // GOG installer patterns
-        private readonly string[] _gogPatterns = new[]
+        // Common installer name patterns
+        private readonly string[] _commonInstallerPatterns = new[]
         {
-            @"setup_.*_gog",
-            @"gog.*setup",
-            @"setup_.*_(\d+\.\d+\.\d+)",
-            @"installer_.*"
+            @"setup_.*",
+            @"installer_.*",
+            @"setup_.*_(\d+\.\d+\.\d+)"
         };
         
         // Non-installer patterns to exclude
@@ -250,8 +249,8 @@ namespace EmuLibrary.RomTypes.PcInstaller
                     }
                 }
                 
-                // Check if filename matches GOG installer patterns
-                foreach (var pattern in _gogPatterns)
+                // Check if filename matches common installer patterns
+                foreach (var pattern in _commonInstallerPatterns)
                 {
                     if (Regex.IsMatch(filename, pattern, RegexOptions.IgnoreCase))
                     {
@@ -278,14 +277,6 @@ namespace EmuLibrary.RomTypes.PcInstaller
                             return true;
                         }
                         
-                        // Check for GOG specific properties
-                        if (versionInfo.CompanyName?.Contains("GOG") == true ||
-                            versionInfo.FileDescription?.Contains("GOG") == true ||
-                            versionInfo.ProductName?.Contains("GOG") == true)
-                        {
-                            _installerDetectionCache[path] = true;
-                            return true;
-                        }
                     }
                     catch
                     {

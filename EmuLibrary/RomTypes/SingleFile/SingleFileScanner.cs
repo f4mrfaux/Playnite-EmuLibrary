@@ -170,7 +170,7 @@ namespace EmuLibrary.RomTypes.SingleFile
 
             if (game.GameId.Contains("|"))
             {
-                // TODO: finish this up for non-PB cases, using existing ELPathInfo code as a base
+                // Parse legacy game ID format
                 var parts = game.GameId.Split('|');
 
                 Debug.Assert(parts.Length == 2, $"GameId is not in expected format (expected 2 parts, got {parts.Length})");

@@ -120,7 +120,6 @@ namespace EmuLibrary
                 });
             });
             
-            // GOG installer games now use PC installer format by default (migration helper removed)
         }
 
         public override IEnumerable<GameMetadata> GetGames(LibraryGetGamesArgs args)

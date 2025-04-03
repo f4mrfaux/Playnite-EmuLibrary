@@ -11,7 +11,6 @@
 
         [RomTypeInfo(typeof(Yuzu.YuzuGameInfo), typeof(Yuzu.YuzuScanner))]
         Yuzu = 4,
-        // GogInstaller enum value was removed (pre-release cleanup)
         [RomTypeInfo(typeof(PcInstaller.PcInstallerGameInfo), typeof(PcInstaller.PcInstallerScanner))]
         PcInstaller = 6,
     }

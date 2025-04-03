@@ -663,26 +663,18 @@ namespace EmuLibrary.RomTypes.PcInstaller
                 
                 if (extension == ".exe")
                 {
-                    // Check for GOG installers first
-                    if (Regex.IsMatch(filename, @"setup_.*_gog", RegexOptions.IgnoreCase) ||
-                        Regex.IsMatch(filename, @"gog.*setup", RegexOptions.IgnoreCase) ||
+                    // Check for InnoSetup-based installers (which includes many game installers)
+                    if (Regex.IsMatch(filename, @"setup_.*", RegexOptions.IgnoreCase) ||
+                        Regex.IsMatch(filename, @".*setup", RegexOptions.IgnoreCase) ||
                         Regex.IsMatch(filename, @"setup_.*_\d+\.\d+\.\d+", RegexOptions.IgnoreCase))
                     {
-                        // GOG-specific silent parameters
+                        // InnoSetup silent parameters
                         return $"/VERYSILENT /SP- /SUPPRESSMSGBOXES /DIR=\"{destDir}\" /NOICONS /NORESTART";
                     }
                     
                     try
                     {
                         var versionInfo = FileVersionInfo.GetVersionInfo(installerPath);
-                        
-                        // Check for GOG in file properties
-                        if (versionInfo.CompanyName?.Contains("GOG") == true ||
-                            versionInfo.FileDescription?.Contains("GOG") == true ||
-                            versionInfo.ProductName?.Contains("GOG") == true)
-                        {
-                            return $"/VERYSILENT /SP- /SUPPRESSMSGBOXES /DIR=\"{destDir}\" /NOICONS /NORESTART";
-                        }
                         
                         // InnoSetup installers
                         if (versionInfo.FileDescription?.Contains("Inno Setup") == true ||
