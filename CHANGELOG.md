@@ -1,5 +1,26 @@
 ## [Unreleased]
 
+## [0.8.3] - 2025-04-03
+### Changed
+- **Refactored GOG installer functionality into PC installer**
+  - Consolidated GOG installer and PC installer code to simplify maintenance
+  - Enhanced PC installer to detect and handle GOG installers with specialized parameters
+  - Added automatic migration for existing GOG games to use PC installer format
+  - Made GogInstaller type use PcInstaller implementation to maintain backward compatibility
+
+### Improved
+- **UI and Usability**
+  - Fixed text contrast issues in Settings panel for better readability
+  - Improved visibility of text in colored information panels
+  - Added consistent text styling for all UI components
+  - Enhanced checkbox label contrast with explicit foreground colors
+  - Ensured DataGrid text is visible regardless of theme
+
+### Fixed
+- Fixed "Unknown emulator profile type" error in Settings
+- Resolved GOG installer scanner initialization issues
+- Improved installer parameter detection for GOG games
+
 ## [0.8.2] - 2025-04-02
 ### Fixed
 - **GogInstallerScanner initialization errors**
