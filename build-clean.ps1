@@ -23,16 +23,31 @@ Copy-Item "$outputDir/ZstdSharp.dll" "$extDir/" -ErrorAction SilentlyContinue
 Copy-Item "$outputDir/INIFileParser.dll" "$extDir/" -ErrorAction SilentlyContinue
 Copy-Item "$outputDir/LibHac.dll" "$extDir/" -ErrorAction SilentlyContinue
 
-# If LibHac.dll is not in the output directory, try to find it in the NuGet packages
+# Ensure LibHac.dll is included - it should now be copied by default due to 
+# CopyLocalLockFileAssemblies=true in the csproj file
 if (-not (Test-Path "$extDir/LibHac.dll")) {
+    Write-Host "LibHac.dll was not found in the output directory. Trying to find it..." -ForegroundColor Yellow
+    
+    # Try to find it in the NuGet packages
     $nugetDir = "$env:USERPROFILE/.nuget/packages/libhac/0.7.0/lib/net46"
     if (Test-Path "$nugetDir/LibHac.dll") {
         Write-Host "Found LibHac.dll in NuGet cache, copying to extension directory..."
         Copy-Item "$nugetDir/LibHac.dll" "$extDir/"
     } else {
-        Write-Host "WARNING: LibHac.dll not found. The extension may not work properly without it." -ForegroundColor Yellow
-        Write-Host "Please manually download LibHac.dll version 0.7.0 and place it in the extension directory." -ForegroundColor Yellow
+        Write-Host "LibHac.dll not found. Running automatic download script..." -ForegroundColor Yellow
+        # Run the download script
+        & "$PSScriptRoot/download-libhac.ps1"
+        # Copy from wherever download-libhac.ps1 placed it
+        if (Test-Path "./LibHac.dll") {
+            Copy-Item "./LibHac.dll" "$extDir/"
+            Write-Host "LibHac.dll has been automatically downloaded and included in the package." -ForegroundColor Green
+        } else {
+            Write-Host "ERROR: Could not include LibHac.dll. The extension will not work properly." -ForegroundColor Red
+            Write-Host "Please run download-libhac.ps1 manually before packaging." -ForegroundColor Red
+        }
     }
+} else {
+    Write-Host "LibHac.dll found and included in the package." -ForegroundColor Green
 }
 
 # Create the extension package (.pext is just a .zip file)

@@ -12,7 +12,7 @@
 	<AutoGenerateBindingRedirects>True</AutoGenerateBindingRedirects>
 	<GenerateBindingRedirectsOutputType>true</GenerateBindingRedirectsOutputType>
 	<AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
-	<CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
+	<CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
   
   <ItemGroup>
@@ -24,8 +24,8 @@
   <ItemGroup>
     <PackageReference Include="ini-parser" Version="2.5.2" />
     <PackageReference Include="LibHac" Version="0.7.0">
-      <IncludeAssets>compile; build</IncludeAssets>
-      <PrivateAssets>all</PrivateAssets>
+      <!-- Allow LibHac.dll to be copied to output directory -->
+      <PrivateAssets>analyzers</PrivateAssets>
     </PackageReference>
     <PackageReference Include="NETStandard.Library" Version="2.0.3">
       <ExcludeAssets>runtime</ExcludeAssets>

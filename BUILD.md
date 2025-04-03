@@ -44,31 +44,31 @@ After building the project, use the clean build scripts to create a proper packa
 
 ## Important Notes
 
-### Missing Dependencies
+### Dependencies
 
-If you're encountering issues with missing dependencies like `LibHac.dll`, make sure:
+The build system is configured to automatically include all required dependencies:
 
-1. The NuGet package is installed properly
-2. The DLL is copied to the output directory
-3. The package reference in EmuLibrary.csproj has the correct configuration:
+1. LibHac.dll - Required for Yuzu ROM scanning
+2. INIFileParser.dll - Used for configuration parsing
+3. ZstdSharp.dll - Used for archive handling
+
+These dependencies are configured in EmuLibrary.csproj with proper settings:
 
 ```xml
 <PackageReference Include="LibHac" Version="0.7.0">
-  <IncludeAssets>compile; build</IncludeAssets>
-  <PrivateAssets>all</PrivateAssets>
+  <!-- Allow LibHac.dll to be copied to output directory -->
+  <PrivateAssets>analyzers</PrivateAssets>
 </PackageReference>
 ```
 
-### Manual File Inclusion
+The project is configured with `<CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>` to ensure all required dependencies are copied to the output directory.
 
-If automatic dependency inclusion is not working, you may need to manually copy the required DLLs to the extension package:
+### Automatic Dependency Handling
 
-1. Build the project
-2. Find the required DLLs in your NuGet packages folder:
-   - LibHac.dll
-   - INIFileParser.dll 
-   - ZstdSharp.dll
-3. Copy these DLLs to the extension directory alongside EmuLibrary.dll
+The build-clean.ps1 script includes logic to:
+1. Check if all required dependencies are present
+2. Automatically download any missing dependencies
+3. Include them in the final package
 
 ### Testing the Extension
 
@@ -86,8 +86,11 @@ If automatic dependency inclusion is not working, you may need to manually copy 
 **Issue:** Playnite cannot load the LibHac.dll dependency.
 
 **Solution:**
-1. Download LibHac.dll version 0.7.0 from NuGet
-2. Place it in the extension directory
+1. Run the included script to automatically download and install LibHac:
+   ```powershell
+   .\download-libhac.ps1
+   ```
+2. Alternatively, manually download LibHac.dll version 0.7.0 from NuGet and place it in the extension directory
 3. Restart Playnite
 
 ### Newtonsoft.Json Version Conflicts

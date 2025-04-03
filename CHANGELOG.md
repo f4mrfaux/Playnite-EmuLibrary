@@ -11,8 +11,13 @@
 - **Dependency reference issues**
   - Fixed Newtonsoft.Json version conflicts (downgraded from 13.0.3 to 10.0.3)
   - Added assembly binding redirects for Newtonsoft.Json in app.config
-  - Properly configured LibHac dependency to be included in package
-  - Modified EmuLibrary.csproj to properly handle package references
+  - Modified EmuLibrary.csproj to ensure LibHac.dll is automatically included
+  - Set CopyLocalLockFileAssemblies to true for proper dependency handling
+  
+- **Build process improvements**
+  - Created improved build scripts that check for and include all dependencies
+  - Added automatic LibHac.dll download capability for missing dependencies
+  - Simplified packaging process to ensure consistent results
 
 ### Improved
 - **Build and packaging**
