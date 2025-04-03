@@ -45,12 +45,12 @@ try {
     
     # Download and install protobuf-net.dll
     try {
-        # URL for protobuf-net 2.4.6 NuGet package
-        $nugetUrl = "https://www.nuget.org/api/v2/package/protobuf-net/2.4.6"
-        $packagePath = Join-Path $tempDir "protobuf-net.2.4.6.nupkg"
+        # URL for protobuf-net 2.4.0 NuGet package (must match Playnite's version)
+        $nugetUrl = "https://www.nuget.org/api/v2/package/protobuf-net/2.4.0"
+        $packagePath = Join-Path $tempDir "protobuf-net.2.4.0.nupkg"
         
         # Download the NuGet package
-        Write-Host "Downloading protobuf-net 2.4.6 NuGet package..."
+        Write-Host "Downloading protobuf-net 2.4.0 NuGet package..."
         Invoke-WebRequest -Uri $nugetUrl -OutFile $packagePath
         
         # Extract the package (it's a ZIP file)

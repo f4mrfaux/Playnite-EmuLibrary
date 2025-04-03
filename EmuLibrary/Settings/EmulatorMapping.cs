@@ -126,17 +126,66 @@ namespace EmuLibrary.Settings
             get
             {
                 IEnumerable<string> imageExtensionsLower;
-                if (EmulatorProfile is CustomEmulatorProfile)
+                // Default set of extensions to use if none are found
+                string[] defaultExtensions = { ".iso", ".bin", ".exe", ".img" };
+                
+                try
                 {
-                    imageExtensionsLower = (EmulatorProfile as CustomEmulatorProfile).ImageExtensions?.Where(ext => !ext.IsNullOrEmpty()).Select(ext => ext.Trim().ToLower());
+                    if (EmulatorProfile is CustomEmulatorProfile)
+                    {
+                        var extensions = (EmulatorProfile as CustomEmulatorProfile).ImageExtensions?
+                            .Where(ext => !ext.IsNullOrEmpty())
+                            .Select(ext => ext.Trim().ToLower());
+                            
+                        imageExtensionsLower = extensions != null && extensions.Any() 
+                            ? extensions 
+                            : defaultExtensions;
+                    }
+                    else if (EmulatorProfile is BuiltInEmulatorProfile)
+                    {
+                        try
+                        {
+                            var emulator = Settings.Instance?.PlayniteAPI.Emulation.Emulators
+                                .FirstOrDefault(e => e.Id == Emulator?.BuiltInConfigId);
+                                
+                            if (emulator != null)
+                            {
+                                var profile = emulator.Profiles.FirstOrDefault(p => p.Name == EmulatorProfile.Name);
+                                if (profile != null)
+                                {
+                                    var extensions = profile.ImageExtensions?
+                                        .Where(ext => !ext.IsNullOrEmpty())
+                                        .Select(ext => ext.Trim().ToLower());
+                                        
+                                    imageExtensionsLower = extensions != null && extensions.Any() 
+                                        ? extensions 
+                                        : defaultExtensions;
+                                }
+                                else
+                                {
+                                    imageExtensionsLower = defaultExtensions;
+                                }
+                            }
+                            else
+                            {
+                                imageExtensionsLower = defaultExtensions;
+                            }
+                        }
+                        catch
+                        {
+                            imageExtensionsLower = defaultExtensions;
+                        }
+                    }
+                    else
+                    {
+                        // Fallback for any unknown profile type
+                        imageExtensionsLower = defaultExtensions;
+                    }
                 }
-                else if (EmulatorProfile is BuiltInEmulatorProfile)
+                catch
                 {
-                    imageExtensionsLower = Settings.Instance?.PlayniteAPI.Emulation.Emulators.First(e => e.Id == Emulator.BuiltInConfigId).Profiles.FirstOrDefault(p => p.Name == EmulatorProfile.Name).ImageExtensions?.Where(ext => !ext.IsNullOrEmpty()).Select(ext => ext.Trim().ToLower());
-                }
-                else
-                {
-                    throw new NotImplementedException("Unknown emulator profile type.");
+                    // Final fallback in case of any errors
+                    imageExtensionsLower = defaultExtensions;
                 }
 
                 return imageExtensionsLower;

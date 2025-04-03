@@ -48,6 +48,32 @@ namespace EmuLibrary.RomTypes
                             var pcGameInfo = new PcInstaller.PcInstallerGameInfo();
                             pcGameInfo.MappingId = gogGameInfo.MappingId;
                             
+                            // Try to extract additional fields from the game properties if available
+                            try {
+                                // Check if we can access any additional data from the game object
+                                var gameData = game.GameData;
+                                if (gameData != null && gameData.Contains("SourcePath"))
+                                {
+                                    pcGameInfo.SourcePath = gameData["SourcePath"].ToString();
+                                }
+                                
+                                if (gameData != null && gameData.Contains("InstallDirectory"))
+                                {
+                                    pcGameInfo.InstallDirectory = gameData["InstallDirectory"].ToString();
+                                }
+                                
+                                if (gameData != null && gameData.Contains("ExecutablePath"))
+                                {
+                                    pcGameInfo.ExecutablePath = gameData["ExecutablePath"].ToString();
+                                    pcGameInfo.IsExecutablePathManuallySet = true;
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                logger.Warn($"Error extracting additional data for {game.Name}: {ex.Message}");
+                                // Continue with the migration even if we can't get all the data
+                            }
+                            
                             // Update the game ID to use the PC installer format
                             game.GameId = pcGameInfo.AsGameId();
                             

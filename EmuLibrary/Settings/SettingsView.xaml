@@ -10,18 +10,43 @@
              d:DesignHeight="400" d:DesignWidth="600"
              Padding="2,0,2,4">
     <UserControl.Resources>
+        <!-- Basic text elements -->
         <Style TargetType="TextBlock">
             <Setter Property="Foreground" Value="#FF333333"/>
         </Style>
+        <Style TargetType="Label">
+            <Setter Property="Foreground" Value="#FF333333"/>
+        </Style>
+        
+        <!-- Grid-related elements -->
         <Style TargetType="DataGridCell">
             <Setter Property="Foreground" Value="#FF333333"/>
         </Style>
+        <Style TargetType="DataGridColumnHeader">
+            <Setter Property="Foreground" Value="#FF333333"/>
+            <Setter Property="Background" Value="#FFD8D8D8"/>
+        </Style>
+        
+        <!-- Input controls -->
         <Style TargetType="CheckBox">
+            <Setter Property="Foreground" Value="#FF333333"/>
             <Style.Resources>
                 <Style TargetType="TextBlock">
                     <Setter Property="Foreground" Value="#FF333333"/>
                 </Style>
             </Style.Resources>
+        </Style>
+        <Style TargetType="Button">
+            <Setter Property="Foreground" Value="#FF333333"/>
+            <Setter Property="Background" Value="#FFE0E0E0"/>
+        </Style>
+        <Style TargetType="ComboBox">
+            <Setter Property="Foreground" Value="#FF333333"/>
+            <Setter Property="Background" Value="#FFFFFFFF"/>
+        </Style>
+        <Style TargetType="TextBox">
+            <Setter Property="Foreground" Value="#FF333333"/>
+            <Setter Property="Background" Value="#FFFFFFFF"/>
         </Style>
     </UserControl.Resources>
     <DockPanel Margin="20">

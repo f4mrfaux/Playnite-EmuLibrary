@@ -24,8 +24,9 @@
   <ItemGroup>
     <PackageReference Include="ini-parser" Version="2.5.2" />
     <PackageReference Include="LibHac" Version="0.7.0">
-      <!-- Allow LibHac.dll to be copied to output directory -->
-      <PrivateAssets>analyzers</PrivateAssets>
+      <!-- LibHac should be copied to output -->
+      <CopyLocal>true</CopyLocal>
+      <Private>true</Private>
     </PackageReference>
     <PackageReference Include="NETStandard.Library" Version="2.0.3">
       <ExcludeAssets>runtime</ExcludeAssets>
@@ -39,9 +40,10 @@
       <ExcludeAssets>runtime</ExcludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="protobuf-net" Version="2.4.6">
-      <!-- Allow protobuf-net.dll to be copied to output directory -->
-      <PrivateAssets>analyzers</PrivateAssets>
+    <PackageReference Include="protobuf-net" Version="2.4.0">
+      <!-- protobuf-net should be copied to output -->
+      <CopyLocal>true</CopyLocal>
+      <Private>true</Private>
     </PackageReference>
     <PackageReference Include="System.IO.Abstractions" Version="2.1.0.227">
       <ExcludeAssets>runtime</ExcludeAssets>
@@ -49,6 +51,12 @@
     </PackageReference>
     <PackageReference Include="ZstdSharp.Port" Version="0.6.5" />
   </ItemGroup>
+  
+  <!-- Add a build target to ensure dependencies are always copied -->
+  <Target Name="EnsureDependenciesCopied" AfterTargets="Build">
+    <Message Text="Ensuring dependencies are copied to output directory..." Importance="high" />
+    <Exec Command="PowerShell -File &quot;$(SolutionDir)download-dependencies.ps1&quot;" ContinueOnError="true" />
+  </Target>
 	
   <ItemGroup>
     <None Update="extension.yaml">
