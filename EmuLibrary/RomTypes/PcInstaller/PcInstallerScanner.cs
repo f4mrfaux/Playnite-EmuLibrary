@@ -104,17 +104,12 @@ namespace EmuLibrary.RomTypes.PcInstaller
                         count++;
                         string relativePath = file.FullName.Replace(srcPath, "").TrimStart('\\', '/');
                         
-                        // If we should use folder names for better metadata matching
-                        string gameName;
-                        // Always use file name for now
-                        if (false)
+                        // Extract game name, preferring folder name for better metadata matching
+                        string gameName = ExtractGameNameFromPath(file.FullName, srcPath);
+                        
+                        // If folder name extraction fails, fall back to filename
+                        if (string.IsNullOrWhiteSpace(gameName))
                         {
-                            // Try to use parent folder name for better metadata matching
-                            gameName = ExtractGameNameFromPath(file.FullName, srcPath);
-                        }
-                        else
-                        {
-                            // Use traditional filename-based extraction
                             gameName = ExtractGameName(file.Name);
                         }
                         

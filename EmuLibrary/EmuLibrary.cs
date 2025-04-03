@@ -313,11 +313,7 @@ namespace EmuLibrary
                                         }
                                     }
                                 }
-                                // Handle GOG Installer games if needed
-                                else if (gameInfo is RomTypes.GogInstaller.GogInstallerGameInfo)
-                                {
-                                    // Implement similar functionality for GOG games if needed
-                                }
+                                // Note: GOG installers now use the PcInstaller implementation (v0.8.3+)
                             }
                         },
                         Description = "Select Custom Executable...",
