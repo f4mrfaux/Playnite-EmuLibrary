@@ -9,6 +9,21 @@
              mc:Ignorable="d"
              d:DesignHeight="400" d:DesignWidth="600"
              Padding="2,0,2,4">
+    <UserControl.Resources>
+        <Style TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#FF333333"/>
+        </Style>
+        <Style TargetType="DataGridCell">
+            <Setter Property="Foreground" Value="#FF333333"/>
+        </Style>
+        <Style TargetType="CheckBox">
+            <Style.Resources>
+                <Style TargetType="TextBlock">
+                    <Setter Property="Foreground" Value="#FF333333"/>
+                </Style>
+            </Style.Resources>
+        </Style>
+    </UserControl.Resources>
     <DockPanel Margin="20">
         <ScrollViewer DockPanel.Dock="Top">
             <StackPanel x:Name="EmulatorSettingsPanel">
@@ -178,14 +193,14 @@
                 
                 <Border Background="#FFF5F9FF" BorderBrush="#FFADD8E6" BorderThickness="1" Padding="10" Margin="0,0,0,10">
                     <StackPanel>
-                        <TextBlock TextWrapping="Wrap" FontWeight="SemiBold">
+                        <TextBlock TextWrapping="Wrap" FontWeight="SemiBold" Foreground="#FF333333">
                             📌 PC Installer Guide
                         </TextBlock>
-                        <TextBlock TextWrapping="Wrap" Margin="0,5,0,0">
+                        <TextBlock TextWrapping="Wrap" Margin="0,5,0,0" Foreground="#FF333333">
                             This plugin allows you to scan network shares for game installers and install them on demand. 
                             Follow these steps to get started:
                         </TextBlock>
-                        <TextBlock TextWrapping="Wrap" Margin="10,5,0,0">
+                        <TextBlock TextWrapping="Wrap" Margin="10,5,0,0" Foreground="#FF333333">
                             1. Add a new mapping above with "PcInstaller" as the Rom Type<LineBreak/>
                             2. Set the source path to your network folder with game installers<LineBreak/>
                             3. Set the destination path to where you want games installed<LineBreak/>
@@ -225,10 +240,10 @@
                 
                 <Border Background="#FFFFF5F0" BorderBrush="#FFFFD0B0" BorderThickness="1" Padding="10" Margin="0,0,0,10">
                     <StackPanel>
-                        <TextBlock TextWrapping="Wrap" FontWeight="SemiBold">
+                        <TextBlock TextWrapping="Wrap" FontWeight="SemiBold" Foreground="#FF333333">
                             ⚠️ Archive Support
                         </TextBlock>
-                        <TextBlock TextWrapping="Wrap" Margin="0,5,0,0">
+                        <TextBlock TextWrapping="Wrap" Margin="0,5,0,0" Foreground="#FF333333">
                             For ISO and RAR archive support, you need to place 7z.exe and UnRAR.exe in the Tools folder.
                             <LineBreak/>
                             This enables handling of ISOs, multi-part RAR archives, and nested archives.
