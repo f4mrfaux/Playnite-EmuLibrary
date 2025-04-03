@@ -119,6 +119,9 @@ namespace EmuLibrary
                     }
                 });
             });
+            
+            // Migrate GOG installer games to use PC installer format
+            RomTypes.GogToPC_MigrationHelper.MigrateGogToPcInstaller(PlayniteApi, Logger);
         }
 
         public override IEnumerable<GameMetadata> GetGames(LibraryGetGamesArgs args)
