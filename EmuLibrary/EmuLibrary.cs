@@ -263,8 +263,7 @@ namespace EmuLibrary
                 
                 // Only show the "Select Executable" option for installed PC installer games
                 var pcInstallerGames = ourGameInfos.Where(ggi => ggi.game.IsInstalled && 
-                                                         (ggi.gameInfo.RomType == RomType.PcInstaller || 
-                                                          ggi.gameInfo.RomType == RomType.GogInstaller)).ToList();
+                                                         ggi.gameInfo.RomType == RomType.PcInstaller).ToList();
                 if (pcInstallerGames.Any())
                 {
                     yield return new GameMenuItem()

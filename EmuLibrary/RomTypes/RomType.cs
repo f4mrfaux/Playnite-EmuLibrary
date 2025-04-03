@@ -11,9 +11,7 @@
 
         [RomTypeInfo(typeof(Yuzu.YuzuGameInfo), typeof(Yuzu.YuzuScanner))]
         Yuzu = 4,
-        // Now GogInstaller uses the PcInstaller implementation
-        [RomTypeInfo(typeof(PcInstaller.PcInstallerGameInfo), typeof(PcInstaller.PcInstallerScanner))]
-        GogInstaller = 5,
+        // GogInstaller enum value was removed (pre-release cleanup)
         [RomTypeInfo(typeof(PcInstaller.PcInstallerGameInfo), typeof(PcInstaller.PcInstallerScanner))]
         PcInstaller = 6,
     }
