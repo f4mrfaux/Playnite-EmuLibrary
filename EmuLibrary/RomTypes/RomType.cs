@@ -11,7 +11,8 @@
 
         [RomTypeInfo(typeof(Yuzu.YuzuGameInfo), typeof(Yuzu.YuzuScanner))]
         Yuzu = 4,
-        [RomTypeInfo(typeof(GogInstaller.GogInstallerGameInfo), typeof(GogInstaller.GogInstallerScanner))]
+        // Now GogInstaller uses the PcInstaller implementation
+        [RomTypeInfo(typeof(PcInstaller.PcInstallerGameInfo), typeof(PcInstaller.PcInstallerScanner))]
         GogInstaller = 5,
         [RomTypeInfo(typeof(PcInstaller.PcInstallerGameInfo), typeof(PcInstaller.PcInstallerScanner))]
         PcInstaller = 6,

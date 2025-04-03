@@ -663,9 +663,26 @@ namespace EmuLibrary.RomTypes.PcInstaller
                 
                 if (extension == ".exe")
                 {
+                    // Check for GOG installers first
+                    if (Regex.IsMatch(filename, @"setup_.*_gog", RegexOptions.IgnoreCase) ||
+                        Regex.IsMatch(filename, @"gog.*setup", RegexOptions.IgnoreCase) ||
+                        Regex.IsMatch(filename, @"setup_.*_\d+\.\d+\.\d+", RegexOptions.IgnoreCase))
+                    {
+                        // GOG-specific silent parameters
+                        return $"/VERYSILENT /SP- /SUPPRESSMSGBOXES /DIR=\"{destDir}\" /NOICONS /NORESTART";
+                    }
+                    
                     try
                     {
                         var versionInfo = FileVersionInfo.GetVersionInfo(installerPath);
+                        
+                        // Check for GOG in file properties
+                        if (versionInfo.CompanyName?.Contains("GOG") == true ||
+                            versionInfo.FileDescription?.Contains("GOG") == true ||
+                            versionInfo.ProductName?.Contains("GOG") == true)
+                        {
+                            return $"/VERYSILENT /SP- /SUPPRESSMSGBOXES /DIR=\"{destDir}\" /NOICONS /NORESTART";
+                        }
                         
                         // InnoSetup installers
                         if (versionInfo.FileDescription?.Contains("Inno Setup") == true ||
@@ -706,7 +723,7 @@ namespace EmuLibrary.RomTypes.PcInstaller
                     }
                 }
                 
-                // Default to the most common parameter format (InnoSetup-like)
+                // Default to the most common parameter format (InnoSetup-like, which works for GOG too)
                 return $"/VERYSILENT /SP- /SUPPRESSMSGBOXES /DIR=\"{destDir}\" /NOICONS /NORESTART";
             }
             catch (Exception ex)
@@ -748,6 +765,16 @@ namespace EmuLibrary.RomTypes.PcInstaller
                 
                 if (filteredExes.Count == 0)
                     return null;
+                
+                // Look for GOG Galaxy integration first (if present)
+                var gogGalaxyExes = filteredExes.Where(path => 
+                    Path.GetFileName(path).Equals("GalaxyClient.exe", StringComparison.OrdinalIgnoreCase)).ToList();
+                    
+                if (gogGalaxyExes.Count > 0)
+                {
+                    _logger.Info("Found GOG Galaxy integration executable");
+                    return gogGalaxyExes[0];
+                }
                     
                 // Look for common game executable names
                 string[] commonGameExeNames = {

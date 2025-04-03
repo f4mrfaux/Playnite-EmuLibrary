@@ -35,6 +35,15 @@ namespace EmuLibrary.RomTypes.PcInstaller
             @".*[_\-\s]?installer\.exe"
         };
         
+        // GOG installer patterns
+        private readonly string[] _gogPatterns = new[]
+        {
+            @"setup_.*_gog",
+            @"gog.*setup",
+            @"setup_.*_(\d+\.\d+\.\d+)",
+            @"installer_.*"
+        };
+        
         // Non-installer patterns to exclude
         private readonly string[] _excludePatterns = new[]
         {
@@ -246,6 +255,16 @@ namespace EmuLibrary.RomTypes.PcInstaller
                     }
                 }
                 
+                // Check if filename matches GOG installer patterns
+                foreach (var pattern in _gogPatterns)
+                {
+                    if (Regex.IsMatch(filename, pattern, RegexOptions.IgnoreCase))
+                    {
+                        _installerDetectionCache[path] = true;
+                        return true;
+                    }
+                }
+                
                 // Try to check file properties for clues
                 // Always enable auto-detect for now
                 if (extension == ".exe")
@@ -259,6 +278,15 @@ namespace EmuLibrary.RomTypes.PcInstaller
                             versionInfo.FileDescription?.IndexOf("install", StringComparison.OrdinalIgnoreCase) >= 0 ||
                             versionInfo.ProductName?.IndexOf("setup", StringComparison.OrdinalIgnoreCase) >= 0 ||
                             versionInfo.ProductName?.IndexOf("install", StringComparison.OrdinalIgnoreCase) >= 0)
+                        {
+                            _installerDetectionCache[path] = true;
+                            return true;
+                        }
+                        
+                        // Check for GOG specific properties
+                        if (versionInfo.CompanyName?.Contains("GOG") == true ||
+                            versionInfo.FileDescription?.Contains("GOG") == true ||
+                            versionInfo.ProductName?.Contains("GOG") == true)
                         {
                             _installerDetectionCache[path] = true;
                             return true;
@@ -326,6 +354,20 @@ namespace EmuLibrary.RomTypes.PcInstaller
                 
                 // Remove file extension
                 string nameWithoutExt = Path.GetFileNameWithoutExtension(fileName);
+                
+                // GOG-specific prefixes
+                string[] gogPrefixes = { "setup_", "gog_", "installer_" };
+                foreach (var prefix in gogPrefixes)
+                {
+                    if (nameWithoutExt.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                    {
+                        nameWithoutExt = nameWithoutExt.Substring(prefix.Length);
+                    }
+                }
+                
+                // Remove GOG-specific version info and suffix
+                nameWithoutExt = Regex.Replace(nameWithoutExt, @"_v?\d+\.\d+\.\d+.*$", "");
+                nameWithoutExt = Regex.Replace(nameWithoutExt, @"_gog$", "");
                 
                 // Remove common installer prefixes/suffixes
                 nameWithoutExt = Regex.Replace(nameWithoutExt, @"(?i)setup[_\-\s]", "");
