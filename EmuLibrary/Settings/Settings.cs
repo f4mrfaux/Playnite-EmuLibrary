@@ -159,13 +159,18 @@ namespace EmuLibrary.Settings
                     mappingErrors.Add($"{m.MappingId}: Source path doesn't exist ({m.SourcePath}).");
                 }
 
-                if (string.IsNullOrEmpty(m.DestinationPathResolved))
+                // For PCInstaller type, the destination path is optional initially 
+                // since it will be set during installation
+                if (m.RomType != RomType.PCInstaller)
                 {
-                    mappingErrors.Add($"{m.MappingId}: No destination path specified.");
-                }
-                else if (!Directory.Exists(m.DestinationPathResolved))
-                {
-                    mappingErrors.Add($"{m.MappingId}: Destination path doesn't exist ({m.DestinationPathResolved}).");
+                    if (string.IsNullOrEmpty(m.DestinationPathResolved))
+                    {
+                        mappingErrors.Add($"{m.MappingId}: No destination path specified.");
+                    }
+                    else if (!Directory.Exists(m.DestinationPathResolved))
+                    {
+                        mappingErrors.Add($"{m.MappingId}: Destination path doesn't exist ({m.DestinationPathResolved}).");
+                    }
                 }
             });
 

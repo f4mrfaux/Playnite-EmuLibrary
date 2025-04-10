@@ -1,0 +1,84 @@
+{
+  "format": 1,
+  "restore": {
+    "/home/bob/projects/Playnite-EmuLibrary/EmuLibrary/EmuLibrary.csproj": {}
+  },
+  "projects": {
+    "/home/bob/projects/Playnite-EmuLibrary/EmuLibrary/EmuLibrary.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "/home/bob/projects/Playnite-EmuLibrary/EmuLibrary/EmuLibrary.csproj",
+        "projectName": "EmuLibrary",
+        "projectPath": "/home/bob/projects/Playnite-EmuLibrary/EmuLibrary/EmuLibrary.csproj",
+        "packagesPath": "/home/bob/.nuget/packages/",
+        "outputPath": "/home/bob/projects/Playnite-EmuLibrary/EmuLibrary/obj/",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "/home/bob/.config/NuGet/NuGet.Config"
+        ],
+        "originalTargetFrameworks": [
+          "net462"
+        ],
+        "sources": {
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net462": {
+            "targetAlias": "net462",
+            "projectReferences": {}
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        }
+      },
+      "frameworks": {
+        "net462": {
+          "targetAlias": "net462",
+          "dependencies": {
+            "LibHac": {
+              "target": "Package",
+              "version": "[0.7.0, )"
+            },
+            "NETStandard.Library": {
+              "target": "Package",
+              "version": "[2.0.3, )"
+            },
+            "Newtonsoft.Json": {
+              "target": "Package",
+              "version": "[10.0.1, )"
+            },
+            "PlayniteSDK": {
+              "target": "Package",
+              "version": "[6.4.0, )"
+            },
+            "System.IO.Abstractions": {
+              "target": "Package",
+              "version": "[2.1.0.227, )"
+            },
+            "ZstdSharp.Port": {
+              "target": "Package",
+              "version": "[0.6.5, )"
+            },
+            "ini-parser": {
+              "target": "Package",
+              "version": "[2.5.2, )"
+            },
+            "protobuf-net": {
+              "target": "Package",
+              "version": "[3.1.25, )"
+            }
+          },
+          "runtimeIdentifierGraphPath": "/usr/lib/mono/msbuild/Current/bin/RuntimeIdentifierGraph.json"
+        }
+      }
+    }
+  }
+}

@@ -221,6 +221,29 @@ namespace EmuLibrary
                     Description = "Browse to Source...",
                     MenuSection = "EmuLibrary"
                 };
+                
+                // Menu item for PC Installer games that are not installed
+                var uninstalledPCInstallers = ourGameInfos
+                    .Where(ggi => ggi.gameInfo.RomType == RomType.PCInstaller && !ggi.game.IsInstalled);
+                
+                if (uninstalledPCInstallers.Any())
+                {
+                    yield return new GameMenuItem()
+                    {
+                        Action = (arags) =>
+                        {
+                            uninstalledPCInstallers.ForEach(ggi => 
+                            {
+                                ggi.game.IsInstalling = true;
+                                var controller = ggi.gameInfo.GetInstallController(ggi.game, this);
+                                controller.Install(new InstallActionArgs());
+                            });
+                        },
+                        Description = "Install Game",
+                        MenuSection = "EmuLibrary"
+                    };
+                }
+                
                 yield return new GameMenuItem()
                 {
                     Action = (arags) =>

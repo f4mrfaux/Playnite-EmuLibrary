@@ -126,7 +126,12 @@ namespace EmuLibrary.Settings
             get
             {
                 IEnumerable<string> imageExtensionsLower;
-                if (EmulatorProfile is CustomEmulatorProfile)
+                if (RomType == RomType.PCInstaller)
+                {
+                    // For PC installers, we only support .exe files
+                    imageExtensionsLower = new[] { "exe" };
+                }
+                else if (EmulatorProfile is CustomEmulatorProfile)
                 {
                     imageExtensionsLower = (EmulatorProfile as CustomEmulatorProfile).ImageExtensions?.Where(ext => !ext.IsNullOrEmpty()).Select(ext => ext.Trim().ToLower());
                 }

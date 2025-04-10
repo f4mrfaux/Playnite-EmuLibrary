@@ -1,4 +1,5 @@
 ﻿using EmuLibrary.RomTypes;
+using EmuLibrary.RomTypes.PCInstaller;
 using Playnite.SDK.Models;
 
 internal static class ELGameInfoBaseExtensions
