@@ -32,7 +32,7 @@ namespace EmuLibrary.Settings
 
         // Hidden settings
         public int Version { get; set; }
-        public Dictionary<RomType, bool> MigratedLegacySettings { get; set; }
+        public Dictionary<RomType, bool> MigratedLegacySettings { get; set; } = new Dictionary<RomType, bool>();
 
 
         // Parameterless constructor must exist if you want to use LoadPluginSettings method.

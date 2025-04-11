@@ -6,7 +6,7 @@ While Playnite has had built-in support for scanning paths for installed ROMs an
 
 EmuLibrary treats one or more folders of ROMs/Disc images as a library from which you can "install" games. It can be useful if you have a large collection of emulated games and limited storage where you play them versus where you store them (HTPC vs. NAS, for example). It also is useful for keeping the list of emulated games up to date, and for being able to filter via installed/uninstalled.
 
-Disclaimer: I created this extension for my own usage, and that is still the primary focus. Because of this, many parts of it are still tailored to my personal needs and usage patterns. Despite that, I wanted to share it with others in case it is useful to them. It is still in the process of being (slowly) adapted for more general use.
+Disclaimer: This extension was originally created for personal usage, and that is still the primary focus. Because of this, many parts of it are still tailored to specific needs and usage patterns. Despite that, it's being shared with others in case it is useful to them. It is still in the process of being adapted for more general use.
 
 ## Setup
 

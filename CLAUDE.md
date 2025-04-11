@@ -2,6 +2,8 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+> **IMPORTANT NOTE**: This project is developed on Arch Linux but built and deployed on Windows. Do not attempt to build the project on Linux as it will fail due to Windows-specific dependencies.
+
 ## Project Overview
 EmuLibrary is a library extension for Playnite, an open source video game library manager, focused on emulator ROM management. It allows users to "install" games from one or more folders of ROMs/Disc images to local storage, and helps manage large collections of emulated games.
 
