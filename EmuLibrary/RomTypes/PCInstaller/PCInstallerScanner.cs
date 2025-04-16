@@ -118,21 +118,84 @@ namespace EmuLibrary.RomTypes.PCInstaller
                                 
                                 var relativePath = file.FullName.Substring(srcPath.Length).TrimStart(Path.DirectorySeparatorChar);
                                 
+                                // Try to detect GOG installer by checking filename
+                                bool isGogInstaller = file.Name.Contains("gog") || 
+                                                     file.Name.Contains("setup_") || 
+                                                     file.FullName.Contains("GOG") ||
+                                                     parentFolder.Contains("GOG");
+                                
+                                // Try to extract store ID from filename or folder
+                                string storeGameId = null;
+                                string installerType = null;
+                                
+                                if (isGogInstaller)
+                                {
+                                    installerType = "GOG";
+                                    
+                                    // GOG installers often contain an ID in the format setup_name_id
+                                    var filename = Path.GetFileNameWithoutExtension(file.Name);
+                                    if (!string.IsNullOrEmpty(filename) && filename.StartsWith("setup_"))
+                                    {
+                                        var parts = filename.Split('_');
+                                        if (parts != null && parts.Length >= 3)
+                                        {
+                                            storeGameId = parts[parts.Length - 1];
+                                            // Verify it looks like a GOG ID (typically numeric)
+                                            if (string.IsNullOrEmpty(storeGameId) || 
+                                                !System.Text.RegularExpressions.Regex.IsMatch(storeGameId, @"^\d+$"))
+                                            {
+                                                storeGameId = null;
+                                            }
+                                        }
+                                    }
+                                }
+                                
                                 var info = new PCInstallerGameInfo()
                                 {
                                     MappingId = mapping.MappingId,
                                     SourcePath = relativePath,
                                     InstallerFullPath = file.FullName,
-                                    InstallDirectory = null // Will be set during installation
+                                    InstallDirectory = null, // Will be set during installation
+                                    StoreGameId = storeGameId,
+                                    InstallerType = installerType
                                 };
 
-                                gameMetadataBatch.Add(new GameMetadata()
+                                // Set proper platform based on installer type
+                                string platformName = mapping.Platform?.Name;
+                                if (string.IsNullOrEmpty(platformName))
+                                {
+                                    platformName = "PC"; // Default fallback
+                                }
+                                
+                                // Add store-specific platform if available
+                                if (info.InstallerType == "GOG")
+                                {
+                                    try
+                                    {
+                                        // Try to set a more specific GOG platform if available
+                                        var gogPlatform = _playniteAPI.Database.Platforms?
+                                            .FirstOrDefault(p => p != null && 
+                                                               (p.Name == "GOG" || 
+                                                                (p.SpecificationId != null && p.SpecificationId == "pc_gog")));
+                                        
+                                        if (gogPlatform != null && !string.IsNullOrEmpty(gogPlatform.Name))
+                                        {
+                                            platformName = gogPlatform.Name;
+                                        }
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        _emuLibrary.Logger.Error($"Error getting GOG platform: {ex.Message}");
+                                    }
+                                }
+                                
+                                var metadata = new GameMetadata()
                                 {
                                     Source = EmuLibrary.SourceName,
                                     Name = gameName,
                                     IsInstalled = false, // PC games start as uninstalled
                                     GameId = info.AsGameId(),
-                                    Platforms = new HashSet<MetadataProperty>() { new MetadataNameProperty(mapping.Platform.Name) },
+                                    Platforms = new HashSet<MetadataProperty>() { new MetadataNameProperty(platformName) },
                                     InstallSize = (ulong)new FileInfo(file.FullName).Length,
                                     GameActions = new List<GameAction>() 
                                     { 
@@ -144,7 +207,30 @@ namespace EmuLibrary.RomTypes.PCInstaller
                                             IsPlayAction = false
                                         }
                                     }
-                                });
+                                };
+                                
+                                // Add metadata tags based on installer type
+                                if (!string.IsNullOrEmpty(info.InstallerType))
+                                {
+                                    metadata.Tags = new HashSet<MetadataProperty>() { 
+                                        new MetadataNameProperty(info.InstallerType) 
+                                    };
+                                }
+                                
+                                // Add metadata for EmuLibrary tracking (do not change Source property)
+                                if (!string.IsNullOrEmpty(info.StoreGameId) && !string.IsNullOrEmpty(info.InstallerType))
+                                {
+                                    // Add store-specific info to help with metadata matching later
+                                    // Use property pattern that won't conflict with Source identification
+                                    metadata.Properties = new Dictionary<string, object> {
+                                        { "StoreGameId", info.StoreGameId },
+                                        { "StoreSource", info.InstallerType }
+                                    };
+                                    
+                                    _emuLibrary.Logger.Debug($"Added store metadata for {gameName}: {info.InstallerType} ID {info.StoreGameId}");
+                                }
+                                
+                                gameMetadataBatch.Add(metadata);
 
                                 // Batch processing handled outside the try block
                             }

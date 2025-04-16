@@ -1,10 +1,10 @@
 # EmuLibrary
 
-EmuLibrary is a library extension for [Playnite](https://www.playnite.link), an open source video game library manager, focused on emulator ROM management.
+EmuLibrary is a library extension for [Playnite](https://www.playnite.link), an open source video game library manager, originally focused on emulator ROM management and now extended to support PC game installers as well.
 
 While Playnite has had built-in support for scanning paths for installed ROMs and adding them to the library since version 9, EmuLibrary provides alternate functionality.
 
-EmuLibrary treats one or more folders of ROMs/Disc images as a library from which you can "install" games. It can be useful if you have a large collection of emulated games and limited storage where you play them versus where you store them (HTPC vs. NAS, for example). It also is useful for keeping the list of emulated games up to date, and for being able to filter via installed/uninstalled.
+EmuLibrary treats one or more folders of ROMs/Disc images or PC game installers as a library from which you can "install" games. It can be useful if you have a large collection of emulated games and PC installers with limited storage where you play them versus where you store them (HTPC vs. NAS, for example). It also is useful for keeping the list of games up to date, and for being able to filter via installed/uninstalled.
 
 Disclaimer: This extension was originally created for personal usage, and that is still the primary focus. Because of this, many parts of it are still tailored to specific needs and usage patterns. Despite that, it's being shared with others in case it is useful to them. It is still in the process of being adapted for more general use.
 
@@ -14,7 +14,7 @@ To set it up, you create mappings to combine one of each of the following:
 
 * Emulator - either a built-in emulator or a custom emulator manually added
 * Emulator Profile - either a built-in emulator profile or a custom one, out of those supported by the chosen emulator
-* Platform - the ROM platform/console, out of those that the emulator profile supports
+* Platform - the ROM platform/console, out of those that the emulator profile supports (PCInstaller type now shows PC platforms regardless of emulator selection)
 * RomType - See [Rom Types](#rom-types) below
 
 ## Paths
@@ -35,6 +35,28 @@ With the MultiFile type, each subfolder directly within the source folder is sca
 
 To determine which file is used as the one to tell the emulator to load, all files matching the configured emulator profile's supported extensions are considered. Precedence is by configured image extension list order, and then by alphabetical order. For example, if file names are the same except for `(Disc 1)` versus `(Disc 2)`, the first disc takes precedence. Similarly, if you have `.cue` in the extension list before `.m3u` (as some of the built-in profiles have at the time of writing), `.cue` would be chosen over `.m3u`, which may not be desired for multi-disc games.
 
+### PCInstaller
+
+The PCInstaller type supports PC game installer executables (.exe files). This type is designed for managing native PC games that don't require emulation. It allows you to:
+
+* Scan folders containing PC game installers (.exe files)
+* Install these games to a specified location
+* Manage PC games alongside your emulated games collection
+
+When using the PCInstaller type, you'll be able to select from PC-related platforms (Windows, Steam, GOG, etc.) regardless of which emulator or profile you've selected. This makes it suitable for organizing PC game installers from various sources.
+
+#### GOG Integration
+
+PCInstaller has special handling for GOG games:
+
+* Automatically detects GOG installers based on file naming patterns
+* Attempts to extract GOG game IDs from installer filenames
+* Sets the correct GOG platform for proper categorization in Playnite
+* Adds metadata tags for better categorization and filtering
+* Stores store-specific IDs for future metadata integration
+
+The PCInstaller type preserves the store information and properly categorizes PC games based on their origin (GOG, Steam, etc.), helping with organization and filtering in Playnite.
+
 ### Yuzu (Beta)
 
 The Yuzu type currently has a beta level quality of support. Some of it is still being reworked. As named, it is very hardcoded to Yuzu specifically, although Ryujinx support reusing most of the same logic will likely come in the future.
@@ -49,6 +71,38 @@ When a game is installed, the latest update and any DLC from the source will als
 
 * If the connection to the source folder's storage is unstable, Playnite may crash when when updating the library. This is unlikely to be able to be completely fixed until Playnite uses a newer .NET version (currently being targeted for Playnite 11). Some some mitigations are planned in the meantime, but are not yet implemented.
 * If the mapping is disabled or if EmuLibrary update is cancelled before the scan for the mapping completes, game installation for the mapping's games may result in an error message. This will be fixed in a later version of this addon.
+
+## Usage Workflow
+
+### Example: Adding a Repository of PC Games (e.g., GOG games)
+
+Here's a step-by-step workflow for adding a repository of PC game installers using the PCInstaller type:
+
+1. Launch Playnite and go to the main menu.
+
+2. Open EmuLibrary settings (Add-ons → Extensions → EmuLibrary → Configure).
+
+3. In the settings window, click "Add Mapping" to create a new mapping.
+
+4. Configure your mapping:
+   - Set "Emulator" to "GOG" (or any placeholder emulator)
+   - Set "Profile" to "Choose on startup" 
+   - Set "Rom Type" to "PCInstaller"
+   - Set "Source Path" to your game repository (e.g., "N:\games\GOG\")
+   - Set "Destination Path" to where you want to install the games
+   - Select a PC platform (Windows, PC, etc.) which should now be available
+
+5. Click "Save" to save your mapping configuration.
+
+6. In Playnite, update your library (F5) to scan for games.
+
+7. Your games should now appear in your library as "uninstalled" games.
+
+8. To install a game, right-click on it and select "Install". This will copy the installer from your source to the destination and handle the setup.
+
+9. After installation, the game will be marked as "installed" and you can launch it directly from Playnite.
+
+This workflow allows you to maintain a central repository of game installers while only keeping installed games on your local machine.
 
 ## Support
 

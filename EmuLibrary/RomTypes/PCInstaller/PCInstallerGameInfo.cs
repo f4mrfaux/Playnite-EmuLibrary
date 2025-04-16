@@ -27,6 +27,14 @@ namespace EmuLibrary.RomTypes.PCInstaller
         // Path to the primary executable after installation
         [ProtoMember(4)]
         public string PrimaryExecutable { get; set; }
+        
+        // Store GOG/Steam/etc. specific game identifier
+        [ProtoMember(5)]
+        public string StoreGameId { get; set; }
+        
+        // Store installer type (GOG, Steam, Epic, etc.)
+        [ProtoMember(6)]
+        public string InstallerType { get; set; }
 
         public string SourceFullPath
         {
@@ -69,6 +77,8 @@ namespace EmuLibrary.RomTypes.PCInstaller
             yield return $"{nameof(InstallerFullPath)} : {InstallerFullPath}";
             yield return $"{nameof(InstallDirectory)} : {InstallDirectory}";
             yield return $"{nameof(PrimaryExecutable)} : {PrimaryExecutable}";
+            yield return $"{nameof(StoreGameId)} : {StoreGameId}";
+            yield return $"{nameof(InstallerType)} : {InstallerType}";
         }
 
         public override void BrowseToSource()

@@ -248,10 +248,17 @@ namespace EmuLibrary.RomTypes.PCInstaller
                     // Create GameInstallationData
                     UpdateProgress("Finalizing installation...", 95);
                     
+                    // Preserve store info in installation data
                     var installationData = new GameInstallationData
                     {
                         InstallDirectory = installDir
                     };
+                    
+                    // Preserve store-specific information
+                    if (!string.IsNullOrEmpty(info.StoreGameId) && !string.IsNullOrEmpty(info.InstallerType))
+                    {
+                        _emuLibrary.Logger.Info($"Preserving store information for {Game.Name}: {info.InstallerType} ID {info.StoreGameId}");
+                    }
                     
                     if (!string.IsNullOrEmpty(primaryExe))
                     {

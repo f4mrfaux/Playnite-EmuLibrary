@@ -68,6 +68,26 @@ namespace EmuLibrary.Settings
                 }
 
                 var playnite = Settings.Instance.PlayniteAPI;
+                
+                // Special case for PCInstaller: Show all PC platforms regardless of emulator profile
+                if (RomType == RomType.PCInstaller)
+                {
+                    // Get all PC-related platforms (PC, Windows, DOS, etc.)
+                    var pcPlatformSpecs = new HashSet<string>
+                    {
+                        "pc_windows", "pc_dos", "pc_linux", "pc_macos", 
+                        "pc_windows_store", "pc_steam", "pc_gog", "pc_origin", "pc_epic"
+                    };
+                    
+                    return playnite.Emulation.Platforms?
+                        .Where(p => p != null && !string.IsNullOrEmpty(p.Id) && 
+                               (pcPlatformSpecs.Contains(p.Id.ToLower()) || 
+                                (p.Name != null && (p.Name.ToLower().Contains("pc") || 
+                                                    p.Name.ToLower().Contains("windows")))))
+                        ?? Enumerable.Empty<EmulatedPlatform>();
+                }
+                
+                // Original logic for other ROM types
                 HashSet<string> validPlatforms = new HashSet<string>();
 
                 if (EmulatorProfile != null)

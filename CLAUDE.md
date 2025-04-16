@@ -59,7 +59,7 @@ EmuLibrary is a library extension for Playnite, an open source video game librar
   - **Dialogs**: User interaction dialogs and prompts
   - **Notifications**: System for displaying notifications to users
   - **Paths**: Access to important file system paths
-  - **Emulation**: Emulator-specific functionality
+  - **Emulation**: Emulator-specific functionality (includes access to Platforms and EmulatedPlatforms collections)
   - **MainView**: UI view manipulation
   - **ApplicationInfo**: Information about Playnite's current state and mode
   - **ApplicationSettings**: Access to Playnite configuration
@@ -141,6 +141,16 @@ EmuLibrary is a library extension for Playnite, an open source video game librar
   ```csharp
   Playnite.Notifications.Add(id, message, NotificationType.Info)
   ```
+
+### Rom Types Support
+- **SingleFile**: For single ROM files (.nes, .sfc, etc.)
+- **MultiFile**: For games with multiple files in subfolders (multi-disc games)
+- **Yuzu**: For Nintendo Switch games (special handling for NAND and updates)
+- **PCInstaller**: For PC game installers (.exe files)
+  - Special platform handling in EmulatorMapping.cs for PC games
+  - Shows PC platforms regardless of emulator profile selection
+  - Only supports .exe files as specified in EmulatorMapping.cs
+  - Bypasses some emulator-specific validations
 
 ### Game Metadata Structure
 - Create specialized GameInfo classes for different game types
