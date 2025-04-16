@@ -14,5 +14,8 @@
         
         [RomTypeInfo(typeof(PCInstaller.PCInstallerGameInfo), typeof(PCInstaller.PCInstallerScanner))]
         PCInstaller = 5,
+        
+        [RomTypeInfo(typeof(ISOInstaller.ISOInstallerGameInfo), typeof(ISOInstaller.ISOInstallerScanner))]
+        ISOInstaller = 6,
     }
 }

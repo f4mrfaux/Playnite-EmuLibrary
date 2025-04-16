@@ -69,8 +69,8 @@ namespace EmuLibrary.Settings
 
                 var playnite = Settings.Instance.PlayniteAPI;
                 
-                // Special case for PCInstaller: Show all PC platforms regardless of emulator profile
-                if (RomType == RomType.PCInstaller)
+                // Special case for PCInstaller and ISOInstaller: Show all PC platforms regardless of emulator profile
+                if (RomType == RomType.PCInstaller || RomType == RomType.ISOInstaller)
                 {
                     // Get all PC-related platforms (PC, Windows, DOS, etc.)
                     var pcPlatformSpecs = new HashSet<string>
@@ -169,6 +169,11 @@ namespace EmuLibrary.Settings
                 {
                     // For PC installers, we only support .exe files
                     imageExtensionsLower = new[] { "exe" };
+                }
+                else if (RomType == RomType.ISOInstaller)
+                {
+                    // For ISO installers, we support common disc image formats
+                    imageExtensionsLower = new[] { "iso", "bin", "img", "cue", "nrg", "mds", "mdf" };
                 }
                 else if (EmulatorProfile is CustomEmulatorProfile)
                 {
