@@ -221,11 +221,9 @@ namespace EmuLibrary.RomTypes.PCInstaller
                                 if (!string.IsNullOrEmpty(info.StoreGameId) && !string.IsNullOrEmpty(info.InstallerType))
                                 {
                                     // Add store-specific info to help with metadata matching later
-                                    // Use property pattern that won't conflict with Source identification
-                                    metadata.Properties = new Dictionary<string, object> {
-                                        { "StoreGameId", info.StoreGameId },
-                                        { "StoreSource", info.InstallerType }
-                                    };
+                                    // Store the information in the game tags instead of Properties
+                                    metadata.Tags = metadata.Tags ?? new HashSet<MetadataProperty>();
+                                    metadata.Tags.Add(new MetadataNameProperty($"{info.InstallerType}:{info.StoreGameId}"));
                                     
                                     _emuLibrary.Logger.Debug($"Added store metadata for {gameName}: {info.InstallerType} ID {info.StoreGameId}");
                                 }
