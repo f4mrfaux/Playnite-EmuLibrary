@@ -1,4 +1,5 @@
-﻿using Playnite.SDK.Models;
+﻿using Playnite.SDK;
+using Playnite.SDK.Models;
 using Playnite.SDK.Plugins;
 using ProtoBuf;
 using System.Collections.Generic;
@@ -38,7 +39,7 @@ namespace EmuLibrary.RomTypes.PCInstaller
                         return InstallerFullPath;
                     }
 
-                    var mapping = GetMapping();
+                    var mapping = Mapping;
                     if (mapping == null || string.IsNullOrEmpty(mapping.SourcePath))
                     {
                         // Fallback to direct path if mapping is missing

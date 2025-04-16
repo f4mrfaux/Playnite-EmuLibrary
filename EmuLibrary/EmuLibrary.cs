@@ -27,6 +27,11 @@ namespace EmuLibrary
         public IPlayniteAPI Playnite { get; private set; }
         public Settings.Settings Settings { get; private set; }
         RomTypeScanner IEmuLibrary.GetScanner(RomType romType) => _scanners[romType];
+        
+        public string GetPluginUserDataPath()
+        {
+            return PlayniteApi.Paths.ExtensionsDataPath;
+        }
 
         private const string s_pluginName = "EmuLibrary";
 
