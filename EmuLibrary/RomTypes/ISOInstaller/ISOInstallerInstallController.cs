@@ -8,6 +8,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Management.Automation;
+using System.Management.Automation.Runspaces;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -38,6 +39,9 @@ namespace EmuLibrary.RomTypes.ISOInstaller
         {
             var info = Game.GetISOInstallerGameInfo();
             _watcherToken = new CancellationTokenSource();
+            
+            // Add timeout of 30 minutes for installation process
+            _watcherToken.CancelAfter(TimeSpan.FromMinutes(30));
             
             // Use the local cancellation token
             var cancellationToken = _watcherToken.Token;
@@ -134,24 +138,67 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                         // If no common installer found or multiple options, let user select
                         if (selectedInstaller == null)
                         {
-                            // TODO: Implement proper file selection dialog
-                            // For now, just use the first exe as a placeholder
-                            // In a real implementation, you would use a proper selection dialog here
-                            _emuLibrary.Logger.Info("Multiple executables found in ISO. User should select one.");
+                            _emuLibrary.Logger.Info("Multiple executables found in ISO. User will select one.");
                             
                             if (exeFiles.Count > 0)
                             {
-                                // Use OS file dialog to select
-                                // This is a simplified version - ideally we'd show just the executables from the mounted ISO
-                                var selectFileDialog = _emuLibrary.Playnite.Dialogs.SelectFile("Executable files (*.exe)|*.exe");
+                                // First, create a friendly message with the top executable options
+                                var topExeOptions = exeFiles.Take(5)
+                                    .Select(p => Path.GetFileName(p))
+                                    .ToList();
+                                
+                                string exeOptionsMessage = "Found these executables in the ISO:";
+                                foreach (var exe in topExeOptions)
+                                {
+                                    exeOptionsMessage += $"\n- {exe}";
+                                }
+                                
+                                if (exeFiles.Count > 5)
+                                {
+                                    exeOptionsMessage += $"\n- Plus {exeFiles.Count - 5} more...";
+                                }
+                                
+                                _emuLibrary.Playnite.Notifications.Add(
+                                    Game.GameId,
+                                    $"{exeOptionsMessage}\n\nPlease select an installer for {Game.Name}.",
+                                    NotificationType.Info
+                                );
+                                
+                                // Use Playnite's file selection dialog
+                                var selectFileDialog = _emuLibrary.Playnite.Dialogs.SelectFile(
+                                    "Executable files (*.exe)|*.exe", 
+                                    Path.GetDirectoryName(exeFiles[0])
+                                );
+                                
                                 if (!string.IsNullOrEmpty(selectFileDialog))
                                 {
                                     selectedInstaller = selectFileDialog;
+                                    _emuLibrary.Logger.Info($"User selected installer: {selectedInstaller}");
                                 }
                                 else
                                 {
-                                    // If user cancels, use first exe as fallback
-                                    selectedInstaller = exeFiles[0];
+                                    // If user cancels, give them another chance
+                                    _emuLibrary.Playnite.Notifications.Add(
+                                        Game.GameId,
+                                        $"Please select an installer from the ISO for {Game.Name}, or the installation will be cancelled.",
+                                        NotificationType.Warning
+                                    );
+                                    
+                                    // Try one more time with a more direct prompt
+                                    var secondAttempt = _emuLibrary.Playnite.Dialogs.SelectFile(
+                                        "Executable files (*.exe)|*.exe", 
+                                        Path.GetDirectoryName(exeFiles[0])
+                                    );
+                                    
+                                    if (!string.IsNullOrEmpty(secondAttempt))
+                                    {
+                                        selectedInstaller = secondAttempt;
+                                        _emuLibrary.Logger.Info($"User selected installer on second attempt: {selectedInstaller}");
+                                    }
+                                    else
+                                    {
+                                        throw new OperationCanceledException("No installer was selected from the ISO.");
+                                    }
                                 }
                             }
                         }
@@ -175,17 +222,32 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                     );
                     
                     // Execute the installer
-                    var process = new Process
+                    Process process = null;
+                    try
                     {
-                        StartInfo = new ProcessStartInfo
+                        process = new Process
                         {
-                            FileName = selectedInstaller,
-                            WorkingDirectory = Path.GetDirectoryName(selectedInstaller),
-                            UseShellExecute = true
+                            StartInfo = new ProcessStartInfo
+                            {
+                                FileName = selectedInstaller,
+                                WorkingDirectory = Path.GetDirectoryName(selectedInstaller),
+                                UseShellExecute = true
+                            }
+                        };
+                        
+                        // Verify installer file exists before attempting to launch
+                        if (!File.Exists(selectedInstaller))
+                        {
+                            throw new FileNotFoundException($"Selected installer not found: {selectedInstaller}");
                         }
-                    };
-                    
-                    process.Start();
+                        
+                        process.Start();
+                    }
+                    catch (Exception ex)
+                    {
+                        _emuLibrary.Logger.Error($"Failed to start installer: {ex.Message}");
+                        throw;
+                    }
                     
                     // Don't create nested tasks - use await directly
                     await Task.Run(() => 
@@ -208,7 +270,7 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                             }
                             Thread.Sleep(500);
                         }
-                        process.WaitForExit();
+                        // No need to wait again, we already waited in the loop
                     }, cancellationToken);
                     
                     if (cancellationToken.IsCancellationRequested)
@@ -223,10 +285,28 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                     UpdateProgress("Selecting installation directory...", 70);
                     
                     string installDir = null;
-                    _emuLibrary.Playnite.MainView.UIDispatcher.Invoke(() =>
+                    try
                     {
-                        installDir = _emuLibrary.Playnite.Dialogs.SelectFolder();
-                    });
+                        _emuLibrary.Playnite.MainView.UIDispatcher.Invoke(() =>
+                        {
+                            // Check if cancelled before showing dialog
+                            if (cancellationToken.IsCancellationRequested)
+                                return;
+                                
+                            installDir = _emuLibrary.Playnite.Dialogs.SelectFolder();
+                        });
+                        
+                        // Check cancellation after UI operation
+                        if (cancellationToken.IsCancellationRequested)
+                        {
+                            throw new OperationCanceledException("Installation was cancelled.");
+                        }
+                    }
+                    catch (Exception ex) when (!(ex is OperationCanceledException))
+                    {
+                        _emuLibrary.Logger.Error($"Error selecting installation directory: {ex.Message}");
+                        throw;
+                    }
                     
                     if (string.IsNullOrEmpty(installDir))
                     {
@@ -390,10 +470,25 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                     );
                     Game.IsInstalling = false;
                     
-                    // Clean up if cancelled
-                    if (!string.IsNullOrEmpty(mountPoint))
+                        // Clean up if cancelled
+                    try
                     {
-                        UnmountIsoFile(mountPoint);
+                        if (!string.IsNullOrEmpty(mountPoint))
+                        {
+                            _emuLibrary.Logger.Info($"Cleaning up mount point {mountPoint} after cancellation");
+                            UnmountIsoFile(mountPoint);
+                        }
+                        
+                        // Also clean up temp directory
+                        if (!string.IsNullOrEmpty(tempDir) && Directory.Exists(tempDir))
+                        {
+                            _emuLibrary.Logger.Info($"Cleaning up temp directory {tempDir} after cancellation");
+                            Directory.Delete(tempDir, true);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _emuLibrary.Logger.Error($"Error during cleanup after cancellation: {ex.Message}");
                     }
                 }
                 catch (Exception ex)
@@ -408,9 +503,24 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                     Game.IsInstalling = false;
                     
                     // Clean up on failure
-                    if (!string.IsNullOrEmpty(mountPoint))
+                    try
                     {
-                        UnmountIsoFile(mountPoint);
+                        if (!string.IsNullOrEmpty(mountPoint))
+                        {
+                            _emuLibrary.Logger.Info($"Cleaning up mount point {mountPoint} after failure");
+                            UnmountIsoFile(mountPoint);
+                        }
+                        
+                        // Also clean up temp directory
+                        if (!string.IsNullOrEmpty(tempDir) && Directory.Exists(tempDir))
+                        {
+                            _emuLibrary.Logger.Info($"Cleaning up temp directory {tempDir} after failure");
+                            Directory.Delete(tempDir, true);
+                        }
+                    }
+                    catch (Exception cleanupEx)
+                    {
+                        _emuLibrary.Logger.Error($"Error during cleanup after failure: {cleanupEx.Message}");
                     }
                     
                     throw; // Rethrow without wrapping to preserve stack trace
@@ -427,8 +537,9 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                 // Use PowerShell to mount the ISO
                 using (var ps = PowerShell.Create())
                 {
-                    // Mount the ISO and get the drive letter
-                    ps.AddScript($"$result = Mount-DiskImage -ImagePath '{isoPath}' -PassThru; Get-Volume -DiskImage $result | Select-Object -ExpandProperty DriveLetter");
+                    // Mount the ISO and get the drive letter with proper escaping
+                    string escapedPath = isoPath.Replace("'", "''").Replace("\"", "\\\"");
+                    ps.AddScript($"$result = Mount-DiskImage -ImagePath \"{escapedPath}\" -PassThru; Get-Volume -DiskImage $result | Select-Object -ExpandProperty DriveLetter");
                     var results = ps.Invoke();
                     
                     if (ps.HadErrors || results.Count == 0)
@@ -474,8 +585,9 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                 // Use PowerShell to unmount the ISO
                 using (var ps = PowerShell.Create())
                 {
-                    // Get the disk image by drive letter and dismount it
-                    ps.AddScript($"Get-DiskImage -DevicePath (Get-Volume -DriveLetter {driveLetter} | Get-Partition | Get-Disk | Get-DiskImage | Select-Object -ExpandProperty DevicePath) | Dismount-DiskImage");
+                    // Get the disk image by drive letter and dismount it with proper error handling
+                    ps.AddScript($"try {{ Get-DiskImage -DevicePath (Get-Volume -DriveLetter {driveLetter} | Get-Partition | Get-Disk | Get-DiskImage | Select-Object -ExpandProperty DevicePath) | Dismount-DiskImage -ErrorAction Stop; $true }} catch {{ Write-Error $_.Exception.Message; $false }}");
+                    
                     ps.Invoke();
                     
                     if (ps.HadErrors)
