@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Plugins Introduction </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Plugins Introduction ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/JosefNemec/PlayniteDocs/blob/main/docs/tutorials/extensions/plugins.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="">
+            
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="plugins-introduction">Plugins Introduction</h1>
+
+<h2 id="basics">Basics</h2>
+<p>Plugins can be written in any .NET Framework compatible languages, this includes C#, VB.NET, F# and others, targeting .NET Framework 4.6.2.</p>
+<h2 id="plugin-types">Plugin types</h2>
+<p>There are currently two types of plugins:</p>
+<ul>
+<li><p><code>Generic plugins</code> Generic plugins offer same extensibility as scripts. You can add new entries to main menu or react to various <a href="events.html">game events</a>.</p>
+</li>
+<li><p><code>Library plugins</code>: Add ability to import games automatically as well as methods for metadata download for those games.</p>
+</li>
+<li><p><code>Metadata plugins</code>: Add ability to import game metadata.</p>
+</li>
+</ul>
+<h2 id="creating-plugins">Creating plugins</h2>
+<div class="NOTE">
+<h5>Note</h5>
+<p>Although you can technically write Playnite plugins in any IDE which supports .NET Framework 4.6.2 SDK, which includes <a href="https://www.jetbrains.com/rider">Rider</a> and <a href="vscodeWindows.html">Visual Studio Code</a>, standard Visual Studio (including Community edition) is the preferred IDE, because it has the best .NET Framework support.</p>
+</div>
+<h3 id="1-generate-plugin-from-template">1. Generate plugin from template</h3>
+<p>Run <a href="../toolbox.html">Toolbox</a> with arguments specific to a type of plugin you want to create.</p>
+<p>For example, to create new library plugin:</p>
+<pre><code class="lang-cmd">Toolbox.exe new LibraryPlugin &quot;SomeLibrary importer&quot; &quot;d:\somefolder&quot;
+</code></pre>
+<p>This will generate new C# project, with all of required classes already premade. Use generated <code>.sln</code> solution file to open plugin source code in your IDE.</p>
+<h3 id="2-implement-functionality">2. Implement functionality</h3>
+<p>Don't forget to implement functionality for template methods and properties that by default return <code>NotImplementedException</code> exception.</p>
+<ul>
+<li><code>Generic plugins</code> - see generic plugins <a href="genericPlugins.html">documentation page</a>.</li>
+<li><code>Library plugins</code> - see library plugins <a href="libraryPlugins.html">documentation page</a>.</li>
+<li><code>Metadata plugins</code> - see metadata plugins <a href="metadataPlugins.html">documentation page</a>.</li>
+</ul>
+<p><strong>Note to Visual Studio users:</strong> If you are having issues compiling plugins created from the template, make sure that nuget dependencies are downloaded and installed properly. If you can't for some reason restore SDK nuget package, try following:</p>
+<ul>
+<li>Use &quot;Save all&quot; and save solution file if you are prompted to.</li>
+<li>Restart Visual Studio if new solution file was created.</li>
+<li>Restore nuget dependencies via right-click menu on the solution item (in solution explorer, using &quot;Restore NuGet packages&quot;).</li>
+</ul>
+<h3 id="3-make-playnite-load-new-extension">3. Make Playnite load new extension</h3>
+<p>Go to Playnite settings, <code>For developers</code> section and add build output folder from the plugin project to <code>External extensions</code> list. This will look something like: <code>c:\plugin_project_folder\bin\Debug\</code> for debug builds by default. Build output folder can be seen/changed in VS project settings.</p>
+<h3 id="4-debugging-a-plugin">4. Debugging a plugin</h3>
+<p>Playnite plugins are standard .NET assemblies and therefore can be debugged in the same way as standard .NET dlls loaded in an external process, which is by default done via <code>Debug -&gt; Attach to process</code> menu in Visual Studio. If you want to have an easier time and be able to start Playnite from VS directly with debugger attached to it automatically, do following:</p>
+<ul>
+<li>Open project properties via right-click menu on plugin project in solution explorer.</li>
+<li>Go to <code>Debug</code> section.</li>
+<li>Switch <code>Start action</code> to <code>Start external program</code> and set path to Playnite's executable.</li>
+</ul>
+<p>Now when you start debugging, Visual Studio will automatically start Playnite process and attach debugger to it.</p>
+<h2 id="accessing-playnite-api">Accessing Playnite API</h2>
+<p>Playnite API instance is available via <a class="xref" href="../../api/Playnite.SDK.Plugins.Plugin.html#Playnite_SDK_Plugins_Plugin_PlayniteApi">PlayniteAPI</a> property on your plugin class, the same instance which is also injected in plugin's constructor. In case you can't for some reason access this property, there's also static singleton instance accessible via <a class="xref" href="../../api/Playnite.SDK.API.html#Playnite_SDK_API_Instance">Playnite.SDK.API.Instance</a>.</p>
+<div class="WARNING">
+<h5>Warning</h5>
+<p>Playnite's SDK is not fully thread safe. Meaning that you might occasionally run into a situation where you will access or modify UI object owned by UI thread (which can happen indirectly through events as well) and crash will happen. In that case you need to run affected code on UI thread, which can be achieved by using <a class="xref" href="../../api/Playnite.SDK.IMainViewAPI.html#Playnite_SDK_IMainViewAPI_UIDispatcher">UIDispatcher</a> from <code>MainView</code> API.</p>
+</div>
+<h2 id="plugin-dependencies">Plugin dependencies</h2>
+<div class="WARNING">
+<h5>Warning</h5>
+<p>If you are using external dependencies (from NuGet for example), make sure that you use the same version that Playnite already references. Current plugin system doesn't allow loading of multiple versions of the same assembly and you may encounter issues if you use different version compared to what Playnite uses.</p>
+</div>
+<p>You can check list of all Playnite's dependencies here:</p>
+<ul>
+<li><a href="https://github.com/JosefNemec/Playnite/blob/master/source/Playnite/packages.config">Playnite</a></li>
+<li><a href="https://github.com/JosefNemec/Playnite/blob/master/source/Playnite.DesktopApp/packages.config">Playnite.DesktopApp</a></li>
+<li><a href="https://github.com/JosefNemec/Playnite/blob/master/source/Playnite.FullscreenApp/packages.config">Playnite.FullscreenApp</a></li>
+</ul>
+<p>Probably the most common case where you might need to add an external dependency is for data serialization, usually JSON one. SDK already provides object serialization <a class="xref" href="../../api/Playnite.SDK.Data.Serialization.html">methods</a> which should cover most serialization cases, including <a class="xref" href="../../api/Playnite.SDK.Data.DontSerializeAttribute.html">DontSerialize</a> and <a class="xref" href="../../api/Playnite.SDK.Data.SerializationPropertyNameAttribute.html">SerializationPropertyName</a> attributes.</p>
+<div class="NOTE">
+<h5>Note</h5>
+<p>PlayniteSDK is designed in a way that all versions from one major version branch (for example 1.0, 1.1, 1.2 etc.) are backwards compatible. Therefore plugin written for SDK version 1.0 will also work with Playnite containing all 1.x versions of SDK. When loading plugins Playnite checks all SDK references and won't load plugins referencing incompatible SDK versions.</p>
+</div>
+<h2 id="referencing-playnite-assemblies">Referencing Playnite assemblies</h2>
+<div class="WARNING">
+<h5>Warning</h5>
+<p><strong>DO NOT</strong> reference non-SDK Playnite assemblies in your project (<code>Playnite</code>, <code>Playnite.Common</code> etc.). Playnite will refuse to load plugins that reference those assemblies.</p>
+</div>
+<p>If you want to use functionality/code from non-SDK assemblies, you have several options:</p>
+<ul>
+<li>Open GitHub issues for the functionality to be exposed in the SDK.</li>
+<li>Link the source code to your project (choose &quot;Add as link&quot; when adding a source file into plugin project) and compile it with your plugin assembly.</li>
+</ul>
+<h2 id="plugin-settings">Plugin settings</h2>
+<p>If you want to give user ability to change plugin behavior, you can do that by implementing appropriate settings overrides from <code>Plugin</code> abstract class. Including ability to add fully customizable UI for your configuration that will be accessible in Playnite's settings windows. To add plugin settings support to your plugin follow <a href="pluginSettings.html">Plugin settings guide</a>.</p>
+<h2 id="examples">Examples</h2>
+<p>Support for all library integrations in Playnite is implemented via plugins, therefore built-in integrations (those offered during first time startup) can be used as reference examples. Source for &quot;built-in&quot; integrations can be found <a href="https://github.com/JosefNemec/PlayniteExtensions">on GitHub</a>.</p>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/JosefNemec/PlayniteDocs/blob/main/docs/tutorials/extensions/plugins.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          <span>Made with <a href="https://dotnet.github.io/docfx">docfx</a></span>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

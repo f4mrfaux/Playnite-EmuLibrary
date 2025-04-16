@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Working with game library </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Working with game library ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/JosefNemec/PlayniteDocs/blob/main/docs/tutorials/extensions/library.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="">
+            
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="working-with-game-library">Working with game library</h1>
+
+<h2 id="introduction">Introduction</h2>
+<p>Game database API allows you to access and modify game library and its objects (including platforms and emulators). Database API can be accessed via <code>PlayniteAPI.Database</code> property, which provides <a class="xref" href="../../api/Playnite.SDK.IGameDatabaseAPI.html">IDatabaseAPI</a> interface.</p>
+<h2 id="handling-games">Handling Games</h2>
+<h3 id="getting-games">Getting Games</h3>
+<p>To get list of all games in library use <a class="xref" href="../../api/Playnite.SDK.IPlayniteAPI.html#Playnite_SDK_IPlayniteAPI_Database">Database</a> property from <code>IPlayniteAPI</code> and <a class="xref" href="../../api/Playnite.SDK.IGameDatabase.html#Playnite_SDK_IGameDatabase_Games">Games</a> collection.</p>
+<div class="tabGroup" id="tabgroup_1">
+<ul role="tablist">
+<li role="presentation">
+<a href="#tabpanel_1_csharp" role="tab" aria-controls="tabpanel_1_csharp" data-tab="csharp" tabindex="0" aria-selected="true">C#</a>
+</li>
+<li role="presentation">
+<a href="#tabpanel_1_tabpowershell" role="tab" aria-controls="tabpanel_1_tabpowershell" data-tab="tabpowershell" tabindex="-1">PowerShell</a>
+</li>
+</ul>
+<section id="tabpanel_1_csharp" role="tabpanel" data-tab="csharp">
+
+<pre><code class="lang-csharp">foreach (var game in PlayniteApi.Database.Games)
+{
+    // Do stuff with a game
+}
+
+// Get a game with known Id
+var game = PlayniteApi.Database.Games[SomeGuidId];
+</code></pre>
+</section>
+<section id="tabpanel_1_tabpowershell" role="tabpanel" data-tab="tabpowershell" aria-hidden="true" hidden="hidden">
+
+<pre><code class="lang-powershell"># Get all games
+$games = $PlayniteApi.Database.Games
+# Get a game with known Id
+$game = $PlayniteApi.Database.Games[$SomeGuidId]
+</code></pre>
+</section>
+</div>
+<h3 id="adding-new-game">Adding New Game</h3>
+<p>To add a new game create new instance of <a class="xref" href="../../api/Playnite.SDK.Models.Game.html">Game</a> class and call <code>Add</code> method from <a class="xref" href="../../api/Playnite.SDK.IGameDatabase.html#Playnite_SDK_IGameDatabase_Games">Games</a> collection.</p>
+<div class="tabGroup" id="tabgroup_2">
+<ul role="tablist">
+<li role="presentation">
+<a href="#tabpanel_2_csharp" role="tab" aria-controls="tabpanel_2_csharp" data-tab="csharp" tabindex="0" aria-selected="true">C#</a>
+</li>
+<li role="presentation">
+<a href="#tabpanel_2_tabpowershell" role="tab" aria-controls="tabpanel_2_tabpowershell" data-tab="tabpowershell" tabindex="-1">PowerShell</a>
+</li>
+</ul>
+<section id="tabpanel_2_csharp" role="tabpanel" data-tab="csharp">
+
+<pre><code class="lang-csharp">var newGame = new Game(&quot;New Game&quot;);
+PlayniteApi.Database.Games.Add(newGame);
+</code></pre>
+</section>
+<section id="tabpanel_2_tabpowershell" role="tabpanel" data-tab="tabpowershell" aria-hidden="true" hidden="hidden">
+
+<pre><code class="lang-powershell">$newGame = New-Object &quot;Playnite.SDK.Models.Game&quot;
+$newGame.Name = &quot;New Game&quot;
+$PlayniteApi.Database.Games.Add($newGame)
+</code></pre>
+</section>
+</div>
+<h3 id="changing-game-data">Changing Game Data</h3>
+<p>Changing properties on a <code>Game</code> object doesn't automatically update the game in Playnite's database and changes are lost with application restart. To make permanent changes game object must be updated in database manually using <code>Update</code> method from <a class="xref" href="../../api/Playnite.SDK.IGameDatabase.html#Playnite_SDK_IGameDatabase_Games">Games</a> collection.</p>
+<div class="tabGroup" id="tabgroup_3">
+<ul role="tablist">
+<li role="presentation">
+<a href="#tabpanel_3_csharp" role="tab" aria-controls="tabpanel_3_csharp" data-tab="csharp" tabindex="0" aria-selected="true">C#</a>
+</li>
+<li role="presentation">
+<a href="#tabpanel_3_tabpowershell" role="tab" aria-controls="tabpanel_3_tabpowershell" data-tab="tabpowershell" tabindex="-1">PowerShell</a>
+</li>
+</ul>
+<section id="tabpanel_3_csharp" role="tabpanel" data-tab="csharp">
+
+<pre><code class="lang-csharp">var game = PlayniteApi.Database.Games[SomeId];
+game.Name = &quot;Changed Name&quot;;
+PlayniteApi.Database.Games.Update(game);
+</code></pre>
+</section>
+<section id="tabpanel_3_tabpowershell" role="tabpanel" data-tab="tabpowershell" aria-hidden="true" hidden="hidden">
+
+<pre><code class="lang-powershell">$game = $PlayniteApi.Database.Games[$SomeId]
+$game.Name = &quot;Changed Name&quot;
+$PlayniteApi.Database.Games.Update($game)
+</code></pre>
+</section>
+</div>
+<h3 id="removing-games">Removing Games</h3>
+<p>To remove game from database use <code>Remove</code> method from <a class="xref" href="../../api/Playnite.SDK.IGameDatabase.html#Playnite_SDK_IGameDatabase_Games">Games</a> collection.</p>
+<div class="tabGroup" id="tabgroup_4">
+<ul role="tablist">
+<li role="presentation">
+<a href="#tabpanel_4_csharp" role="tab" aria-controls="tabpanel_4_csharp" data-tab="csharp" tabindex="0" aria-selected="true">C#</a>
+</li>
+<li role="presentation">
+<a href="#tabpanel_4_tabpowershell" role="tab" aria-controls="tabpanel_4_tabpowershell" data-tab="tabpowershell" tabindex="-1">PowerShell</a>
+</li>
+</ul>
+<section id="tabpanel_4_csharp" role="tabpanel" data-tab="csharp">
+
+<pre><code class="lang-csharp">PlayniteApi.Database.Games.Remove(SomeId);
+</code></pre>
+</section>
+<section id="tabpanel_4_tabpowershell" role="tabpanel" data-tab="tabpowershell" aria-hidden="true" hidden="hidden">
+
+<pre><code class="lang-powershell">$PlayniteApi.Database.Games.Remove($SomeId)
+</code></pre>
+</section>
+</div>
+<h3 id="bulk-updates">Bulk updates</h3>
+<p>Every collection change operation (update, add, remove) generates an event that is sent to all plugins and other parts of Playnite. Therefore it's highly recommend to bulk as much changes as possible together. You can use buffer updates which collect all changes and only generate single event once you commit/end update operation.</p>
+<div class="tabGroup" id="tabgroup_5">
+<ul role="tablist">
+<li role="presentation">
+<a href="#tabpanel_5_csharp" role="tab" aria-controls="tabpanel_5_csharp" data-tab="csharp" tabindex="0" aria-selected="true">C#</a>
+</li>
+<li role="presentation">
+<a href="#tabpanel_5_tabpowershell" role="tab" aria-controls="tabpanel_5_tabpowershell" data-tab="tabpowershell" tabindex="-1">PowerShell</a>
+</li>
+</ul>
+<section id="tabpanel_5_csharp" role="tabpanel" data-tab="csharp">
+
+<pre><code class="lang-csharp">using (PlayniteApi.Database.BufferedUpdate())
+{
+    // Any collection changes here don't generate any events
+}
+// Single event is sent here for all changes made in previous using block
+</code></pre>
+</section>
+<section id="tabpanel_5_tabpowershell" role="tabpanel" data-tab="tabpowershell" aria-hidden="true" hidden="hidden">
+
+<pre><code class="lang-powershell">$PlayniteApi.Database.BeginBufferUpdate()
+try
+{
+     # Any collection changes here don't generate any events
+}
+finally
+{
+    $PlayniteApi.Database.EndBufferUpdate()
+    # Single event is sent here for all changes made in previous try block
+}
+</code></pre>
+</section>
+</div>
+<h2 id="handling-reference-fields">Handling reference fields</h2>
+<p>Some fields are only stored as references in <code>Game</code> object and can't be directly updated. For example <code>Series</code> field is a reference via <code>SeriesId</code> property, you can't directly assign new value to <code>Series</code> property (it can be only used to obtain referenced series object).</p>
+<h3 id="updating-references">Updating references</h3>
+<p>Every reference field has it's own collection accessible in <a class="xref" href="../../api/Playnite.SDK.IPlayniteAPI.html#Playnite_SDK_IPlayniteAPI_Database">Database</a> API object. For example all series can be accessed via <a class="xref" href="../../api/Playnite.SDK.IGameDatabase.html#Playnite_SDK_IGameDatabase_Series">Series</a> collection.</p>
+<p>If you want to change name of the series then you will need to do it by updating series item from <a class="xref" href="../../api/Playnite.SDK.IGameDatabase.html#Playnite_SDK_IGameDatabase_Series">Series</a> collection. The change will be automatically propagated to all games using that series. All field collections are implemented via <a class="xref" href="../../api/Playnite.SDK.IItemCollection-1.html">IItemCollection</a> meaning that the update is done via the same process like updating general game information via <code>Update</code> method on the specific collection.</p>
+<h3 id="adding-references">Adding references</h3>
+<p>To assign completely new series to a game:</p>
+<ul>
+<li>Add new series into <a class="xref" href="../../api/Playnite.SDK.IGameDatabase.html#Playnite_SDK_IGameDatabase_Series">Series</a> database collection.</li>
+<li>Assign ID of newly added series to the game via <code>SeriesId</code> property.</li>
+<li>Call Update on <code>Games</code> collection to update new <code>SeriesId</code> in database.</li>
+</ul>
+<p>Some fields allow you to assign more items to a game. For example you can assign multiple tags to a game. In that case you need to assign <a href="https://docs.microsoft.com/en-us/dotnet/api/system.collections.generic.list-1">List</a> of IDs to <code>TagIds</code> property.</p>
+<h2 id="handling-data-changes">Handling data changes</h2>
+<p>Collections from <a class="xref" href="../../api/Playnite.SDK.IGameDatabaseAPI.html">IDatabaseAPI</a> provide <code>ItemCollectionChanged</code> and <code>ItemUpdated</code> events which you can use to react to data changes in the game library.</p>
+<div class="tabGroup" id="tabgroup_6">
+<ul role="tablist">
+<li role="presentation">
+<a href="#tabpanel_6_csharp" role="tab" aria-controls="tabpanel_6_csharp" data-tab="csharp" tabindex="0" aria-selected="true">C#</a>
+</li>
+<li role="presentation">
+<a href="#tabpanel_6_tabpowershell" role="tab" aria-controls="tabpanel_6_tabpowershell" data-tab="tabpowershell" tabindex="-1">PowerShell</a>
+</li>
+</ul>
+<section id="tabpanel_6_csharp" role="tabpanel" data-tab="csharp">
+
+<pre><code class="lang-csharp">PlayniteApi.Database.Games.ItemCollectionChanged += (_, args) =&gt;
+{
+    PlayniteApi.Dialogs.ShowMessage(args.AddedItems.Count + &quot; items added into the library.&quot;);
+};
+</code></pre>
+</section>
+<section id="tabpanel_6_tabpowershell" role="tabpanel" data-tab="tabpowershell" aria-hidden="true" hidden="hidden">
+
+<pre><code class="lang-powershell">Register-ObjectEvent -InputObject $PlayniteApi.Database.Games -EventName ItemCollectionChanged -Action {
+    $PlayniteApi.Dialogs.ShowMessage(&quot;$($EventArgs.AddedItems.Count) items added into the library.&quot;);
+}
+</code></pre>
+</section>
+</div>
+
+<p>If you want to specifically execute code after game library update (automatic one on startup or manual one from main menu), use <a href="events.html">OnLibraryUpdated</a> plugin event. <code>OnLibraryUpdated</code> is called after all library plugins finish with their game library updates.</p>
+<h2 id="handling-files">Handling Files</h2>
+<p>All game related image files are stored in game database itself, with only reference Id being used on the game object itself (with exception of <a class="xref" href="../../api/Playnite.SDK.Models.Game.html#Playnite_SDK_Models_Game_BackgroundImage">BackgroundImage</a>, which allows use of WEB URL as well). Following examples show how to handle game images using database API.</p>
+<h3 id="exporting-game-cover">Exporting Game Cover</h3>
+<p>Game cover images are referenced in <a class="xref" href="../../api/Playnite.SDK.Models.Game.html#Playnite_SDK_Models_Game_CoverImage">CoverImage</a> property. To save a file first get the file record by calling <a class="xref" href="../../api/Playnite.SDK.IGameDatabaseAPI.html#Playnite_SDK_IGameDatabaseAPI_GetFullFilePath_System_String_">GetFullFilePath</a> method. <code>GetFullFilePath</code> returns full path to a file on the disk drive.</p>
+<div class="tabGroup" id="tabgroup_7">
+<ul role="tablist">
+<li role="presentation">
+<a href="#tabpanel_7_csharp" role="tab" aria-controls="tabpanel_7_csharp" data-tab="csharp" tabindex="0" aria-selected="true">C#</a>
+</li>
+<li role="presentation">
+<a href="#tabpanel_7_tabpowershell" role="tab" aria-controls="tabpanel_7_tabpowershell" data-tab="tabpowershell" tabindex="-1">PowerShell</a>
+</li>
+</ul>
+<section id="tabpanel_7_csharp" role="tabpanel" data-tab="csharp">
+
+<pre><code class="lang-csharp">var game = PlayniteApi.Database.Games[SomeId];
+var coverPath = PlayniteApi.Database.GetFullFilePath(game.CoverImage);
+</code></pre>
+</section>
+<section id="tabpanel_7_tabpowershell" role="tabpanel" data-tab="tabpowershell" aria-hidden="true" hidden="hidden">
+
+<pre><code class="lang-powershell">$game = $PlayniteApi.Database.Games[$SomeId]
+$coverPath = $PlayniteApi.Database.GetFullFilePath($game.CoverImage)
+</code></pre>
+</section>
+</div>
+<h3 id="changing-cover-image">Changing Cover Image</h3>
+<p>Changing cover image involves several steps. First remove original image by calling <a class="xref" href="../../api/Playnite.SDK.IGameDatabaseAPI.html#Playnite_SDK_IGameDatabaseAPI_RemoveFile_System_String_">RemoveFile</a> method. Then add new image file to a database using <a class="xref" href="../../api/Playnite.SDK.IGameDatabaseAPI.html#Playnite_SDK_IGameDatabaseAPI_AddFile_System_String_System_Guid_">AddFile</a>. And lastly assign Id of new image to a game.</p>
+<p>Following example changes cover image of first game in database:</p>
+<div class="tabGroup" id="tabgroup_8">
+<ul role="tablist">
+<li role="presentation">
+<a href="#tabpanel_8_csharp" role="tab" aria-controls="tabpanel_8_csharp" data-tab="csharp" tabindex="0" aria-selected="true">C#</a>
+</li>
+<li role="presentation">
+<a href="#tabpanel_8_tabpowershell" role="tab" aria-controls="tabpanel_8_tabpowershell" data-tab="tabpowershell" tabindex="-1">PowerShell</a>
+</li>
+</ul>
+<section id="tabpanel_8_csharp" role="tabpanel" data-tab="csharp">
+
+<pre><code class="lang-csharp">var game = PlayniteApi.Database.Games[SomeId];
+PlayniteApi.Database.RemoveFile(game.CoverImage);
+game.CoverImage = PlayniteApi.Database.AddFile(@&quot;c:\file.png&quot;, game.Id);
+PlayniteApi.Database.Games.Update(game);
+</code></pre>
+</section>
+<section id="tabpanel_8_tabpowershell" role="tabpanel" data-tab="tabpowershell" aria-hidden="true" hidden="hidden">
+
+<pre><code class="lang-powershell">$game = $PlayniteApi.Database.Games[SomeId]
+$PlayniteApi.Database.RemoveFile($game.CoverImage)
+$game.CoverImage = $PlayniteApi.Database.AddFile(&quot;c:\file.png&quot;, $game.Id)
+$PlayniteApi.Database.Games.Update($game)
+</code></pre>
+</section>
+</div>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/JosefNemec/PlayniteDocs/blob/main/docs/tutorials/extensions/library.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          <span>Made with <a href="https://dotnet.github.io/docfx">docfx</a></span>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Introduction to Themes </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Introduction to Themes ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/JosefNemec/PlayniteDocs/blob/main/docs/tutorials/themes/introduction.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="">
+            
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="introduction-to-themes">Introduction to Themes</h1>
+
+<h2 id="general-information">General information</h2>
+<p>Playnite's user interface is implemented using Windows Presentation Framework (WPF) and UI definition is done using <a href="https://docs.microsoft.com/en-us/dotnet/framework/wpf/advanced/xaml-overview-wpf">XAML</a> files. Custom themes in Playnite are implemented using <a href="https://docs.microsoft.com/en-us/dotnet/framework/wpf/controls/styling-and-templating">standard template and styling</a> support that WPF provides, therefore any tutorial that applies to styling in WPF also applies to Playnite.</p>
+<h2 id="fullscreen-and-desktop-modes">Fullscreen and Desktop modes</h2>
+<p>Playnite offers two separate modes of operation. Standard <code>Desktop</code> mode designed for keyboard and mouse and <code>Fullscreen</code> mode designed to be controlled with gamepad. These two modes are implemented completely separately and therefore themes are also completely separate.</p>
+<h2 id="learning-resources">Learning resources</h2>
+<p>Since Playnite themes are essentially just set of <a href="https://docs.microsoft.com/en-us/dotnet/framework/wpf/controls/styling-and-templating">template and style</a> files, general editing rules and tutorials that apply to WPF also apply to Playnite.</p>
+<p>Recommended WPF resources:</p>
+<ul>
+<li><a href="https://docs.microsoft.com/en-us/dotnet/framework/wpf/advanced/xaml-overview-wpf">https://docs.microsoft.com/en-us/dotnet/framework/wpf/advanced/xaml-overview-wpf</a></li>
+<li><a href="https://www.wpftutorial.net/GettingStarted.html">https://www.wpftutorial.net/GettingStarted.html</a></li>
+<li><a href="https://www.tutorialspoint.com/wpf/">https://www.tutorialspoint.com/wpf/</a></li>
+</ul>
+<div class="NOTE">
+<h5>Note</h5>
+<p>There's currently very active community around theme/extension development on our <a href="https://discord.gg/hSFvmN6">Discord server</a>. We highly recommend joining if you plan to develop add-ons for Playnite!</p>
+</div>
+<h2 id="creating-playnite-themes">Creating Playnite themes</h2>
+<div class="WARNING">
+<h5>Warning</h5>
+<p>Do not edit built-in default themes. Always create new copy of theme files (ideally using Toolbox utility) are edit those. Broken edits to default theme files could lead to Playnite not being able to start anymore.</p>
+</div>
+<div class="WARNING">
+<h5>Warning</h5>
+<p>Please read the documentation carefully, especially section about <a href="distributionAndUpdates.html">distribution and theme updates</a>. Not updating your theme regularly could cause issues to theme users, for example they might not be able to use newly added features. Or they might not be able to load the theme at all in newer version of Playnite, in the worst case scenario.</p>
+</div>
+<p>There are generally two approaches to theme creation in Playnite.</p>
+<ol>
+<li><p><strong><a href="manualEditing.html">Manually editing</a></strong> XAML files using any text editor.</p>
+</li>
+<li><p><strong><a href="usingBlend.html">Using Blend/Visual Studio</a></strong> designer.</p>
+</li>
+</ol>
+<p>Option #1 doesn't require installation of any additional applications and themes can be generally created even using Notepad. However this approach has major disadvantages:</p>
+<ul>
+<li>You don't get live preview of changes your are making.</li>
+<li>You have to restart Playnite every time a change is made to theme files.</li>
+<li>There's not autocompletion or error checking for XAML syntax.</li>
+</ul>
+<p>Option #2 requires installation of <a href="https://visualstudio.microsoft.com/">Visual Studio IDE</a>, Community edition is free to download and includes <a href="https://docs.microsoft.com/en-us/visualstudio/designers/creating-a-ui-by-using-blend-for-visual-studio?view=vs-2019">Blend</a> editor. This approach takes some time to set up, but offers all advantages that manual editing lacks, like live preview, autocompletion of XAML properties, visual editor etc.</p>
+<div class="WARNING">
+<h5>Warning</h5>
+<p>The latest Visual Studio <strong>2022</strong> is currently not supported (live previews will not work)! Use <a href="https://download.visualstudio.microsoft.com/download/pr/93f24e82-778c-46ae-92f9-8d3010ecd011/a5da04d78b1f94ab145a365733476df7a1ec6219fa17f09c7e2f3c7cd74d9c9e/vs_Community.exe">2019 or 2017 version</a> instead.</p>
+</div>
+<p><strong>Using Blend editor is recommended option.</strong></p>
+<div class="WARNING">
+<h5>Warning</h5>
+<p>Theme installation and update always replaces the entire theme directory completely. Meaning that any files that are not part of the installation package will be lost during installation process! If your theme includes some custom functionality that requires user to replace/add files to theme's directory, make sure they know that they will loose those changes after an update!</p>
+</div>
+<h2 id="integrating-with-plugins">Integrating with plugins</h2>
+<p>Plugins can provide custom UI elements that can be integration into a theme. See <a href="extensionIntegration.html">extension integration page</a> for more details.</p>
+<h2 id="theme-files-and-directories">Theme files and directories</h2>
+<p>This section explains contents and purpose of specific theme files.</p>
+<table>
+<thead>
+<tr>
+<th>Directory/File</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>DefaultControls</td>
+<td>Styles for standard (built-in WPF) controls like button, checkbox etc.</td>
+</tr>
+<tr>
+<td>DerivedStyles</td>
+<td>Styles for standard (built-in WPF) controls like button, checkbox etc., that are used in specific cases. For example Play button, list item for Grid view etc.</td>
+</tr>
+<tr>
+<td>CustomControls</td>
+<td>Styles for custom Playnite controls.</td>
+</tr>
+<tr>
+<td>Views</td>
+<td>Styles for library views and panels.</td>
+</tr>
+<tr>
+<td>Common.xaml</td>
+<td>Base styles that are inherited by other styles from the theme.</td>
+</tr>
+<tr>
+<td>Constants.xaml</td>
+<td>Colors, brushes, sizes and other constants used by styles form the theme.</td>
+</tr>
+<tr>
+<td>Media.xaml</td>
+<td>Various icons, texts and image specifications used by styles form the theme.</td>
+</tr>
+</tbody>
+</table>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/JosefNemec/PlayniteDocs/blob/main/docs/tutorials/themes/introduction.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          <span>Made with <a href="https://dotnet.github.io/docfx">docfx</a></span>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

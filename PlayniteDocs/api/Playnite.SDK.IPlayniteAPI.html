@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Interface IPlayniteAPI </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Interface IPlayniteAPI ">
+      
+      <meta name="description" content="Describes object providing Playnite API.">
+      <link rel="icon" href="../favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/JosefNemec/Playnite/new/main/apiSpec/new?filename=Playnite_SDK_IPlayniteAPI.md&amp;value=---%0Auid%3A%20Playnite.SDK.IPlayniteAPI%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="ManagedReference">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../logo.svg" alt="">
+            
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="Playnite.SDK.IPlayniteAPI">
+
+
+
+  <h1 id="Playnite_SDK_IPlayniteAPI" data-uid="Playnite.SDK.IPlayniteAPI" class="text-break">
+Interface IPlayniteAPI  <a class="header-action link-secondary" title="View source" href="https://github.com/JosefNemec/Playnite/blob/main/source/PlayniteSDK/IPlayniteAPI.cs/#L14"><i class="bi bi-code-slash"></i></a>
+  </h1>
+
+  <div class="facts text-secondary">
+    <dl><dt>Namespace</dt><dd><a class="xref" href="Playnite.html">Playnite</a>.<a class="xref" href="Playnite.SDK.html">SDK</a></dd></dl>
+  <dl><dt>Assembly</dt><dd>Playnite.SDK.dll</dd></dl>
+  </div>
+
+  <div class="markdown summary"><p>Describes object providing Playnite API.</p>
+</div>
+  <div class="markdown conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public interface IPlayniteAPI</code></pre>
+  </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  <h2 class="section" id="properties">Properties
+</h2>
+
+
+  <a id="Playnite_SDK_IPlayniteAPI_Addons_" data-uid="Playnite.SDK.IPlayniteAPI.Addons*"></a>
+
+  <h3 id="Playnite_SDK_IPlayniteAPI_Addons" data-uid="Playnite.SDK.IPlayniteAPI.Addons">
+  Addons
+  <a class="header-action link-secondary" title="View source" href="https://github.com/JosefNemec/Playnite/blob/main/source/PlayniteSDK/IPlayniteAPI.cs/#L69"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets addons API.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">IAddons Addons { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="Playnite.SDK.IAddons.html">IAddons</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="Playnite_SDK_IPlayniteAPI_ApplicationInfo_" data-uid="Playnite.SDK.IPlayniteAPI.ApplicationInfo*"></a>
+
+  <h3 id="Playnite_SDK_IPlayniteAPI_ApplicationInfo" data-uid="Playnite.SDK.IPlayniteAPI.ApplicationInfo">
+  ApplicationInfo
+  <a class="header-action link-secondary" title="View source" href="https://github.com/JosefNemec/Playnite/blob/main/source/PlayniteSDK/IPlayniteAPI.cs/#L44"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets application info API.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">IPlayniteInfoAPI ApplicationInfo { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="Playnite.SDK.IPlayniteInfoAPI.html">IPlayniteInfoAPI</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="Playnite_SDK_IPlayniteAPI_ApplicationSettings_" data-uid="Playnite.SDK.IPlayniteAPI.ApplicationSettings*"></a>
+
+  <h3 id="Playnite_SDK_IPlayniteAPI_ApplicationSettings" data-uid="Playnite.SDK.IPlayniteAPI.ApplicationSettings">
+  ApplicationSettings
+  <a class="header-action link-secondary" title="View source" href="https://github.com/JosefNemec/Playnite/blob/main/source/PlayniteSDK/IPlayniteAPI.cs/#L64"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Get application settings API.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">IPlayniteSettingsAPI ApplicationSettings { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="Playnite.SDK.IPlayniteSettingsAPI.html">IPlayniteSettingsAPI</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="Playnite_SDK_IPlayniteAPI_Database_" data-uid="Playnite.SDK.IPlayniteAPI.Database*"></a>
+
+  <h3 id="Playnite_SDK_IPlayniteAPI_Database" data-uid="Playnite.SDK.IPlayniteAPI.Database">
+  Database
+  <a class="header-action link-secondary" title="View source" href="https://github.com/JosefNemec/Playnite/blob/main/source/PlayniteSDK/IPlayniteAPI.cs/#L24"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets database API.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">IGameDatabaseAPI Database { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="Playnite.SDK.IGameDatabaseAPI.html">IGameDatabaseAPI</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="Playnite_SDK_IPlayniteAPI_Dialogs_" data-uid="Playnite.SDK.IPlayniteAPI.Dialogs*"></a>
+
+  <h3 id="Playnite_SDK_IPlayniteAPI_Dialogs" data-uid="Playnite.SDK.IPlayniteAPI.Dialogs">
+  Dialogs
+  <a class="header-action link-secondary" title="View source" href="https://github.com/JosefNemec/Playnite/blob/main/source/PlayniteSDK/IPlayniteAPI.cs/#L29"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets dialog API.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">IDialogsFactory Dialogs { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="Playnite.SDK.IDialogsFactory.html">IDialogsFactory</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="Playnite_SDK_IPlayniteAPI_Emulation_" data-uid="Playnite.SDK.IPlayniteAPI.Emulation*"></a>
+
+  <h3 id="Playnite_SDK_IPlayniteAPI_Emulation" data-uid="Playnite.SDK.IPlayniteAPI.Emulation">
+  Emulation
+  <a class="header-action link-secondary" title="View source" href="https://github.com/JosefNemec/Playnite/blob/main/source/PlayniteSDK/IPlayniteAPI.cs/#L74"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets emulation API.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">IEmulationAPI Emulation { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="Playnite.SDK.IEmulationAPI.html">IEmulationAPI</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="Playnite_SDK_IPlayniteAPI_MainView_" data-uid="Playnite.SDK.IPlayniteAPI.MainView*"></a>
+
+  <h3 id="Playnite_SDK_IPlayniteAPI_MainView" data-uid="Playnite.SDK.IPlayniteAPI.MainView">
+  MainView
+  <a class="header-action link-secondary" title="View source" href="https://github.com/JosefNemec/Playnite/blob/main/source/PlayniteSDK/IPlayniteAPI.cs/#L19"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets main view API.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">IMainViewAPI MainView { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="Playnite.SDK.IMainViewAPI.html">IMainViewAPI</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="Playnite_SDK_IPlayniteAPI_Notifications_" data-uid="Playnite.SDK.IPlayniteAPI.Notifications*"></a>
+
+  <h3 id="Playnite_SDK_IPlayniteAPI_Notifications" data-uid="Playnite.SDK.IPlayniteAPI.Notifications">
+  Notifications
+  <a class="header-action link-secondary" title="View source" href="https://github.com/JosefNemec/Playnite/blob/main/source/PlayniteSDK/IPlayniteAPI.cs/#L39"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets notification API.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">INotificationsAPI Notifications { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="Playnite.SDK.INotificationsAPI.html">INotificationsAPI</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="Playnite_SDK_IPlayniteAPI_Paths_" data-uid="Playnite.SDK.IPlayniteAPI.Paths*"></a>
+
+  <h3 id="Playnite_SDK_IPlayniteAPI_Paths" data-uid="Playnite.SDK.IPlayniteAPI.Paths">
+  Paths
+  <a class="header-action link-secondary" title="View source" href="https://github.com/JosefNemec/Playnite/blob/main/source/PlayniteSDK/IPlayniteAPI.cs/#L34"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets paths API.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">IPlaynitePathsAPI Paths { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="Playnite.SDK.IPlaynitePathsAPI.html">IPlaynitePathsAPI</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="Playnite_SDK_IPlayniteAPI_Resources_" data-uid="Playnite.SDK.IPlayniteAPI.Resources*"></a>
+
+  <h3 id="Playnite_SDK_IPlayniteAPI_Resources" data-uid="Playnite.SDK.IPlayniteAPI.Resources">
+  Resources
+  <a class="header-action link-secondary" title="View source" href="https://github.com/JosefNemec/Playnite/blob/main/source/PlayniteSDK/IPlayniteAPI.cs/#L54"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets resources API.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">IResourceProvider Resources { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="Playnite.SDK.IResourceProvider.html">IResourceProvider</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="Playnite_SDK_IPlayniteAPI_UriHandler_" data-uid="Playnite.SDK.IPlayniteAPI.UriHandler*"></a>
+
+  <h3 id="Playnite_SDK_IPlayniteAPI_UriHandler" data-uid="Playnite.SDK.IPlayniteAPI.UriHandler">
+  UriHandler
+  <a class="header-action link-secondary" title="View source" href="https://github.com/JosefNemec/Playnite/blob/main/source/PlayniteSDK/IPlayniteAPI.cs/#L59"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets URI handler API.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">IUriHandlerAPI UriHandler { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="Playnite.SDK.IUriHandlerAPI.html">IUriHandlerAPI</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="Playnite_SDK_IPlayniteAPI_WebViews_" data-uid="Playnite.SDK.IPlayniteAPI.WebViews*"></a>
+
+  <h3 id="Playnite_SDK_IPlayniteAPI_WebViews" data-uid="Playnite.SDK.IPlayniteAPI.WebViews">
+  WebViews
+  <a class="header-action link-secondary" title="View source" href="https://github.com/JosefNemec/Playnite/blob/main/source/PlayniteSDK/IPlayniteAPI.cs/#L49"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets web view API.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">IWebViewFactory WebViews { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="Playnite.SDK.IWebViewFactory.html">IWebViewFactory</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <h2 class="section" id="methods">Methods
+</h2>
+
+
+  <a id="Playnite_SDK_IPlayniteAPI_AddConvertersSupport_" data-uid="Playnite.SDK.IPlayniteAPI.AddConvertersSupport*"></a>
+
+  <h3 id="Playnite_SDK_IPlayniteAPI_AddConvertersSupport_Playnite_SDK_Plugins_Plugin_Playnite_SDK_Plugins_AddConvertersSupportArgs_" data-uid="Playnite.SDK.IPlayniteAPI.AddConvertersSupport(Playnite.SDK.Plugins.Plugin,Playnite.SDK.Plugins.AddConvertersSupportArgs)">
+  AddConvertersSupport(Plugin, AddConvertersSupportArgs)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/JosefNemec/Playnite/blob/main/source/PlayniteSDK/IPlayniteAPI.cs/#L138"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">void AddConvertersSupport(Plugin source, AddConvertersSupportArgs args)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>source</code> <a class="xref" href="Playnite.SDK.Plugins.Plugin.html">Plugin</a></dt>
+    <dd></dd>
+    <dt><code>args</code> <a class="xref" href="Playnite.SDK.Plugins.AddConvertersSupportArgs.html">AddConvertersSupportArgs</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="Playnite_SDK_IPlayniteAPI_AddCustomElementSupport_" data-uid="Playnite.SDK.IPlayniteAPI.AddCustomElementSupport*"></a>
+
+  <h3 id="Playnite_SDK_IPlayniteAPI_AddCustomElementSupport_Playnite_SDK_Plugins_Plugin_Playnite_SDK_Plugins_AddCustomElementSupportArgs_" data-uid="Playnite.SDK.IPlayniteAPI.AddCustomElementSupport(Playnite.SDK.Plugins.Plugin,Playnite.SDK.Plugins.AddCustomElementSupportArgs)">
+  AddCustomElementSupport(Plugin, AddCustomElementSupportArgs)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/JosefNemec/Playnite/blob/main/source/PlayniteSDK/IPlayniteAPI.cs/#L124"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">void AddCustomElementSupport(Plugin source, AddCustomElementSupportArgs args)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>source</code> <a class="xref" href="Playnite.SDK.Plugins.Plugin.html">Plugin</a></dt>
+    <dd></dd>
+    <dt><code>args</code> <a class="xref" href="Playnite.SDK.Plugins.AddCustomElementSupportArgs.html">AddCustomElementSupportArgs</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="Playnite_SDK_IPlayniteAPI_AddSettingsSupport_" data-uid="Playnite.SDK.IPlayniteAPI.AddSettingsSupport*"></a>
+
+  <h3 id="Playnite_SDK_IPlayniteAPI_AddSettingsSupport_Playnite_SDK_Plugins_Plugin_Playnite_SDK_Plugins_AddSettingsSupportArgs_" data-uid="Playnite.SDK.IPlayniteAPI.AddSettingsSupport(Playnite.SDK.Plugins.Plugin,Playnite.SDK.Plugins.AddSettingsSupportArgs)">
+  AddSettingsSupport(Plugin, AddSettingsSupportArgs)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/JosefNemec/Playnite/blob/main/source/PlayniteSDK/IPlayniteAPI.cs/#L131"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">void AddSettingsSupport(Plugin source, AddSettingsSupportArgs args)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>source</code> <a class="xref" href="Playnite.SDK.Plugins.Plugin.html">Plugin</a></dt>
+    <dd></dd>
+    <dt><code>args</code> <a class="xref" href="Playnite.SDK.Plugins.AddSettingsSupportArgs.html">AddSettingsSupportArgs</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="Playnite_SDK_IPlayniteAPI_ExpandGameVariables_" data-uid="Playnite.SDK.IPlayniteAPI.ExpandGameVariables*"></a>
+
+  <h3 id="Playnite_SDK_IPlayniteAPI_ExpandGameVariables_Playnite_SDK_Models_Game_Playnite_SDK_Models_GameAction_" data-uid="Playnite.SDK.IPlayniteAPI.ExpandGameVariables(Playnite.SDK.Models.Game,Playnite.SDK.Models.GameAction)">
+  ExpandGameVariables(Game, GameAction)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/JosefNemec/Playnite/blob/main/source/PlayniteSDK/IPlayniteAPI.cs/#L99"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Expands dynamic game variables in specified game action.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">GameAction ExpandGameVariables(Game game, GameAction action)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>game</code> <a class="xref" href="Playnite.SDK.Models.Game.html">Game</a></dt>
+    <dd><p>Game to use dynamic variables from.</p>
+</dd>
+    <dt><code>action</code> <a class="xref" href="Playnite.SDK.Models.GameAction.html">GameAction</a></dt>
+    <dd><p>Game action to expand variables to.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="Playnite.SDK.Models.GameAction.html">GameAction</a></dt>
+    <dd><p>Game action with expanded variables.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="Playnite_SDK_IPlayniteAPI_ExpandGameVariables_" data-uid="Playnite.SDK.IPlayniteAPI.ExpandGameVariables*"></a>
+
+  <h3 id="Playnite_SDK_IPlayniteAPI_ExpandGameVariables_Playnite_SDK_Models_Game_System_String_" data-uid="Playnite.SDK.IPlayniteAPI.ExpandGameVariables(Playnite.SDK.Models.Game,System.String)">
+  ExpandGameVariables(Game, string)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/JosefNemec/Playnite/blob/main/source/PlayniteSDK/IPlayniteAPI.cs/#L82"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Expands dynamic game variables in specified string.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">string ExpandGameVariables(Game game, string inputString)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>game</code> <a class="xref" href="Playnite.SDK.Models.Game.html">Game</a></dt>
+    <dd><p>Game to use dynamic variables from.</p>
+</dd>
+    <dt><code>inputString</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd><p>String containing dynamic variables.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd><p>String with replaces variables.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="Playnite_SDK_IPlayniteAPI_ExpandGameVariables_" data-uid="Playnite.SDK.IPlayniteAPI.ExpandGameVariables*"></a>
+
+  <h3 id="Playnite_SDK_IPlayniteAPI_ExpandGameVariables_Playnite_SDK_Models_Game_System_String_System_String_" data-uid="Playnite.SDK.IPlayniteAPI.ExpandGameVariables(Playnite.SDK.Models.Game,System.String,System.String)">
+  ExpandGameVariables(Game, string, string)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/JosefNemec/Playnite/blob/main/source/PlayniteSDK/IPlayniteAPI.cs/#L91"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Expands dynamic game variables in specified string.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">string ExpandGameVariables(Game game, string inputString, string emulatorDir)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>game</code> <a class="xref" href="Playnite.SDK.Models.Game.html">Game</a></dt>
+    <dd><p>Game to use dynamic variables from.</p>
+</dd>
+    <dt><code>inputString</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd><p>String containing dynamic variables.</p>
+</dd>
+    <dt><code>emulatorDir</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd><p>String to be used to expand {EmulatorDir} variable if present.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd><p>String with replaces variables.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="Playnite_SDK_IPlayniteAPI_InstallGame_" data-uid="Playnite.SDK.IPlayniteAPI.InstallGame*"></a>
+
+  <h3 id="Playnite_SDK_IPlayniteAPI_InstallGame_System_Guid_" data-uid="Playnite.SDK.IPlayniteAPI.InstallGame(System.Guid)">
+  InstallGame(Guid)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/JosefNemec/Playnite/blob/main/source/PlayniteSDK/IPlayniteAPI.cs/#L111"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Installs game.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">void InstallGame(Guid gameId)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>gameId</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.guid">Guid</a></dt>
+    <dd><p>Game's database ID.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="Playnite_SDK_IPlayniteAPI_StartGame_" data-uid="Playnite.SDK.IPlayniteAPI.StartGame*"></a>
+
+  <h3 id="Playnite_SDK_IPlayniteAPI_StartGame_System_Guid_" data-uid="Playnite.SDK.IPlayniteAPI.StartGame(System.Guid)">
+  StartGame(Guid)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/JosefNemec/Playnite/blob/main/source/PlayniteSDK/IPlayniteAPI.cs/#L105"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Starts game.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">void StartGame(Guid gameId)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>gameId</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.guid">Guid</a></dt>
+    <dd><p>Game's database ID.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="Playnite_SDK_IPlayniteAPI_UninstallGame_" data-uid="Playnite.SDK.IPlayniteAPI.UninstallGame*"></a>
+
+  <h3 id="Playnite_SDK_IPlayniteAPI_UninstallGame_System_Guid_" data-uid="Playnite.SDK.IPlayniteAPI.UninstallGame(System.Guid)">
+  UninstallGame(Guid)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/JosefNemec/Playnite/blob/main/source/PlayniteSDK/IPlayniteAPI.cs/#L117"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Uninstalls game.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">void UninstallGame(Guid gameId)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>gameId</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.guid">Guid</a></dt>
+    <dd><p>Game's database ID.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/JosefNemec/Playnite/blob/main/source/PlayniteSDK/IPlayniteAPI.cs/#L14" class="edit-link">Edit this page</a>
+        </div>
+
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          <span>Made with <a href="https://dotnet.github.io/docfx">docfx</a></span>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

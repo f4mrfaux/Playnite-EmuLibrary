@@ -364,7 +364,21 @@ namespace EmuLibrary.RomTypes.Yuzu
                                 br.BaseStream.Seek(0, SeekOrigin.Begin);
 
                                 var ncaHeader = new byte[0x4000];
-                                br.BaseStream.Read(ncaHeader, 0, ncaHeader.Length);
+                                int bytesRead = 0;
+                                int totalBytesRead = 0;
+                                
+                                // Read with exact checking for number of bytes read
+                                while (totalBytesRead < ncaHeader.Length && 
+                                      (bytesRead = br.BaseStream.Read(ncaHeader, totalBytesRead, ncaHeader.Length - totalBytesRead)) > 0)
+                                {
+                                    totalBytesRead += bytesRead;
+                                }
+                                
+                                // Verify we read the expected number of bytes
+                                if (totalBytesRead != ncaHeader.Length)
+                                {
+                                    throw new IOException($"Failed to read complete NCA header. Expected {ncaHeader.Length} bytes, read {totalBytesRead}");
+                                }
 
                                 outStream.Write(ncaHeader, 0, ncaHeader.Length);
 

@@ -36,6 +36,13 @@ namespace EmuLibrary.RomTypes.PCInstaller
                 yield break;
             }
 
+            // Validate mapping and emulator configuration
+            if (mapping.EmulatorProfile == null)
+            {
+                _emuLibrary.Logger.Error($"No emulator profile specified for mapping {mapping.MappingId}");
+                yield break;
+            }
+
             // Validate paths
             var srcPath = mapping.SourcePath;
             var dstPath = mapping.DestinationPathResolved;
@@ -59,6 +66,7 @@ namespace EmuLibrary.RomTypes.PCInstaller
             var gameMetadataBatch = new List<GameMetadata>();
 
             #region Import discovered installers
+            var sourcedGames = new List<GameMetadata>();
             try
             {
                 fileEnumerator = new SafeFileEnumerator(srcPath, "*.*", SearchOption.AllDirectories);
@@ -138,43 +146,38 @@ namespace EmuLibrary.RomTypes.PCInstaller
                                     }
                                 });
 
-                                // Return games in batches for better performance
-                                if (gameMetadataBatch.Count >= BATCH_SIZE)
-                                {
-                                    _emuLibrary.Logger.Debug($"Yielding batch of {gameMetadataBatch.Count} PC installer games");
-                                    foreach (var game in gameMetadataBatch)
-                                    {
-                                        yield return game;
-                                    }
-                                    gameMetadataBatch.Clear();
-                                }
+                                // Batch processing handled outside the try block
                             }
                             catch (Exception ex)
                             {
-                                _emuLibrary.Logger.Error($"Error processing installer file {file.FullName}: {ex.Message}", ex);
+                                _emuLibrary.Logger.Error($"Error processing installer file {file.FullName}: {ex.Message}");
                             }
                         }
                     }
                 }
 
-                // Return any remaining games in the batch
+                // Add remaining games to the collection
                 if (gameMetadataBatch.Count > 0)
                 {
-                    _emuLibrary.Logger.Debug($"Yielding final batch of {gameMetadataBatch.Count} PC installer games");
-                    foreach (var game in gameMetadataBatch)
-                    {
-                        yield return game;
-                    }
+                    _emuLibrary.Logger.Debug($"Adding final batch of {gameMetadataBatch.Count} PC installer games");
+                    sourcedGames.AddRange(gameMetadataBatch);
                     gameMetadataBatch.Clear();
                 }
             }
             catch (Exception ex)
             {
-                _emuLibrary.Logger.Error($"Error scanning source directory {srcPath}: {ex.Message}", ex);
+                _emuLibrary.Logger.Error($"Error scanning source directory {srcPath}: {ex.Message}");
+            }
+            
+            // Return all discovered games outside the try/catch
+            foreach (var game in sourcedGames)
+            {
+                yield return game;
             }
             #endregion
             
             #region Update installed games
+            var installedGamesToReturn = new List<GameMetadata>();
             try
             {
                 _emuLibrary.Logger.Info("Updating installed PC installer games");
@@ -193,28 +196,31 @@ namespace EmuLibrary.RomTypes.PCInstaller
                                 }
                             } 
                             catch (Exception ex) {
-                                _emuLibrary.Logger.Error($"Error getting game info for {g.Name}: {ex.Message}", ex);
+                                _emuLibrary.Logger.Error($"Error getting game info for {g.Name}: {ex.Message}");
                             }
                             return (null, null);
                         })
                         .Where(pair => pair.Item1 != null);
                 
-                    foreach (var (game, gameInfo) in installedGames)
+                    foreach (var pair in installedGames)
                     {
+                        var game = pair.Item1;
+                        var gameInfo = pair.Item2;
                         if (args.CancelToken.IsCancellationRequested)
                         {
                             _emuLibrary.Logger.Info("Updating installed games cancelled");
-                            yield break;
+                            yield break; // Will continue after the catch block
                         }
                         
+                        GameMetadata gameMetadata = null;
                         try
                         {
                             if (!string.IsNullOrEmpty(gameInfo.InstallDirectory))
                             {
                                 if (Directory.Exists(gameInfo.InstallDirectory))
                                 {
-                                    // Game is still installed, update it
-                                    yield return new GameMetadata()
+                                    // Game is still installed, prepare it for returning later
+                                    gameMetadata = new GameMetadata()
                                     {
                                         Source = EmuLibrary.SourceName,
                                         Name = game.Name,
@@ -249,14 +255,26 @@ namespace EmuLibrary.RomTypes.PCInstaller
                         }
                         catch (Exception ex)
                         {
-                            _emuLibrary.Logger.Error($"Error processing installed game {game.Name}: {ex.Message}", ex);
+                            _emuLibrary.Logger.Error($"Error processing installed game {game.Name}: {ex.Message}");
+                        }
+                        
+                        // Metadata will be collected and returned outside the try/catch block
+                        if (gameMetadata != null)
+                        {
+                            installedGamesToReturn.Add(gameMetadata);
                         }
                     }
                 }
             }
             catch (Exception ex)
             {
-                _emuLibrary.Logger.Error($"Error updating installed games: {ex.Message}", ex);
+                _emuLibrary.Logger.Error($"Error updating installed games: {ex.Message}");
+            }
+            
+            // Return all collected games after the try/catch block
+            foreach (var game in installedGamesToReturn)
+            {
+                yield return game;
             }
             #endregion
         }
@@ -304,7 +322,7 @@ namespace EmuLibrary.RomTypes.PCInstaller
                             }
                             catch (Exception ex)
                             {
-                                _emuLibrary.Logger.Error($"Error checking source file for game {g.Name}: {ex.Message}", ex);
+                                _emuLibrary.Logger.Error($"Error checking source file for game {g.Name}: {ex.Message}");
                                 return false;
                             }
                         });
@@ -312,7 +330,7 @@ namespace EmuLibrary.RomTypes.PCInstaller
             }
             catch (Exception ex)
             {
-                _emuLibrary.Logger.Error($"Error in GetUninstalledGamesMissingSourceFiles: {ex.Message}", ex);
+                _emuLibrary.Logger.Error($"Error in GetUninstalledGamesMissingSourceFiles: {ex.Message}");
                 return Enumerable.Empty<Game>();
             }
         }

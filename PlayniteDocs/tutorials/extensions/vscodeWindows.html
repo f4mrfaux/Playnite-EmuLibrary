@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Use VSCode to develop Playnite extensions in Windows </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Use VSCode to develop Playnite extensions in Windows ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/JosefNemec/PlayniteDocs/blob/main/docs/tutorials/extensions/vscodeWindows.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="">
+            
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="use-vscode-to-develop-playnite-extensions-in-windows">Use VSCode to develop Playnite extensions in Windows</h1>
+
+<div class="WARNING">
+<h5>Warning</h5>
+<p>This guide is not up to date with the latest changes made to C# development in VS Code and therefore not all steps might be correct.</p>
+<p>Proper VS Code development doc will be made after Playnite transitions to modern .NET runtime with Playnite 11.</p>
+</div>
+<p>This is a step by step tutorial to build the Playnite extensions using VSCode.</p>
+<h2 id="download-and-setup-dependencies">Download and setup dependencies</h2>
+<ol>
+<li>Install <a href="https://code.visualstudio.com/Download">VSCode</a></li>
+<li>Install <a href="https://dotnet.microsoft.com/en-us/download/dotnet/sdk-for-vs-code">.NET SDK for VSCode</a></li>
+<li>Install <a href="https://dotnet.microsoft.com/en-us/download/dotnet-framework/net462">.NET Framework 4.6.2 Developer Pack</a></li>
+<li>Install <a href="https://my.visualstudio.com/Downloads?q=%22Visual%20Build%20Tools%20for%20Visual%20Studio%202015%20with%20Update%203%22">Visual Build Tools for Visual Studio 2015 with Update 3</a> (Requires registration)</li>
+<li>Install <a href="https://marketplace.visualstudio.com/items?itemName=ms-dotnettools.csharp">C# extension in VSCode</a></li>
+<li>Install <a href="https://www.nuget.org/downloads">nuget</a> (If in doubt, follow the instruction in <a href="https://docs.microsoft.com/en-us/nuget/install-nuget-client-tools#nugetexe-cli">Microsoft Docs</a>, and be sure to add it to the path!)</li>
+</ol>
+<h2 id="prepare-your-project-folder">Prepare your project folder</h2>
+<ol>
+<li><a href="https://playnite.link/docs/master/tutorials/toolbox.html#plugins">Create the project using toolbox.exe</a></li>
+<li>Open the project folder in VSCode</li>
+<li>In VSCode, press <code>ctrl+shit+P</code>, type <code>Terminal: Create New Terminal</code> and press <code>Enter</code></li>
+<li>Create a new <code>AssemblyInfo.cs</code> file:</li>
+</ol>
+<pre><code class="lang-powershell">Get-Content .\Properties\AssemblyInfo.cs | Where-Object {$_ -notmatch '^\[assembly: Assembly.+'} | Set-Content .\AssemblyInfo.cs
+Remove-Item -path .\Properties\ -recurse -force
+</code></pre>
+<ol start="5">
+<li>Install PlayniteSDK package using <code>nuget</code>:</li>
+</ol>
+<pre><code class="lang-shell">nuget restore -SolutionDirectory . -Verbosity normal
+</code></pre>
+<ol start="6">
+<li>Replace the csproj file content in your project folder for this:</li>
+</ol>
+<pre><code class="lang-xml">&lt;Project Sdk=&quot;Microsoft.NET.Sdk&quot;&gt;
+  &lt;PropertyGroup&gt;
+    &lt;OutputType&gt;Library&lt;/OutputType&gt;
+    &lt;TargetFramework&gt;net4.6.2&lt;/TargetFramework&gt;
+    &lt;UseWPF&gt;true&lt;/UseWPF&gt;
+  &lt;/PropertyGroup&gt;
+  &lt;PropertyGroup Condition=&quot;'$(Configuration)|$(Platform)'=='Debug|AnyCPU'&quot;&gt;
+        &lt;DefineConstants&gt;DEBUG;NET462;TRACE&lt;/DefineConstants&gt;
+        &lt;DebugType&gt;portable&lt;/DebugType&gt;
+  &lt;/PropertyGroup&gt; 
+  &lt;ItemGroup&gt;
+    &lt;ApplicationDefinition Remove=&quot;App.xaml&quot; /&gt;
+  &lt;/ItemGroup&gt;
+  &lt;ItemGroup&gt;
+    &lt;PackageReference Include=&quot;PlayniteSDK&quot; Version=&quot;6.2.0&quot; /&gt;
+  &lt;/ItemGroup&gt;
+  &lt;ItemGroup&gt;
+    &lt;None Include=&quot;extension.yaml&quot;&gt;
+      &lt;CopyToOutputDirectory&gt;PreserveNewest&lt;/CopyToOutputDirectory&gt;
+    &lt;/None&gt;
+    &lt;None Include=&quot;packages.config&quot; /&gt;
+  &lt;/ItemGroup&gt;
+  &lt;ItemGroup&gt;
+    &lt;None Include=&quot;icon.png&quot;&gt;
+      &lt;CopyToOutputDirectory&gt;PreserveNewest&lt;/CopyToOutputDirectory&gt;
+    &lt;/None&gt;
+  &lt;/ItemGroup&gt;
+&lt;/Project&gt;
+</code></pre>
+<ol start="7">
+<li>In VSCode, press <code>ctrl+shift+P</code>, type <code>.NET: Generate Assets for Build and Debug</code> and press <code>Enter</code></li>
+<li>In VSCode, press <code>ctrl+shift+P</code>, type <code>Tasks: Run Task &gt; publish</code> and press <code>Enter</code></li>
+<li>Output folder should be in <code>.\bin\Debug\net4.6.2\publish</code>. Add the full path (including drive letter) to the external extensions list in Playnite, and restart it.</li>
+<li>In Playnite, you should see your extension running in the Add-Ons window.</li>
+</ol>
+<p>As soon as build VSCode debugger are not support x86 application debug and execution, but Playnite x86 officially only, You have to prepare x64 version of Playnite yourself to be able to debug. To do it you have:</p>
+<ol>
+<li>Install Windows PowerShell version 7.0.</li>
+<li>Open Powershell version 7.0 and in PlayniteSources call <code>.\build\build.ps1 Debug x64 c:\playnite</code> this will build binaries and move to c:\playnite. Please be aware that it may affect already existed Playnite installation at this location.</li>
+<li>You have to download and replace x86 to x64 versions of SDL2.dll and SDL2_mixer.dll. Obtain it from official releases <a href="https://github.com/libsdl-org/SDL/releases">https://github.com/libsdl-org/SDL/releases</a> and <a href="https://github.com/libsdl-org/SDL_mixer/releases">https://github.com/libsdl-org/SDL_mixer/releases</a></li>
+<li>Tune you .vscode/tasks.json:</li>
+</ol>
+<pre><code class="lang-json">{
+    &quot;version&quot;: &quot;2.0.0&quot;,
+    &quot;tasks&quot;: [
+        {
+            &quot;label&quot;: &quot;build debug&quot;,
+            &quot;command&quot;: &quot;dotnet&quot;,
+            &quot;type&quot;: &quot;process&quot;,
+            &quot;args&quot;: [
+                &quot;build&quot;,
+                &quot;/property:GenerateFullPaths=true&quot;,
+                &quot;/consoleloggerparameters:NoSummary;ForceNoAlign&quot;
+            ],
+            &quot;problemMatcher&quot;: &quot;$msCompile&quot;,
+            &quot;group&quot;: {
+                &quot;kind&quot;: &quot;build&quot;,
+                &quot;isDefault&quot;: true
+            }
+        },
+        {
+            &quot;label&quot;: &quot;build release&quot;,
+            &quot;command&quot;: &quot;dotnet&quot;,
+            &quot;type&quot;: &quot;process&quot;,
+            &quot;args&quot;: [
+                &quot;build&quot;,
+                &quot;/property:GenerateFullPaths=true&quot;,
+                &quot;/consoleloggerparameters:NoSummary;ForceNoAlign&quot;,
+                &quot;-c&quot;,
+                &quot;Release&quot;
+            ],
+            &quot;problemMatcher&quot;: &quot;$msCompile&quot;
+        },
+        {
+            &quot;label&quot;: &quot;pack&quot;,
+            &quot;command&quot;: &quot;C:\\Playnite\\Toolbox.exe&quot;,
+            &quot;type&quot;: &quot;process&quot;,
+            &quot;args&quot;: [
+                &quot;pack&quot;,
+                &quot;${workspaceFolder}\\bin\\Release\\net4.6.2&quot;,
+                &quot;${workspaceFolder}\\bin\\Package&quot;
+            ],
+            &quot;problemMatcher&quot;: &quot;$msCompile&quot;,
+            &quot;dependsOn&quot;: [
+                &quot;build release&quot;
+            ]
+        }
+    ]
+}
+</code></pre>
+<p>and .vscode/launch.json:</p>
+<pre><code class="lang-json">{
+    &quot;configurations&quot;: [
+        {
+            &quot;name&quot;: &quot;Debug PlayniteSounds Desktop&quot;,
+            &quot;type&quot;: &quot;clr&quot;,
+            &quot;request&quot;: &quot;launch&quot;,
+            &quot;preLaunchTask&quot;: &quot;build debug&quot;,
+            &quot;program&quot;: &quot;C:\\Playnite\\Playnite.DesktopApp.exe&quot;,
+            &quot;args&quot;: [],
+            &quot;cwd&quot;: &quot;${workspaceFolder}&quot;,
+            &quot;stopAtEntry&quot;: false,
+            &quot;console&quot;: &quot;internalConsole&quot;,
+            &quot;logging&quot;: {
+                &quot;programOutput&quot;: true,
+                &quot;moduleLoad&quot;: false,
+                &quot;processExit&quot;: false
+            }
+        },
+        {
+            &quot;name&quot;: &quot;Debug PlayniteSounds Fullscreen&quot;,
+            &quot;type&quot;: &quot;clr&quot;,
+            &quot;request&quot;: &quot;launch&quot;,
+            &quot;preLaunchTask&quot;: &quot;build debug&quot;,
+            &quot;program&quot;: &quot;C:\\Playnite\\Playnite.FullscreenApp.exe&quot;,
+            &quot;args&quot;: [],
+            &quot;cwd&quot;: &quot;${workspaceFolder}&quot;,
+            &quot;stopAtEntry&quot;: false,
+            &quot;console&quot;: &quot;internalConsole&quot;,
+            &quot;logging&quot;: {
+                &quot;programOutput&quot;: true,
+                &quot;moduleLoad&quot;: false,
+                &quot;processExit&quot;: false
+            }
+        }
+    ]
+}
+</code></pre>
+<p>You can use something like <a href="https://aka.ms/xamlstudio">XAML Studio</a> to edit single XAML files graphically.</p>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/JosefNemec/PlayniteDocs/blob/main/docs/tutorials/extensions/vscodeWindows.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          <span>Made with <a href="https://dotnet.github.io/docfx">docfx</a></span>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

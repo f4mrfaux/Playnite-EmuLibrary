@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Library Plugins </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Library Plugins ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/JosefNemec/PlayniteDocs/blob/main/docs/tutorials/extensions/libraryPlugins.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="">
+            
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="library-plugins">Library Plugins</h1>
+
+<p>To implement library plugin:</p>
+<ul>
+<li>Read the introduction to <a href="intro.html">extensions</a> and <a href="plugins.html">plugins</a>.</li>
+<li>Create new public class inheriting from <a class="xref" href="../../api/Playnite.SDK.Plugins.LibraryPlugin.html">LibraryPlugin</a> abstract class.</li>
+<li>Add implementation for mandatory abstract members.</li>
+</ul>
+<h2 id="mandatory-members">Mandatory members</h2>
+<table>
+<thead>
+<tr>
+<th>Member</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Id</td>
+<td>Unique plugin id.</td>
+</tr>
+<tr>
+<td>Name</td>
+<td>Library name.</td>
+</tr>
+<tr>
+<td>GetGames</td>
+<td>Return games available in library.</td>
+</tr>
+</tbody>
+</table>
+<p><code>GetGames</code> returns list of <a class="xref" href="../../api/Playnite.SDK.Models.Game.html">Game</a> objects and these properties must be set correctly by the plugin in order for game to be imported properly:</p>
+<table>
+<thead>
+<tr>
+<th>Member</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GameId</td>
+<td>Unique identifier used to differentiate games of the same plugin.</td>
+</tr>
+<tr>
+<td>PluginId</td>
+<td>Source Id of the plugin importing game.</td>
+</tr>
+<tr>
+<td>PlayAction</td>
+<td>Game action used to start the game. Only if game is reported as installed via <code>State</code> property.</td>
+</tr>
+<tr>
+<td>InstallDirectory</td>
+<td>Installation location. Only if game is reported as installed via <code>State</code> property.</td>
+</tr>
+</tbody>
+</table>
+<p>You can implement additional functionality by overriding virtual methods from <a class="xref" href="../../api/Playnite.SDK.Plugins.LibraryPlugin.html">LibraryPlugin</a> base class.</p>
+<h2 id="capabilities">Capabilities</h2>
+<p>If you want to provide extra features for specific library integration, like ability to close third party client after the game is close, then implement <code>Properties</code> property on your plugin class that represents <a class="xref" href="../../api/Playnite.SDK.Plugins.LibraryPluginProperties.html">LibraryPluginProperties</a>.</p>
+<h3 id="supported-properties">Supported properties</h3>
+<table>
+<thead>
+<tr>
+<th>Capability</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CanShutdownClient</td>
+<td>When supported, library's client object has to implement <code>Shutdown</code> method.</td>
+</tr>
+<tr>
+<td>HasCustomizedGameImport</td>
+<td>Specifies that library is in full control over the game import mechanism. In this case the library should implement <code>ImportGames</code> method instead of <code>GetGames</code>.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="example-plugin">Example plugin</h2>
+<pre><code class="lang-csharp">public class LibraryPlugin : LibraryPlugin
+{
+    public override Guid Id { get; } = Guid.Parse(&quot;D625A3B7-1AA4-41CB-9CD7-74448D28E99B&quot;);
+
+    public override string Name { get; } = &quot;Test Library&quot;;
+
+    public TestGameLibrary(IPlayniteAPI api) : base (api)
+    {
+        Properties = new LibraryPluginProperties
+        {
+            CanShutdownClient = true,
+            HasSettings = true
+        };
+    }
+
+    public override IEnumerable&lt;GameMetadata&gt; GetGames()
+    {
+        return new List&lt;GameMetadata&gt;()
+        {
+            new GameMetadata()
+            {
+                Name = &quot;Some App&quot;,
+                GameId = &quot;some_app_id&quot;,
+                GameActions = new List&lt;GameAction&gt;
+                {
+                    new GameAction
+                    {
+                        Type = GameActionType.File,
+                        Path = &quot;c:\some_path\app.exe&quot;,
+                        IsPlayAction = true
+                    }
+                },
+                IsInstalled = true,
+                Icon = new MetadataFile(@&quot;c:\some_path\app.exe&quot;)
+            },
+            new GameMetadata()
+            {
+                Name = &quot;Calculator&quot;,
+                GameId = &quot;calc&quot;,
+                GameActions = new List&lt;GameAction&gt;
+                {
+                    new GameAction
+                    {
+                        Type = GameActionType.File,
+                        Path = &quot;calc.exe&quot;,
+                        IsPlayAction = true
+                    }
+                },
+                IsInstalled = true,
+                Icon = new MetadataFile(@&quot;https://playnite.link/applogo.png&quot;),
+                BackgroundImage =  new MetadataFile(@&quot;https://playnite.link/applogo.png&quot;)
+            }
+        };
+    }
+}
+</code></pre>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/JosefNemec/PlayniteDocs/blob/main/docs/tutorials/extensions/libraryPlugins.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          <span>Made with <a href="https://dotnet.github.io/docfx">docfx</a></span>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

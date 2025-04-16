@@ -31,7 +31,27 @@ namespace EmuLibrary.RomTypes.PCInstaller
         {
             get
             {
-                return Path.Combine(Mapping?.SourcePath ?? "", SourcePath);
+                try
+                {
+                    if (string.IsNullOrEmpty(SourcePath))
+                    {
+                        return InstallerFullPath;
+                    }
+
+                    var mapping = GetMapping();
+                    if (mapping == null || string.IsNullOrEmpty(mapping.SourcePath))
+                    {
+                        // Fallback to direct path if mapping is missing
+                        return InstallerFullPath;
+                    }
+
+                    return Path.Combine(mapping.SourcePath, SourcePath);
+                }
+                catch (System.Exception ex)
+                {
+                    LogManager.GetLogger().Error(ex, "Error getting source full path");
+                    return InstallerFullPath;
+                }
             }
         }
 
@@ -52,12 +72,49 @@ namespace EmuLibrary.RomTypes.PCInstaller
 
         public override void BrowseToSource()
         {
-            var psi = new System.Diagnostics.ProcessStartInfo()
+            try
             {
-                FileName = "explorer.exe",
-                Arguments = $"/e, /select, \"{Path.GetFullPath(SourceFullPath)}\""
-            };
-            System.Diagnostics.Process.Start(psi);
+                var sourcePath = SourceFullPath;
+                
+                if (File.Exists(sourcePath))
+                {
+                    if (System.Environment.OSVersion.Platform == System.PlatformID.Win32NT)
+                    {
+                        var psi = new System.Diagnostics.ProcessStartInfo()
+                        {
+                            FileName = "explorer.exe",
+                            Arguments = $"/select,\"{Path.GetFullPath(sourcePath)}\""
+                        };
+                        System.Diagnostics.Process.Start(psi);
+                    }
+                    else
+                    {
+                        // For non-Windows platforms, open the directory
+                        var directory = Path.GetDirectoryName(sourcePath);
+                        System.Diagnostics.Process.Start(directory);
+                    }
+                }
+                else
+                {
+                    // File doesn't exist, show directory
+                    var directory = Path.GetDirectoryName(sourcePath);
+                    if (Directory.Exists(directory))
+                    {
+                        if (System.Environment.OSVersion.Platform == System.PlatformID.Win32NT)
+                        {
+                            System.Diagnostics.Process.Start("explorer.exe", directory);
+                        }
+                        else
+                        {
+                            System.Diagnostics.Process.Start(directory);
+                        }
+                    }
+                }
+            }
+            catch (System.Exception ex)
+            {
+                LogManager.GetLogger().Error(ex, "Error browsing to source");
+            }
         }
     }
 }

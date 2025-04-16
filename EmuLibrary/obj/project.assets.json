@@ -863,24 +863,32 @@
     ]
   },
   "packageFolders": {
-    "/home/bob/.nuget/packages/": {}
+    "C:\\Users\\Bob\\.nuget\\packages\\": {},
+    "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "/home/bob/projects/Playnite-EmuLibrary/EmuLibrary/EmuLibrary.csproj",
+      "projectUniqueName": "\\\\ROGDOG\\bob\\projects\\Playnite-EmuLibrary\\EmuLibrary\\EmuLibrary.csproj",
       "projectName": "EmuLibrary",
-      "projectPath": "/home/bob/projects/Playnite-EmuLibrary/EmuLibrary/EmuLibrary.csproj",
-      "packagesPath": "/home/bob/.nuget/packages/",
-      "outputPath": "/home/bob/projects/Playnite-EmuLibrary/EmuLibrary/obj/",
+      "projectPath": "\\\\ROGDOG\\bob\\projects\\Playnite-EmuLibrary\\EmuLibrary\\EmuLibrary.csproj",
+      "packagesPath": "C:\\Users\\Bob\\.nuget\\packages\\",
+      "outputPath": "\\\\ROGDOG\\bob\\projects\\Playnite-EmuLibrary\\EmuLibrary\\obj\\",
       "projectStyle": "PackageReference",
+      "fallbackFolders": [
+        "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
+      ],
       "configFilePaths": [
-        "/home/bob/.config/NuGet/NuGet.Config"
+        "C:\\Users\\Bob\\AppData\\Roaming\\NuGet\\NuGet.Config",
+        "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+        "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
       ],
       "originalTargetFrameworks": [
         "net462"
       ],
       "sources": {
+        "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+        "C:\\Program Files\\dotnet\\library-packs": {},
         "https://api.nuget.org/v3/index.json": {}
       },
       "frameworks": {
@@ -898,7 +906,8 @@
         "enableAudit": "true",
         "auditLevel": "low",
         "auditMode": "direct"
-      }
+      },
+      "SdkAnalysisLevel": "9.0.200"
     },
     "frameworks": {
       "net462": {
@@ -937,7 +946,7 @@
             "version": "[3.1.25, )"
           }
         },
-        "runtimeIdentifierGraphPath": "/usr/lib/mono/msbuild/Current/bin/RuntimeIdentifierGraph.json"
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.201\\RuntimeIdentifierGraph.json"
       }
     }
   },

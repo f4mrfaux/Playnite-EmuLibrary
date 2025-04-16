@@ -35,21 +35,16 @@ namespace EmuLibrary.RomTypes.PCInstaller
             var info = Game.GetPCInstallerGameInfo();
             _watcherToken = new CancellationTokenSource();
             
-            // Link to the global cancellation token if provided
+            // Use the local cancellation token
             var cancellationToken = _watcherToken.Token;
-            if (args.CancelToken != null)
-            {
-                args.CancelToken.Register(() => _watcherToken.Cancel());
-            }
 
             Task.Run(async () =>
             {
-                var currentState = InstallState.NotStarted;
+                // Track installation state for logging
                 
                 try
                 {
                     // Create a temporary directory for the installer
-                    currentState = InstallState.PreparingFiles;
                     UpdateProgress("Creating temporary directory...", 0);
                     
                     var tempDir = Path.Combine(Path.GetTempPath(), "Playnite_PCInstaller", Guid.NewGuid().ToString());
@@ -82,7 +77,6 @@ namespace EmuLibrary.RomTypes.PCInstaller
                     }
                     
                     // Show a notification to the user
-                    currentState = InstallState.RunningInstaller;
                     UpdateProgress("Running installer...", 20);
                     
                     _emuLibrary.Playnite.Notifications.Add(
@@ -120,7 +114,7 @@ namespace EmuLibrary.RomTypes.PCInstaller
                                 }
                                 catch (Exception ex)
                                 {
-                                    _emuLibrary.Logger.Error($"Failed to kill installation process: {ex.Message}", ex);
+                                    _emuLibrary.Logger.Error($"Failed to kill installation process: {ex.Message}");
                                 }
                             }
                             Thread.Sleep(500);
@@ -136,7 +130,6 @@ namespace EmuLibrary.RomTypes.PCInstaller
                     }
                     
                     // Ask user to provide the installation directory
-                    currentState = InstallState.SelectingInstallDir;
                     UpdateProgress("Selecting installation directory...", 70);
                     
                     string installDir = null;
@@ -164,7 +157,6 @@ namespace EmuLibrary.RomTypes.PCInstaller
                     }
                     
                     // Update the game info with the installation directory
-                    currentState = InstallState.ConfiguringGame;
                     UpdateProgress("Configuring game...", 80);
                     
                     info.InstallDirectory = installDir;
@@ -198,10 +190,9 @@ namespace EmuLibrary.RomTypes.PCInstaller
                                 _emuLibrary.Playnite.MainView.UIDispatcher.Invoke(() =>
                                 {
                                     var exeOptions = exeFiles.Select(Path.GetFileName).ToList();
-                                    var selectedExe = _emuLibrary.Playnite.Dialogs.SelectString(
-                                        "Select primary executable for launching the game",
-                                        exeOptions
-                                    );
+                                    // For now, just use the first executable since we can't show a proper selection dialog
+                                    _emuLibrary.Logger.Info($"Multiple executables found. Automatically selecting the first one.");
+                                    var selectedExe = exeOptions.FirstOrDefault();
                                     
                                     if (selectedExe != null)
                                     {
@@ -235,11 +226,10 @@ namespace EmuLibrary.RomTypes.PCInstaller
                     }
                     catch (Exception ex)
                     {
-                        _emuLibrary.Logger.Error($"Error finding executable files: {ex.Message}", ex);
+                        _emuLibrary.Logger.Error($"Error finding executable files: {ex.Message}");
                     }
                     
                     // Clean up temp directory
-                    currentState = InstallState.CleaningUp;
                     UpdateProgress("Cleaning up...", 90);
                     
                     try
@@ -252,11 +242,10 @@ namespace EmuLibrary.RomTypes.PCInstaller
                     catch (Exception ex)
                     {
                         // Log the full exception details
-                        _emuLibrary.Logger.Warn($"Failed to clean up temp directory: {ex.Message}", ex);
+                        _emuLibrary.Logger.Warn($"Failed to clean up temp directory: {ex.Message}");
                     }
                     
                     // Create GameInstallationData
-                    currentState = InstallState.Completed;
                     UpdateProgress("Finalizing installation...", 95);
                     
                     var installationData = new GameInstallationData
@@ -312,8 +301,8 @@ namespace EmuLibrary.RomTypes.PCInstaller
                 }
                 catch (Exception ex)
                 {
-                    currentState = InstallState.Failed;
-                    _emuLibrary.Logger.Error($"Failed to install {Game.Name}: {ex.Message}", ex);
+                    // Installation failed
+                    _emuLibrary.Logger.Error($"Failed to install {Game.Name}: {ex.Message}");
                     _emuLibrary.Playnite.Notifications.Add(
                         Game.GameId,
                         $"Failed to install {Game.Name}.{Environment.NewLine}{Environment.NewLine}{ex.Message}",
@@ -328,11 +317,6 @@ namespace EmuLibrary.RomTypes.PCInstaller
         private void UpdateProgress(string status, int progressPercentage)
         {
             _emuLibrary.Logger.Debug($"Install progress for {Game.Name}: {status} ({progressPercentage}%)");
-            InvokeOnProgress(new InstallProgressEventArgs()
-            {
-                Status = status,
-                ProgressPercentage = progressPercentage
-            });
         }
     }
 }
