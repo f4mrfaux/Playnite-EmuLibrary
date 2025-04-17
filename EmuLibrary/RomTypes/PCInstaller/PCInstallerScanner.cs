@@ -169,7 +169,7 @@ namespace EmuLibrary.RomTypes.PCInstaller
                                 string baseGameName = null;
                                 string parentGameId = null;
                                 
-                                if (contentType != PCInstallerGameInfo.ContentType.BaseGame)
+                                if (contentType != ContentType.BaseGame)
                                 {
                                     // Try to extract base game name by removing content indicators
                                     baseGameName = ExtractBaseGameName(gameName);
@@ -200,7 +200,7 @@ namespace EmuLibrary.RomTypes.PCInstaller
                                                 {
                                                     var pcBaseGameInfo = baseGameInfo as PCInstallerGameInfo;
                                                     if (pcBaseGameInfo != null && 
-                                                        pcBaseGameInfo.ContentType == PCInstallerGameInfo.ContentType.BaseGame)
+                                                        pcBaseGameInfo.ContentType == ContentType.BaseGame)
                                                     {
                                                         parentGameId = baseGame.GameId;
                                                         _emuLibrary.Logger.Info($"Found parent game '{baseGame.Name}' for '{gameName}'");
@@ -788,54 +788,6 @@ namespace EmuLibrary.RomTypes.PCInstaller
             // If all else fails, return null to indicate we couldn't extract the base name
             return null;
         }
-        
-        /// <summary>
-        /// Detects content type, version and other metadata from file and directory names
-        /// </summary>
-        /// <param name="filePath">Full file path to the installer</param>
-        /// <param name="fileName">File name</param>
-        /// <param name="dirName">Directory name</param>
-        /// <returns>Tuple with ContentType, Version, and ContentDescription</returns>
-        private (PCInstallerGameInfo.ContentType contentType, string version, string contentDescription) 
-            DetectContentTypeAndVersion(string filePath, string fileName, string dirName)
-        {
-            // Default values
-            var contentType = PCInstallerGameInfo.ContentType.BaseGame;
-            string version = null;
-            string contentDescription = null;
-            
-            // Combine all relevant names for searching
-            var combinedText = $"{fileName} {dirName}".ToLowerInvariant();
-            
-            // Check for version information
-            var versionMatch = _versionPattern.Match(combinedText);
-            if (versionMatch.Success && versionMatch.Groups.Count > 1)
-            {
-                version = versionMatch.Groups[1].Value;
-            }
-            
-            // Determine content type based on keywords in file and directory names
-            if (_updatePattern.IsMatch(combinedText))
-            {
-                contentType = PCInstallerGameInfo.ContentType.Update;
-                contentDescription = "Game Update";
-                
-                // Try to extract specific update information
-                if (string.IsNullOrEmpty(version))
-                {
-                    // Try to extract version from patterns like "Update 1.2" or "Patch 2.0"
-                    var updateVersionMatch = Regex.Match(combinedText, @"(?i)(?:update|patch)\s*(\d+(?:\.\d+){0,3})");
-                    if (updateVersionMatch.Success && updateVersionMatch.Groups.Count > 1)
-                    {
-                        version = updateVersionMatch.Groups[1].Value;
-                        contentDescription = $"Update v{version}";
-                    }
-                }
-                else
-                {
-                    contentDescription = $"Update v{version}";
-                }
-            }
             else if (_expansionPattern.IsMatch(combinedText))
             {
                 contentType = PCInstallerGameInfo.ContentType.Expansion;
