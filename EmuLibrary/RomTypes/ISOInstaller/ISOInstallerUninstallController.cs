@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace EmuLibrary.RomTypes.ISOInstaller
 {
-    class ISOInstallerUninstallController : UninstallController
+    class ISOInstallerUninstallController : BaseInstallController
     {
         internal ISOInstallerUninstallController(Game game, IEmuLibrary emuLibrary) : base(game, emuLibrary)
         { }

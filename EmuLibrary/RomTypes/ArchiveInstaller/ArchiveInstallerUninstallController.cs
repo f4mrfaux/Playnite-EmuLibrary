@@ -11,21 +11,14 @@ using System.Threading.Tasks;
 
 namespace EmuLibrary.RomTypes.ArchiveInstaller
 {
-    class ArchiveInstallerUninstallController : UninstallController
+    class ArchiveInstallerUninstallController : BaseInstallController
     {
-        private Game _game;
-        private IEmuLibrary _emuLibrary;
-        private CancellationTokenSource _watcherToken;
-
-        internal ArchiveInstallerUninstallController(Game game, IEmuLibrary emuLibrary)
-        {
-            _game = game;
-            _emuLibrary = emuLibrary;
-        }
+        internal ArchiveInstallerUninstallController(Game game, IEmuLibrary emuLibrary) : base(game, emuLibrary)
+        { }
 
         public override void Uninstall(UninstallActionArgs args)
         {
-            var info = _game.GetArchiveInstallerGameInfo();
+            var info = Game.GetArchiveInstallerGameInfo();
             _watcherToken = new CancellationTokenSource();
             
             // Timeout after 10 minutes for uninstall
@@ -35,11 +28,11 @@ namespace EmuLibrary.RomTypes.ArchiveInstaller
             {
                 try
                 {
-                    _emuLibrary.Logger.Info($"Starting uninstallation of {_game.Name}");
+                    _emuLibrary.Logger.Info($"Starting uninstallation of {Game.Name}");
                     
                     // Mark game as uninstalling
-                    _game.IsUninstalling = true;
-                    _emuLibrary.Playnite.Database.Games.Update(_game);
+                    Game.IsUninstalling = true;
+                    _emuLibrary.Playnite.Database.Games.Update(Game);
                     
                     // Get game install directory
                     var installDirectory = info.InstallDirectory;
@@ -334,7 +327,7 @@ namespace EmuLibrary.RomTypes.ArchiveInstaller
             _emuLibrary.Playnite.Database.Games.Update(_game);
             
             // Call event handler
-            OnUninstalled(new GameUninstalledEventArgs());
+            InvokeOnUninstalled(null);
         }
     }
 }

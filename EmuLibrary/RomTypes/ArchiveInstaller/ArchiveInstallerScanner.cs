@@ -64,16 +64,12 @@ namespace EmuLibrary.RomTypes.ArchiveInstaller
             }
 
             // Create a SafeFileEnumerator to handle network issues gracefully
-            var options = new EnumerationOptions
-            {
-                RecurseSubdirectories = true,
-                IgnoreInaccessible = true,
-                ReturnSpecialDirectories = false
-            };
+            // Use SearchOption instead of EnumerationOptions for .NET Framework compatibility
+            var searchOption = SearchOption.AllDirectories;
 
             try
             {
-                using (var enumerator = new PlayniteCommon.SafeFileEnumerator(mapping.SourcePath, "*.*", options))
+                using (var enumerator = new PlayniteCommon.SafeFileEnumerator(mapping.SourcePath, "*.*", searchOption))
                 {
                     var multipartArchives = new Dictionary<string, List<string>>();
                     var allArchives = new List<string>();
@@ -643,7 +639,9 @@ namespace EmuLibrary.RomTypes.ArchiveInstaller
                 if (parentGame != null)
                 {
                     // Store the parent-child relationship in custom properties
-                    result.GameDependencies = new HashSet<Guid> { parentGame.Id };
+                    // Fixed: GameDependencies property doesn't exist in this API version
+                    // We'll use GameMetadata's properties instead
+                    result.Properties.Add("DependentGameId", parentGame.Id.ToString());
                     
                     if (result.Description == null)
                     {
