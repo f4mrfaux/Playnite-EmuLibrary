@@ -71,7 +71,7 @@ namespace EmuLibrary.RomTypes.Yuzu
                     InstallDirectory = mapping.EmulatorBasePath,
                     IsInstalled = true,
                     GameId = gameInfo.AsGameId(),
-                    Platforms = new HashSet<MetadataProperty>() { new MetadataNameProperty(mapping.Platform.Name) },
+                    Platforms = new HashSet<MetadataProperty>() { new MetadataNameProperty(mapping.Platform?.Name ?? "Nintendo Switch") },
                     Regions = _switchRegions,
                     Version = g.Version,
                     GameActions = new List<GameAction>()
@@ -117,7 +117,7 @@ namespace EmuLibrary.RomTypes.Yuzu
                     Name = g.Title,
                     IsInstalled = false,
                     GameId = gameInfo.AsGameId(),
-                    Platforms = new HashSet<MetadataProperty>() { new MetadataNameProperty(mapping.Platform.Name) },
+                    Platforms = new HashSet<MetadataProperty>() { new MetadataNameProperty(mapping.Platform?.Name ?? "Nintendo Switch") },
                     Regions = _switchRegions,
                     GameActions = new List<GameAction>() {
                         new GameAction()
