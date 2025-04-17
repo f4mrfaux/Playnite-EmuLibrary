@@ -79,11 +79,22 @@ The ArchiveInstaller type extends the functionality of ISOInstaller by handling 
 * Install games to a specified location
 * Manage archived disc-based PC games alongside your other games
 
-Requirements:
+#### Requirements
 * 7-Zip executable must be installed and available in your PATH
 * For multi-part archives (like rar, r00, r01, etc.), all parts need to be in the same directory
-* Password-protected archives are supported
+* Password-protected archives are supported (you'll need to provide the password in the game properties)
 
+#### Features
+* Smart multi-disc detection for game collections
+* Automatic handling of multi-part archives
+* Parallel extraction for large archives
+* Automatic retry mechanism for corrupted archives
+* Detailed progress reporting during extraction
+* Intelligent ISO selection for multi-disc games
+* Support for nested archive structures
+* Proper cleanup of temporary files
+
+#### Installation Workflow
 The ArchiveInstaller implements a multi-step installation workflow:
 1. Import archive to local temp storage
 2. Extract archive locally using 7-Zip
@@ -93,6 +104,38 @@ The ArchiveInstaller implements a multi-step installation workflow:
 6. Clean up temp files after installation
 
 All operations are performed on locally imported copies of files to ensure reliability, especially over network connections.
+
+#### Troubleshooting ArchiveInstaller
+
+**Common Issues and Solutions:**
+
+1. **7-Zip Not Found Error**
+   - Ensure 7-Zip is installed on your system
+   - Make sure the 7-Zip executable (7z.exe) is in your system PATH
+   - The extension searches in common installation locations, but may not find custom installations
+
+2. **Archive Extraction Fails**
+   - Check if the archive is password-protected (provide password in game properties)
+   - Verify the archive isn't corrupted by testing with 7-Zip directly
+   - For multi-part archives, ensure all parts are available in the same directory
+   - The extension will automatically retry extraction up to 3 times for potentially recoverable errors
+
+3. **No ISO Found After Extraction**
+   - Make sure the archive actually contains a supported disc image (.iso, .bin/.cue, etc.)
+   - Some archives may have complex directory structures - the extension scans all subdirectories
+   - Check if the archive uses an unusual or unsupported disc image format
+
+4. **ISO Mounting Fails**
+   - Requires administrator rights to mount disc images
+   - Ensures the extracted ISO isn't corrupted
+   - Windows may prevent mounting certain disc images due to security restrictions
+
+5. **Performance Considerations**
+   - Large archives (>500MB) will use parallel extraction if available
+   - Network imports can be slow - consider using the asset caching feature
+   - Extraction can be CPU and disk intensive - ensure adequate system resources
+
+For persistent issues, check the extension log files located in the Playnite data directory.
 
 ### Yuzu (Beta)
 
@@ -176,6 +219,34 @@ Here's how to set up a mapping for archived ISO games:
 10. After installation, the game will be marked as "installed" and you can launch it directly from Playnite.
 
 This workflow is particularly useful for large collections of archived disc images, especially when stored on network storage.
+
+### Advanced Usage: Multi-disc Archive Processing
+
+For multi-disc games stored in archives:
+
+1. Organize your archives using standard disc naming conventions:
+   - Use patterns like "Game Name (Disc 1).iso", "Game Name (Disc 2).iso"
+   - Alternative formats like "Game Name - Disc 1.iso" are also recognized
+   - Consistent naming helps the system identify related discs
+
+2. When installing multi-disc games:
+   - The system will automatically detect related discs
+   - The first disc will be selected by default for installation
+   - You can manually select a different disc if needed
+   - After installation, all discs will be accessible from the installed game
+
+3. For multi-part RAR archives:
+   - Ensure all parts (.rar, .r00, .r01, etc.) are in the same directory
+   - The scanner will automatically group them together
+   - The entire set will be imported together to local storage before processing
+   - Processing is done as a single unit for reliable extraction
+
+4. For nested archives (archives inside archives):
+   - The system will extract the outer archive first
+   - Then scan for and extract any inner archives
+   - Finally, it will locate ISO files in the fully extracted content
+
+This functionality is particularly useful for complex game collections that use advanced archiving techniques.
 
 ## Support
 

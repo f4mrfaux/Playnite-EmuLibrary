@@ -720,115 +720,395 @@ namespace EmuLibrary.RomTypes.ArchiveInstaller
             });
         }
         
+        private class ExtractionMetrics
+        {
+            public DateTime StartTime { get; set; }
+            public long TotalBytesProcessed { get; set; }
+            public int FilesProcessed { get; set; }
+            public int TotalFiles { get; set; }
+            public string CurrentFile { get; set; }
+            public int PercentComplete { get; set; }
+            public long BytesPerSecond { get; set; }
+            public long ArchiveSize { get; set; }
+            public bool HasCorruptionWarning { get; set; }
+            public bool HasPasswordError { get; set; }
+            public List<string> ErrorMessages { get; set; } = new List<string>();
+            
+            public double GetTimeElapsed()
+            {
+                return (DateTime.Now - StartTime).TotalSeconds;
+            }
+            
+            public void UpdateSpeed()
+            {
+                double seconds = GetTimeElapsed();
+                if (seconds > 0)
+                {
+                    BytesPerSecond = (long)(TotalBytesProcessed / seconds);
+                }
+            }
+            
+            public string GetStatusMessage()
+            {
+                if (HasPasswordError)
+                {
+                    return "Wrong password for archive";
+                }
+                else if (HasCorruptionWarning)
+                {
+                    return "Archive may be corrupted";
+                }
+                else if (TotalFiles > 0)
+                {
+                    return $"Extracting: {PercentComplete}% - {FilesProcessed}/{TotalFiles} files";
+                }
+                else
+                {
+                    return $"Extracting: {PercentComplete}%";
+                }
+            }
+        }
+        
+        // Maximum number of retries for archive extraction
+        private const int MaxExtractionRetries = 3;
+        // Parallel processing for large files
+        private const bool UseParallelProcessing = true;
+        
         private async Task<bool> ExtractArchiveAsync(string archivePath, string extractPath, string password, CancellationToken cancellationToken)
+        {
+            ExtractionMetrics metrics = new ExtractionMetrics
+            {
+                StartTime = DateTime.Now
+            };
+            
+            // Get archive size if available
+            try
+            {
+                var fileInfo = new FileInfo(archivePath);
+                metrics.ArchiveSize = fileInfo.Length;
+            }
+            catch
+            {
+                // Ignore errors getting file size
+            }
+            
+            int retryCount = 0;
+            bool success = false;
+            
+            while (retryCount < MaxExtractionRetries && !success)
+            {
+                try
+                {
+                    // If this is a retry, clear the extraction directory and reset metrics
+                    if (retryCount > 0)
+                    {
+                        _emuLibrary.Logger.Info($"Retry {retryCount}/{MaxExtractionRetries} for extracting {archivePath}");
+                        
+                        // Notify the user of the retry
+                        _emuLibrary.Playnite.Notifications.Add(
+                            Game.GameId,
+                            $"Retrying archive extraction ({retryCount}/{MaxExtractionRetries})...",
+                            NotificationType.Info
+                        );
+                        
+                        try
+                        {
+                            // Clear extraction directory for clean retry
+                            if (Directory.Exists(extractPath))
+                            {
+                                Directory.Delete(extractPath, true);
+                                Directory.CreateDirectory(extractPath);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            _emuLibrary.Logger.Error($"Failed to clear extraction directory for retry: {ex.Message}");
+                        }
+                        
+                        // Reset metrics for the retry
+                        metrics = new ExtractionMetrics
+                        {
+                            StartTime = DateTime.Now,
+                            ArchiveSize = metrics.ArchiveSize
+                        };
+                        
+                        // Wait briefly before retry
+                        await Task.Delay(1000 * retryCount, cancellationToken);
+                    }
+                
+                    _emuLibrary.Logger.Info($"Extracting archive {archivePath} to {extractPath}");
+                    
+                    // Create process to run 7-Zip
+                    var sevenZipPath = FindSevenZipPath();
+                    if (string.IsNullOrEmpty(sevenZipPath))
+                    {
+                        throw new FileNotFoundException("7-Zip executable not found. Please make sure 7-Zip is installed and in PATH.");
+                    }
+                    
+                    // Build command line arguments
+                    var args = "x ";
+                    args += $"\"{archivePath}\" "; // Quote path to handle spaces
+                    args += $"-o\"{extractPath}\" "; // Output directory
+                    args += "-y "; // Yes to all prompts
+                    
+                    // Add parallel processing for large archives
+                    if (UseParallelProcessing && metrics.ArchiveSize > 100 * 1024 * 1024) // 100MB threshold
+                    {
+                        args += "-mmt=on "; // Enable multi-threading
+                    }
+                    
+                    // Add password if provided
+                    if (!string.IsNullOrEmpty(password))
+                    {
+                        args += $"-p{password} ";
+                    }
+                    
+                    var processStartInfo = new ProcessStartInfo
+                    {
+                        FileName = sevenZipPath,
+                        Arguments = args,
+                        UseShellExecute = false,
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true,
+                        CreateNoWindow = true
+                    };
+                    
+                    _emuLibrary.Logger.Debug($"Running 7-Zip: {sevenZipPath} {args}");
+                    
+                    using (var process = new Process { StartInfo = processStartInfo })
+                    {
+                        // Execute the process
+                        process.Start();
+                        
+                        // Read output and error asynchronously
+                        var outputTask = Task.Run(() => {
+                            string line;
+                            while ((line = process.StandardOutput.ReadLine()) != null)
+                            {
+                                _emuLibrary.Logger.Debug($"7-Zip output: {line}");
+                                
+                                // Parse the output line for extraction information
+                                ParseExtractionOutput(line, metrics);
+                                
+                                // Update progress based on extraction metrics
+                                metrics.UpdateSpeed();
+                                int progressValue = 15 + (int)(metrics.PercentComplete * 0.15);
+                                
+                                // Format the progress message
+                                string speedStr = metrics.BytesPerSecond > 0 
+                                    ? $" ({metrics.BytesPerSecond / (1024 * 1024)} MB/s)" 
+                                    : "";
+                                
+                                UpdateProgress($"{metrics.GetStatusMessage()}{speedStr}", progressValue);
+                            }
+                        }, cancellationToken);
+                        
+                        var errorTask = Task.Run(() => {
+                            string line;
+                            while ((line = process.StandardError.ReadLine()) != null)
+                            {
+                                _emuLibrary.Logger.Error($"7-Zip error: {line}");
+                                metrics.ErrorMessages.Add(line);
+                                
+                                // Check for specific error types
+                                if (line.Contains("Wrong password", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    metrics.HasPasswordError = true;
+                                }
+                                else if (line.Contains("corrupt", StringComparison.OrdinalIgnoreCase) ||
+                                         line.Contains("CRC failed", StringComparison.OrdinalIgnoreCase) ||
+                                         line.Contains("data error", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    metrics.HasCorruptionWarning = true;
+                                }
+                            }
+                        }, cancellationToken);
+                        
+                        // Check for cancellation while waiting
+                        while (!process.HasExited)
+                        {
+                            if (cancellationToken.IsCancellationRequested)
+                            {
+                                try
+                                {
+                                    process.Kill();
+                                    _emuLibrary.Logger.Info("7-Zip process was cancelled and terminated");
+                                    return false;
+                                }
+                                catch (Exception ex)
+                                {
+                                    _emuLibrary.Logger.Error($"Failed to kill 7-Zip process: {ex.Message}");
+                                }
+                            }
+                            await Task.Delay(100, cancellationToken);
+                        }
+                        
+                        // Wait for output/error processing to complete
+                        await Task.WhenAll(outputTask, errorTask);
+                        
+                        // Check for specific error types that would benefit from retrying
+                        if (metrics.HasPasswordError)
+                        {
+                            throw new InvalidOperationException("Wrong password for the archive. Please check the password and try again.");
+                        }
+                        
+                        // Check exit code
+                        if (process.ExitCode != 0)
+                        {
+                            string errorDetail = metrics.ErrorMessages.Count > 0 
+                                ? $": {string.Join(", ", metrics.ErrorMessages)}" 
+                                : "";
+                                
+                            if (metrics.HasCorruptionWarning)
+                            {
+                                throw new IOException($"Archive appears to be corrupted{errorDetail}");
+                            }
+                            else
+                            {
+                                throw new IOException($"7-Zip process exited with code {process.ExitCode}{errorDetail}");
+                            }
+                        }
+                        
+                        // Verify the extraction was successful
+                        var extractedFiles = Directory.GetFiles(extractPath, "*", SearchOption.AllDirectories);
+                        if (extractedFiles.Length == 0)
+                        {
+                            throw new IOException("No files were extracted from the archive. The archive may be empty or corrupted.");
+                        }
+                        
+                        success = true;
+                        return true;
+                    }
+                }
+                catch (InvalidOperationException ex) when (ex.Message.Contains("Wrong password"))
+                {
+                    // Specific handling for password errors - don't retry
+                    _emuLibrary.Logger.Error($"Wrong password for archive: {archivePath}");
+                    _emuLibrary.Playnite.Notifications.Add(
+                        Game.GameId,
+                        $"Failed to extract {Game.Name}: Wrong password for archive.",
+                        NotificationType.Error
+                    );
+                    return false;
+                }
+                catch (IOException ex) when (ex.Message.Contains("corrupted") || ex.Message.Contains("CRC") || ex.Message.Contains("data error"))
+                {
+                    // Archive corruption errors are worth retrying
+                    _emuLibrary.Logger.Error($"Archive corruption detected: {ex.Message}");
+                    retryCount++;
+                    
+                    // If this was the last retry, notify the user
+                    if (retryCount >= MaxExtractionRetries)
+                    {
+                        _emuLibrary.Playnite.Notifications.Add(
+                            Game.GameId,
+                            $"Failed to extract {Game.Name} after {MaxExtractionRetries} attempts: Archive appears to be corrupted.",
+                            NotificationType.Error
+                        );
+                    }
+                }
+                catch (Exception ex) when (!(ex is OperationCanceledException))
+                {
+                    _emuLibrary.Logger.Error($"Error extracting archive: {ex.Message}");
+                    retryCount++;
+                    
+                    // If this was the last retry, notify the user
+                    if (retryCount >= MaxExtractionRetries)
+                    {
+                        _emuLibrary.Playnite.Notifications.Add(
+                            Game.GameId,
+                            $"Failed to extract {Game.Name} after {MaxExtractionRetries} attempts: {ex.Message}",
+                            NotificationType.Error
+                        );
+                    }
+                }
+            }
+            
+            return success;
+        }
+        
+        private void ParseExtractionOutput(string line, ExtractionMetrics metrics)
         {
             try
             {
-                _emuLibrary.Logger.Info($"Extracting archive {archivePath} to {extractPath}");
-                
-                // Create process to run 7-Zip
-                var sevenZipPath = FindSevenZipPath();
-                if (string.IsNullOrEmpty(sevenZipPath))
+                // Example: " 47% 12 - file.bin"
+                if (line.Contains("%"))
                 {
-                    throw new FileNotFoundException("7-Zip executable not found. Please make sure 7-Zip is installed and in PATH.");
-                }
-                
-                // Build command line arguments
-                var args = "x ";
-                args += $"\"{archivePath}\" "; // Quote path to handle spaces
-                args += $"-o\"{extractPath}\" "; // Output directory
-                args += "-y "; // Yes to all prompts
-                
-                // Add password if provided
-                if (!string.IsNullOrEmpty(password))
-                {
-                    args += $"-p{password} ";
-                }
-                
-                var processStartInfo = new ProcessStartInfo
-                {
-                    FileName = sevenZipPath,
-                    Arguments = args,
-                    UseShellExecute = false,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    CreateNoWindow = true
-                };
-                
-                _emuLibrary.Logger.Debug($"Running 7-Zip: {sevenZipPath} {args}");
-                
-                using (var process = new Process { StartInfo = processStartInfo })
-                {
-                    // Execute the process
-                    process.Start();
-                    
-                    // Read output and error asynchronously
-                    var outputTask = Task.Run(() => {
-                        string line;
-                        while ((line = process.StandardOutput.ReadLine()) != null)
-                        {
-                            _emuLibrary.Logger.Debug($"7-Zip output: {line}");
-                            // Update progress based on output
-                            if (line.Contains("%")) {
-                                try {
-                                    // Try to parse percentage from output
-                                    var percentStr = line.Substring(line.IndexOf(" ") + 1, line.IndexOf("%") - line.IndexOf(" ") - 1);
-                                    if (int.TryParse(percentStr, out int percent)) {
-                                        // Map extraction progress (15-30%)
-                                        int progressValue = 15 + (int)(percent * 0.15);
-                                        UpdateProgress($"Extracting archive: {percent}%", progressValue);
-                                    }
-                                } catch {
-                                    // Ignore parsing errors
-                                }
-                            }
-                        }
-                    }, cancellationToken);
-                    
-                    var errorTask = Task.Run(() => {
-                        string line;
-                        while ((line = process.StandardError.ReadLine()) != null)
-                        {
-                            _emuLibrary.Logger.Error($"7-Zip error: {line}");
-                        }
-                    }, cancellationToken);
-                    
-                    // Check for cancellation while waiting
-                    while (!process.HasExited)
+                    // Try to parse percentage
+                    int percentIndex = line.IndexOf("%");
+                    if (percentIndex > 0)
                     {
-                        if (cancellationToken.IsCancellationRequested)
+                        string percentStr = line.Substring(0, percentIndex).Trim();
+                        if (int.TryParse(percentStr, out int percent))
                         {
-                            try
-                            {
-                                process.Kill();
-                                _emuLibrary.Logger.Info("7-Zip process was cancelled and terminated");
-                                return false;
-                            }
-                            catch (Exception ex)
-                            {
-                                _emuLibrary.Logger.Error($"Failed to kill 7-Zip process: {ex.Message}");
-                            }
+                            metrics.PercentComplete = percent;
                         }
-                        await Task.Delay(100, cancellationToken);
                     }
                     
-                    // Wait for output/error processing to complete
-                    await Task.WhenAll(outputTask, errorTask);
-                    
-                    // Check exit code
-                    if (process.ExitCode != 0)
+                    // Try to parse file count if available
+                    // Format: " 47% 12 - file.bin"
+                    int dashIndex = line.IndexOf(" - ");
+                    if (dashIndex > percentIndex)
                     {
-                        _emuLibrary.Logger.Error($"7-Zip process exited with code {process.ExitCode}");
-                        return false;
+                        string fileCountStr = line.Substring(percentIndex + 1, dashIndex - percentIndex - 1).Trim();
+                        if (int.TryParse(fileCountStr, out int fileCount))
+                        {
+                            metrics.FilesProcessed = fileCount;
+                        }
+                        
+                        // Get current file
+                        if (line.Length > dashIndex + 3)
+                        {
+                            metrics.CurrentFile = line.Substring(dashIndex + 3);
+                        }
                     }
+                }
+                // Look for total files count
+                else if (line.Contains("files"))
+                {
+                    string[] parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                    for (int i = 0; i < parts.Length - 1; i++)
+                    {
+                        if (parts[i + 1].Equals("files", StringComparison.OrdinalIgnoreCase) &&
+                            int.TryParse(parts[i], out int totalFiles))
+                        {
+                            metrics.TotalFiles = totalFiles;
+                            break;
+                        }
+                    }
+                }
+                // Look for size information
+                else if (line.Contains("bytes"))
+                {
+                    string[] parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                    for (int i = 0; i < parts.Length - 1; i++)
+                    {
+                        if (parts[i + 1].Equals("bytes", StringComparison.OrdinalIgnoreCase) &&
+                            long.TryParse(parts[i], out long bytes))
+                        {
+                            metrics.TotalBytesProcessed = bytes;
+                            break;
+                        }
+                    }
+                }
+                // Check for warnings or errors
+                else if (line.Contains("Warning", StringComparison.OrdinalIgnoreCase) ||
+                         line.Contains("Error", StringComparison.OrdinalIgnoreCase))
+                {
+                    metrics.ErrorMessages.Add(line);
                     
-                    return true;
+                    // Check for specific error types
+                    if (line.Contains("corrupt", StringComparison.OrdinalIgnoreCase) ||
+                        line.Contains("CRC failed", StringComparison.OrdinalIgnoreCase) ||
+                        line.Contains("data error", StringComparison.OrdinalIgnoreCase))
+                    {
+                        metrics.HasCorruptionWarning = true;
+                    }
                 }
             }
-            catch (Exception ex) when (!(ex is OperationCanceledException))
+            catch
             {
-                _emuLibrary.Logger.Error($"Error extracting archive: {ex.Message}");
-                return false;
+                // Ignore parsing errors
             }
         }
         
@@ -893,21 +1173,93 @@ namespace EmuLibrary.RomTypes.ArchiveInstaller
             return null;
         }
         
+        // Struct to hold information about found ISO files
+        private struct ISOFileInfo
+        {
+            public string FilePath { get; set; }
+            public long FileSize { get; set; }
+            public DateTime LastModified { get; set; }
+            public bool IsPrimaryDisc { get; set; }
+            public int DiscNumber { get; set; }
+            public string GameName { get; set; }
+            
+            public override string ToString()
+            {
+                return Path.GetFileName(FilePath);
+            }
+        }
+        
         private List<string> FindISOFiles(string directory)
         {
             var isoExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
             {
-                ".iso", ".bin", ".cue", ".mdf", ".mds", ".img"
+                ".iso", ".bin", ".cue", ".mdf", ".mds", ".img", ".nrg", ".cdi"
             };
             
             var results = new List<string>();
+            var detectedIsoInfo = new List<ISOFileInfo>();
             
             try
             {
                 foreach (var extension in isoExtensions)
                 {
-                    results.AddRange(Directory.GetFiles(directory, $"*{extension}", SearchOption.AllDirectories));
+                    var files = Directory.GetFiles(directory, $"*{extension}", SearchOption.AllDirectories);
+                    
+                    foreach (var file in files)
+                    {
+                        var fileInfo = new FileInfo(file);
+                        var isoInfo = new ISOFileInfo
+                        {
+                            FilePath = file,
+                            FileSize = fileInfo.Length,
+                            LastModified = fileInfo.LastWriteTime,
+                            IsPrimaryDisc = false,
+                            DiscNumber = -1,
+                            GameName = Path.GetFileNameWithoutExtension(file)
+                        };
+                        
+                        // Try to detect disc information from the filename
+                        DetectDiscInformation(ref isoInfo);
+                        
+                        detectedIsoInfo.Add(isoInfo);
+                    }
                 }
+                
+                // Log found ISOs for debugging
+                if (detectedIsoInfo.Count > 0)
+                {
+                    _emuLibrary.Logger.Info($"Found {detectedIsoInfo.Count} ISO files in extracted archive");
+                    
+                    // Check for multi-disc games
+                    var discGroups = detectedIsoInfo
+                        .Where(iso => iso.DiscNumber > 0)
+                        .GroupBy(iso => iso.GameName)
+                        .Where(g => g.Count() > 1)
+                        .ToList();
+                    
+                    if (discGroups.Count > 0)
+                    {
+                        foreach (var group in discGroups)
+                        {
+                            _emuLibrary.Logger.Info($"Detected multi-disc game: {group.Key} with {group.Count()} discs");
+                            foreach (var disc in group.OrderBy(d => d.DiscNumber))
+                            {
+                                _emuLibrary.Logger.Debug($"  Disc {disc.DiscNumber}: {Path.GetFileName(disc.FilePath)}");
+                            }
+                        }
+                    }
+                }
+                
+                // Return the file paths in a specific order:
+                // 1. Largest ISO files first (if no disc number detected)
+                // 2. Primary discs before secondary discs
+                // 3. Lower disc numbers before higher disc numbers
+                results = detectedIsoInfo
+                    .OrderByDescending(iso => iso.IsPrimaryDisc)
+                    .ThenBy(iso => iso.DiscNumber > 0 ? iso.DiscNumber : int.MaxValue)
+                    .ThenByDescending(iso => iso.FileSize)
+                    .Select(iso => iso.FilePath)
+                    .ToList();
             }
             catch (Exception ex)
             {
@@ -915,6 +1267,72 @@ namespace EmuLibrary.RomTypes.ArchiveInstaller
             }
             
             return results;
+        }
+        
+        private void DetectDiscInformation(ref ISOFileInfo isoInfo)
+        {
+            string filename = Path.GetFileNameWithoutExtension(isoInfo.FilePath).ToLower();
+            
+            // Common disc indicators in filenames
+            var discPatterns = new Dictionary<string, int>
+            {
+                { "disc1", 1 }, { "disc 1", 1 }, { "disc_1", 1 }, { "disc-1", 1 }, { "disk1", 1 }, { "disk 1", 1 }, { "disk_1", 1 }, { "disk-1", 1 }, { "cd1", 1 }, { "cd 1", 1 }, { "cd_1", 1 }, { "cd-1", 1 },
+                { "disc2", 2 }, { "disc 2", 2 }, { "disc_2", 2 }, { "disc-2", 2 }, { "disk2", 2 }, { "disk 2", 2 }, { "disk_2", 2 }, { "disk-2", 2 }, { "cd2", 2 }, { "cd 2", 2 }, { "cd_2", 2 }, { "cd-2", 2 },
+                { "disc3", 3 }, { "disc 3", 3 }, { "disc_3", 3 }, { "disc-3", 3 }, { "disk3", 3 }, { "disk 3", 3 }, { "disk_3", 3 }, { "disk-3", 3 }, { "cd3", 3 }, { "cd 3", 3 }, { "cd_3", 3 }, { "cd-3", 3 },
+                { "disc4", 4 }, { "disc 4", 4 }, { "disc_4", 4 }, { "disc-4", 4 }, { "disk4", 4 }, { "disk 4", 4 }, { "disk_4", 4 }, { "disk-4", 4 }, { "cd4", 4 }, { "cd 4", 4 }, { "cd_4", 4 }, { "cd-4", 4 }
+            };
+            
+            // Check for disc number in parentheses
+            var parenthesesPatterns = new[]
+            {
+                @"\(disc (\d+)\)",
+                @"\(disk (\d+)\)",
+                @"\(cd (\d+)\)",
+                @"\[disc (\d+)\]",
+                @"\[disk (\d+)\]",
+                @"\[cd (\d+)\]"
+            };
+            
+            // Check for disc patterns
+            foreach (var pattern in discPatterns)
+            {
+                if (filename.Contains(pattern.Key))
+                {
+                    isoInfo.DiscNumber = pattern.Value;
+                    isoInfo.IsPrimaryDisc = (pattern.Value == 1);
+                    
+                    // Extract game name by removing disc info
+                    string discPart = pattern.Key;
+                    int discIndex = filename.IndexOf(discPart, StringComparison.OrdinalIgnoreCase);
+                    if (discIndex > 0)
+                    {
+                        isoInfo.GameName = filename.Substring(0, discIndex).Trim();
+                    }
+                    
+                    return;
+                }
+            }
+            
+            // Check for disc number in parentheses
+            foreach (var pattern in parenthesesPatterns)
+            {
+                var match = System.Text.RegularExpressions.Regex.Match(filename, pattern, System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                if (match.Success && match.Groups.Count > 1 && int.TryParse(match.Groups[1].Value, out int discNum))
+                {
+                    isoInfo.DiscNumber = discNum;
+                    isoInfo.IsPrimaryDisc = (discNum == 1);
+                    
+                    // Extract game name by removing parentheses part
+                    string fullMatch = match.Groups[0].Value;
+                    int matchIndex = filename.IndexOf(fullMatch, StringComparison.OrdinalIgnoreCase);
+                    if (matchIndex > 0)
+                    {
+                        isoInfo.GameName = filename.Substring(0, matchIndex).Trim();
+                    }
+                    
+                    return;
+                }
+            }
         }
         
         private async Task<string> SelectISOFileAsync(List<string> isoFiles, CancellationToken cancellationToken)
