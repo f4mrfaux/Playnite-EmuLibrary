@@ -151,6 +151,16 @@ EmuLibrary is a library extension for Playnite, an open source video game librar
   - Shows PC platforms regardless of emulator profile selection
   - Only supports .exe files as specified in EmulatorMapping.cs
   - Bypasses some emulator-specific validations
+- **ISOInstaller**: For disc images requiring mounting and installation
+  - Similar to PCInstaller but handles disc image formats
+  - Supports common ISO formats like .iso, .bin/.cue, .mdf/.mds
+  - Mounts disc images before executing installers
+- **ArchiveInstaller** (planned):
+  - Will handle archives containing ISOs with installers
+  - Required to import all assets locally before operations
+  - No direct network operations for extraction/mounting
+  - Multi-step process: import→extract→mount→install
+  - Will implement proper asset validation and cleanup
 
 ### Game Metadata Structure
 - Create specialized GameInfo classes for different game types
@@ -272,3 +282,13 @@ Example (Total Commander): `"c:\Programs\totalcmd\TOTALCMD64.EXE" /L="{Dir}" /O 
 - Use defensive programming when accessing external resources
 - Provide clear error messages to users when operations fail
 - Consider rolling back partial operations when a process fails
+
+### Network and File Operation Best Practices
+- Always import installation assets to local temp storage before operations
+- Never attempt to extract archives directly over network connections
+- Never attempt to mount disc images directly from network locations
+- Never execute installers directly from network locations
+- Implement proper progress reporting for large file operations
+- Handle network disconnections gracefully during file operations
+- Ensure proper cleanup of temp files after operations complete
+- Implement timeout handling for long-running operations
