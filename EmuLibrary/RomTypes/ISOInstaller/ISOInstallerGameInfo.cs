@@ -51,7 +51,7 @@ namespace EmuLibrary.RomTypes.ISOInstaller
         
         // Content type identification fields
         [SerializationPropertyName("ContentType")]
-        public ContentType ContentTypeValue { get; set; } = ContentType.BaseGame;
+        public ContentType ContentType { get; set; } = ContentType.BaseGame;
         
         [SerializationPropertyName("ParentGameId")]
         public string ParentGameId { get; set; }
@@ -110,8 +110,8 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                 yield return $"{nameof(StoreGameId)}: {StoreGameId}";
                 
             // Content type information
-            if (ContentTypeValue != ContentType.BaseGame)
-                yield return $"{nameof(ContentTypeValue)}: {ContentTypeValue}";
+            if (ContentType != ContentType.BaseGame)
+                yield return $"{nameof(ContentType)}: {ContentType}";
                 
             if (!string.IsNullOrEmpty(Version))
                 yield return $"{nameof(Version)}: {Version}";

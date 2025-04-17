@@ -76,7 +76,7 @@ namespace EmuLibrary.RomTypes.ArchiveInstaller
         
         // Content type identification fields
         [ProtoMember(14)]
-        public ContentType ContentTypeValue { get; set; } = ContentType.BaseGame;
+        public ContentType ContentType { get; set; } = ContentType.BaseGame;
         
         [ProtoMember(15)]
         public string ParentGameId { get; set; }
@@ -141,8 +141,8 @@ namespace EmuLibrary.RomTypes.ArchiveInstaller
                 yield return $"{nameof(InstallerType)}: {InstallerType}";
                 
             // Content type information
-            if (ContentTypeValue != ContentType.BaseGame)
-                yield return $"{nameof(ContentTypeValue)}: {ContentTypeValue}";
+            if (ContentType != ContentType.BaseGame)
+                yield return $"{nameof(ContentType)}: {ContentType}";
                 
             if (!string.IsNullOrEmpty(Version))
                 yield return $"{nameof(Version)}: {Version}";
