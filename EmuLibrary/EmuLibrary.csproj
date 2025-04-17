@@ -12,6 +12,11 @@
 	<AutoGenerateBindingRedirects>True</AutoGenerateBindingRedirects>
 	<GenerateBindingRedirectsOutputType>true</GenerateBindingRedirectsOutputType>
   </PropertyGroup>
+  
+  <!-- Define WINDOWS constant for Windows builds -->
+  <PropertyGroup Condition="'$(OS)' == 'Windows_NT'">
+    <DefineConstants>$(DefineConstants);WINDOWS</DefineConstants>
+  </PropertyGroup>
 	
   <ItemGroup>
     <PackageReference Include="ini-parser" Version="2.5.2" />

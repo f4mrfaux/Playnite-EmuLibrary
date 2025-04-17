@@ -8,7 +8,9 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+#if WINDOWS
 using System.Management.Automation;
+#endif
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -1398,6 +1400,7 @@ namespace EmuLibrary.RomTypes.ArchiveInstaller
             {
                 _emuLibrary.Logger.Info($"Attempting to mount ISO file: {isoPath}");
                 
+#if WINDOWS
                 // Use PowerShell to mount the ISO
                 using (var ps = PowerShell.Create())
                 {
@@ -1405,6 +1408,10 @@ namespace EmuLibrary.RomTypes.ArchiveInstaller
                     string escapedPath = isoPath.Replace("'", "''").Replace("\"", "\\\"");
                     ps.AddScript($"$result = Mount-DiskImage -ImagePath \"{escapedPath}\" -PassThru; Get-Volume -DiskImage $result | Select-Object -ExpandProperty DriveLetter");
                     var results = ps.Invoke();
+#else
+                // Dummy implementation for non-Windows platforms (only for compilation)
+                var results = new Collection<PSObject>();
+#endif
                     
                     if (ps.HadErrors || results.Count == 0)
                     {
