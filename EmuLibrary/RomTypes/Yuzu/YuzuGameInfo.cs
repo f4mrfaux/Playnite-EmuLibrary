@@ -14,10 +14,10 @@ namespace EmuLibrary.RomTypes.Yuzu
         [ProtoMember(1)]
         public ulong TitleId { get; set; }
 
-        public override InstallController GetInstallController(Game game, IEmuLibrary emuLibrary) =>
+        internal override InstallController GetInstallController(Game game, IEmuLibrary emuLibrary) =>
             new YuzuInstallController(game, emuLibrary);
 
-        public override UninstallController GetUninstallController(Game game, IEmuLibrary emuLibrary) =>
+        internal override UninstallController GetUninstallController(Game game, IEmuLibrary emuLibrary) =>
             new YuzuUninstallController(game, emuLibrary);
 
         protected override IEnumerable<string> GetDescriptionLines()

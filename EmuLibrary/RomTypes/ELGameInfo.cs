@@ -59,8 +59,8 @@ namespace EmuLibrary.RomTypes
             return Serializer.Deserialize<T>(Convert.FromBase64String(gameId.Substring(2)).AsSpan());
         }
 
-        public abstract InstallController GetInstallController(Game game, IEmuLibrary emuLibrary);
-        public abstract UninstallController GetUninstallController(Game game, IEmuLibrary emuLibrary);
+        internal abstract InstallController GetInstallController(Game game, IEmuLibrary emuLibrary);
+        internal abstract UninstallController GetUninstallController(Game game, IEmuLibrary emuLibrary);
 
         protected abstract IEnumerable<string> GetDescriptionLines();
 

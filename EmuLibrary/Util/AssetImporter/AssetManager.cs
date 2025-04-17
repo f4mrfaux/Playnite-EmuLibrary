@@ -544,56 +544,8 @@ namespace EmuLibrary.Util.AssetImporter
         }
     }
     
-    public class ImportProgressEventArgs : EventArgs
-    {
-        public double Progress { get; } // 0.0 - 1.0
-        public long BytesTransferred { get; }
-        public long TotalBytes { get; }
-        public long BytesPerSecond { get; }
-        public double SecondsRemaining { get; }
-        
-        public ImportProgressEventArgs(
-            double progress,
-            long bytesTransferred,
-            long totalBytes,
-            long bytesPerSecond,
-            double secondsRemaining)
-        {
-            Progress = progress;
-            BytesTransferred = bytesTransferred;
-            TotalBytes = totalBytes;
-            BytesPerSecond = bytesPerSecond;
-            SecondsRemaining = secondsRemaining;
-        }
-    }
-    
-    public class ImportResult
-    {
-        public string Path { get; }
-        public bool Success { get; }
-        public Exception Error { get; }
-        public long Size { get; }
-        public bool FromCache { get; }
-        
-        public ImportResult(string path, bool success, Exception error, long size, bool fromCache)
-        {
-            Path = path;
-            Success = success;
-            Error = error;
-            Size = size;
-            FromCache = fromCache;
-        }
-    }
-    
-    public class CacheInfo
-    {
-        public long TotalSize { get; }
-        public int ItemCount { get; }
-        
-        public CacheInfo(long totalSize, int itemCount)
-        {
-            TotalSize = totalSize;
-            ItemCount = itemCount;
-        }
-    }
+    // The following classes were moved to AssetImporter.cs:
+    // - ImportProgressEventArgs
+    // - ImportResult
+    // - CacheInfo
 }

@@ -64,10 +64,10 @@ namespace EmuLibrary.RomTypes.PCInstaller
             }
         }
 
-        public override InstallController GetInstallController(Game game, IEmuLibrary emuLibrary) =>
+        internal override InstallController GetInstallController(Game game, IEmuLibrary emuLibrary) =>
             new PCInstallerInstallController(game, emuLibrary);
 
-        public override UninstallController GetUninstallController(Game game, IEmuLibrary emuLibrary) =>
+        internal override UninstallController GetUninstallController(Game game, IEmuLibrary emuLibrary) =>
             new PCInstallerUninstallController(game, emuLibrary);
 
         protected override IEnumerable<string> GetDescriptionLines()

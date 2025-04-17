@@ -52,6 +52,7 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                 // Track installation state for logging
                 var tempDir = string.Empty;
                 var mountPoint = string.Empty;
+                var localISOPath = string.Empty;
                 
                 try
                 {

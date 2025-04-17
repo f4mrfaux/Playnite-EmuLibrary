@@ -8,10 +8,10 @@ using System.IO;
 
 namespace EmuLibrary.RomTypes.ISOInstaller
 {
-    public class ISOInstallerGameInfo : ELGameInfo
+    internal class ISOInstallerGameInfo : ELGameInfo
     {
         [SerializationPropertyName("MappingId")]
-        public Guid MappingId { get; set; }
+        public new Guid MappingId { get; set; }
 
         [SerializationPropertyName("SourcePath")]
         public string SourcePath { get; set; }
@@ -57,12 +57,12 @@ namespace EmuLibrary.RomTypes.ISOInstaller
             }
         }
         
-        public override InstallController GetInstallController(Game game, IEmuLibrary emuLibrary)
+        internal override InstallController GetInstallController(Game game, IEmuLibrary emuLibrary)
         {
             return new ISOInstallerInstallController(game, emuLibrary);
         }
 
-        public override UninstallController GetUninstallController(Game game, IEmuLibrary emuLibrary)
+        internal override UninstallController GetUninstallController(Game game, IEmuLibrary emuLibrary)
         {
             return new ISOInstallerUninstallController(game, emuLibrary);
         }
