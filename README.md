@@ -12,9 +12,9 @@ Disclaimer: This extension was originally created for personal usage, and that i
 
 To set it up, you create mappings to combine one of each of the following:
 
-* Emulator - either a built-in emulator or a custom emulator manually added
-* Emulator Profile - either a built-in emulator profile or a custom one, out of those supported by the chosen emulator
-* Platform - the ROM platform/console, out of those that the emulator profile supports (PCInstaller type now shows PC platforms regardless of emulator selection)
+* Emulator - either a built-in emulator or a custom emulator manually added (optional for PCInstaller and ISOInstaller types)
+* Emulator Profile - either a built-in emulator profile or a custom one, out of those supported by the chosen emulator (optional for PCInstaller and ISOInstaller types)
+* Platform - the ROM platform/console, out of those that the emulator profile supports (PCInstaller and ISOInstaller types show PC platforms regardless of emulator selection, and can work without a platform selected)
 * RomType - See [Rom Types](#rom-types) below
 
 ## Paths
@@ -35,9 +35,20 @@ With the MultiFile type, each subfolder directly within the source folder is sca
 
 To determine which file is used as the one to tell the emulator to load, all files matching the configured emulator profile's supported extensions are considered. Precedence is by configured image extension list order, and then by alphabetical order. For example, if file names are the same except for `(Disc 1)` versus `(Disc 2)`, the first disc takes precedence. Similarly, if you have `.cue` in the extension list before `.m3u` (as some of the built-in profiles have at the time of writing), `.cue` would be chosen over `.m3u`, which may not be desired for multi-disc games.
 
+### ISOInstaller
+
+The ISOInstaller type supports PC game installations from disc images (ISO, BIN/CUE, etc). Like PCInstaller, this type doesn't require an emulator or platform selection. When no platform is selected, it defaults to "PC". This type allows you to:
+
+* Scan folders containing disc images (.iso, .bin/.cue, .img, etc.)
+* Mount the disc images for installation
+* Install games to a specified location
+* Manage disc-based PC games alongside your other games
+
+ISOInstaller has similar features to PCInstaller, including special handling for GOG disc images and store detection.
+
 ### PCInstaller
 
-The PCInstaller type supports PC game installer executables (.exe files). This type is designed for managing native PC games that don't require emulation. It allows you to:
+The PCInstaller type supports PC game installer executables (.exe files). This type is designed for managing native PC games that don't require emulation. It doesn't require an emulator or platform selection - when no platform is selected, it defaults to "PC". It allows you to:
 
 * Scan folders containing PC game installers (.exe files)
 * Install these games to a specified location
@@ -85,12 +96,12 @@ Here's a step-by-step workflow for adding a repository of PC game installers usi
 3. In the settings window, click "Add Mapping" to create a new mapping.
 
 4. Configure your mapping:
-   - Set "Emulator" to "GOG" (or any placeholder emulator)
-   - Set "Profile" to "Choose on startup" 
+   - Set "Emulator" to "GOG" (or any placeholder emulator) - Optional for PCInstaller
+   - Set "Profile" to "Choose on startup" - Optional for PCInstaller
    - Set "Rom Type" to "PCInstaller"
    - Set "Source Path" to your game repository (e.g., "N:\games\GOG\")
    - Set "Destination Path" to where you want to install the games
-   - Select a PC platform (Windows, PC, etc.) which should now be available
+   - Select a PC platform (Windows, PC, etc.) which should now be available - Optional for PCInstaller (defaults to "PC")
 
 5. Click "Save" to save your mapping configuration.
 

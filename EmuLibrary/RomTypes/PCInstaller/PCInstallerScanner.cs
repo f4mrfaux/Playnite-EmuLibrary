@@ -308,7 +308,7 @@ namespace EmuLibrary.RomTypes.PCInstaller
                                         IsInstalled = true,
                                         GameId = gameInfo.AsGameId(),
                                         InstallDirectory = gameInfo.InstallDirectory,
-                                        Platforms = new HashSet<MetadataProperty>() { new MetadataNameProperty(mapping.Platform.Name) },
+                                        Platforms = new HashSet<MetadataProperty>() { new MetadataNameProperty(mapping.Platform?.Name ?? "PC") },
                                         GameActions = new List<GameAction>() 
                                         { 
                                             new GameAction()
