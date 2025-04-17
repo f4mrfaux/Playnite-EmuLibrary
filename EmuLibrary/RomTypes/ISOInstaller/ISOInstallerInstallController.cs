@@ -124,8 +124,8 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                     );
                     
                     // Get or create the AssetImporter
-                    var assetImporter = AssetImporter.AssetImporter.Instance ?? 
-                        new AssetImporter.AssetImporter(_emuLibrary.Logger, _emuLibrary.Playnite);
+                    var assetImporter = EmuLibrary.Util.AssetImporter.AssetImporter.Instance ?? 
+                        new EmuLibrary.Util.AssetImporter.AssetImporter(_emuLibrary.Logger, _emuLibrary.Playnite);
                     
                     // Register for progress updates
                     assetImporter.ImportProgress += (sender, e) => {
@@ -276,7 +276,7 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                                     _emuLibrary.Playnite.Notifications.Add(
                                         Game.GameId,
                                         $"Please select an installer from the ISO for {Game.Name}, or the installation will be cancelled.",
-                                        NotificationType.Warning
+                                        NotificationType.Error
                                     );
                                     
                                     // Try one more time with a more direct prompt
@@ -503,8 +503,8 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                         if (!Settings.Settings.Instance.EnableAssetCaching)
                         {
                             // Get or create the AssetImporter
-                            var assetImporter = AssetImporter.AssetImporter.Instance ?? 
-                                new AssetImporter.AssetImporter(_emuLibrary.Logger, _emuLibrary.Playnite);
+                            var assetImporter = EmuLibrary.Util.AssetImporter.AssetImporter.Instance ?? 
+                                new EmuLibrary.Util.AssetImporter.AssetImporter(_emuLibrary.Logger, _emuLibrary.Playnite);
                                 
                             assetImporter.CleanupTempDirectory(localISOPath);
                         }
@@ -598,8 +598,8 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                             _emuLibrary.Logger.Info($"Cleaning up imported ISO file {localISOPath} after cancellation");
                             
                             // Get or create the AssetImporter
-                            var assetImporter = AssetImporter.AssetImporter.Instance ?? 
-                                new AssetImporter.AssetImporter(_emuLibrary.Logger, _emuLibrary.Playnite);
+                            var assetImporter = EmuLibrary.Util.AssetImporter.AssetImporter.Instance ?? 
+                                new EmuLibrary.Util.AssetImporter.AssetImporter(_emuLibrary.Logger, _emuLibrary.Playnite);
                                 
                             assetImporter.CleanupTempDirectory(localISOPath);
                         }
@@ -642,8 +642,8 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                             _emuLibrary.Logger.Info($"Cleaning up imported ISO file {localISOPath} after failure");
                             
                             // Get or create the AssetImporter
-                            var assetImporter = AssetImporter.AssetImporter.Instance ?? 
-                                new AssetImporter.AssetImporter(_emuLibrary.Logger, _emuLibrary.Playnite);
+                            var assetImporter = EmuLibrary.Util.AssetImporter.AssetImporter.Instance ?? 
+                                new EmuLibrary.Util.AssetImporter.AssetImporter(_emuLibrary.Logger, _emuLibrary.Playnite);
                                 
                             assetImporter.CleanupTempDirectory(Path.GetDirectoryName(localISOPath));
                         }
@@ -715,6 +715,7 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                 
                 _emuLibrary.Logger.Info($"Attempting to unmount ISO from {mountPoint}");
                 
+#if WINDOWS
                 // Get the drive letter from the mount point
                 var driveLetter = mountPoint.Substring(0, 1);
                 
@@ -734,6 +735,11 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                     
                     return true;
                 }
+#else
+                // Dummy implementation for non-Windows platforms
+                _emuLibrary.Logger.Warn("Unmounting ISO files is only supported on Windows");
+                return false;
+#endif
             }
             catch (Exception ex)
             {

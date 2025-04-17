@@ -17,7 +17,7 @@ namespace EmuLibrary.RomTypes.Yuzu
         internal override InstallController GetInstallController(Game game, IEmuLibrary emuLibrary) =>
             new YuzuInstallController(game, emuLibrary);
 
-        internal override UninstallController GetUninstallController(Game game, IEmuLibrary emuLibrary) =>
+        internal override ELUninstallController GetUninstallController(Game game, IEmuLibrary emuLibrary) =>
             new YuzuUninstallController(game, emuLibrary);
 
         protected override IEnumerable<string> GetDescriptionLines()

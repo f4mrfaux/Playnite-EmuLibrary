@@ -11,8 +11,6 @@ using System.Linq;
 #if WINDOWS
 using System.Management.Automation;
 #endif
-// We can keep using System.Collections.ObjectModel in all cases
-using System.Collections.ObjectModel;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -98,8 +96,8 @@ namespace EmuLibrary.RomTypes.ArchiveInstaller
                     );
                     
                     // Get or create the AssetImporter
-                    var assetImporter = AssetImporter.AssetImporter.Instance ?? 
-                        new AssetImporter.AssetImporter(_emuLibrary.Logger, _emuLibrary.Playnite);
+                    var assetImporter = EmuLibrary.Util.AssetImporter.AssetImporter.Instance ?? 
+                        new EmuLibrary.Util.AssetImporter.AssetImporter(_emuLibrary.Logger, _emuLibrary.Playnite);
                     
                     // Register for progress updates
                     assetImporter.ImportProgress += (sender, e) => {
@@ -347,7 +345,7 @@ namespace EmuLibrary.RomTypes.ArchiveInstaller
                                     _emuLibrary.Playnite.Notifications.Add(
                                         Game.GameId,
                                         $"Please select an installer from the ISO for {Game.Name}, or the installation will be cancelled.",
-                                        NotificationType.Warning
+                                        NotificationType.Error
                                     );
                                     
                                     // Try one more time with a more direct prompt
@@ -563,8 +561,8 @@ namespace EmuLibrary.RomTypes.ArchiveInstaller
                         // Clean up the imported archive file if not cached
                         if (!Settings.Settings.Instance.EnableAssetCaching)
                         {
-                            var assetImporterForCleanup = AssetImporter.AssetImporter.Instance ?? 
-                                new AssetImporter.AssetImporter(_emuLibrary.Logger, _emuLibrary.Playnite);
+                            var assetImporterForCleanup = EmuLibrary.Util.AssetImporter.AssetImporter.Instance ?? 
+                                new EmuLibrary.Util.AssetImporter.AssetImporter(_emuLibrary.Logger, _emuLibrary.Playnite);
                                 
                             // If we imported a directory (multi-part), clean up the directory
                             if (isMultiPartArchive && importResult.Path != localArchivePath)
@@ -665,8 +663,8 @@ namespace EmuLibrary.RomTypes.ArchiveInstaller
                         {
                             _emuLibrary.Logger.Info($"Cleaning up imported archive file {localArchivePath} after cancellation");
                             
-                            var assetImporterForCleanup = AssetImporter.AssetImporter.Instance ?? 
-                                new AssetImporter.AssetImporter(_emuLibrary.Logger, _emuLibrary.Playnite);
+                            var assetImporterForCleanup = EmuLibrary.Util.AssetImporter.AssetImporter.Instance ?? 
+                                new EmuLibrary.Util.AssetImporter.AssetImporter(_emuLibrary.Logger, _emuLibrary.Playnite);
                                 
                             assetImporterForCleanup.CleanupTempDirectory(localArchivePath);
                         }
@@ -708,8 +706,8 @@ namespace EmuLibrary.RomTypes.ArchiveInstaller
                         {
                             _emuLibrary.Logger.Info($"Cleaning up imported archive file {localArchivePath} after failure");
                             
-                            var assetImporterForCleanup = AssetImporter.AssetImporter.Instance ?? 
-                                new AssetImporter.AssetImporter(_emuLibrary.Logger, _emuLibrary.Playnite);
+                            var assetImporterForCleanup = EmuLibrary.Util.AssetImporter.AssetImporter.Instance ?? 
+                                new EmuLibrary.Util.AssetImporter.AssetImporter(_emuLibrary.Logger, _emuLibrary.Playnite);
                                 
                             assetImporterForCleanup.CleanupTempDirectory(Path.GetDirectoryName(localArchivePath));
                         }
@@ -1070,7 +1068,7 @@ namespace EmuLibrary.RomTypes.ArchiveInstaller
                 // Look for total files count
                 else if (line.Contains("files"))
                 {
-                    string[] parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                    string[] parts = line.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
                     for (int i = 0; i < parts.Length - 1; i++)
                     {
                         if (parts[i + 1].Equals("files", StringComparison.OrdinalIgnoreCase) &&
@@ -1084,7 +1082,7 @@ namespace EmuLibrary.RomTypes.ArchiveInstaller
                 // Look for size information
                 else if (line.Contains("bytes"))
                 {
-                    string[] parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                    string[] parts = line.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
                     for (int i = 0; i < parts.Length - 1; i++)
                     {
                         if (parts[i + 1].Equals("bytes", StringComparison.OrdinalIgnoreCase) &&
@@ -1155,7 +1153,7 @@ namespace EmuLibrary.RomTypes.ArchiveInstaller
                             if (process.ExitCode == 0 && !string.IsNullOrEmpty(output))
                             {
                                 // Return the first line if multiple paths returned
-                                var firstPath = output.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
+                                var firstPath = output.Split(new char[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
                                 if (!string.IsNullOrEmpty(firstPath) && File.Exists(firstPath))
                                 {
                                     return firstPath;
@@ -1456,6 +1454,7 @@ namespace EmuLibrary.RomTypes.ArchiveInstaller
                 
                 _emuLibrary.Logger.Info($"Attempting to unmount ISO from {mountPoint}");
                 
+#if WINDOWS
                 // Get the drive letter from the mount point
                 var driveLetter = mountPoint.Substring(0, 1);
                 
@@ -1475,6 +1474,11 @@ namespace EmuLibrary.RomTypes.ArchiveInstaller
                     
                     return true;
                 }
+#else
+                // Dummy implementation for non-Windows platforms
+                _emuLibrary.Logger.Warn("Unmounting ISO files is only supported on Windows");
+                return false;
+#endif
             }
             catch (Exception ex)
             {

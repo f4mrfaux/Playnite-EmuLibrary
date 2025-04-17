@@ -60,7 +60,7 @@ namespace EmuLibrary.RomTypes
         }
 
         internal abstract InstallController GetInstallController(Game game, IEmuLibrary emuLibrary);
-        internal abstract UninstallController GetUninstallController(Game game, IEmuLibrary emuLibrary);
+        internal abstract ELUninstallController GetUninstallController(Game game, IEmuLibrary emuLibrary);
 
         protected abstract IEnumerable<string> GetDescriptionLines();
 

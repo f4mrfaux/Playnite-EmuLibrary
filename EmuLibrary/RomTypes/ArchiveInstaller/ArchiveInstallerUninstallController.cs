@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace EmuLibrary.RomTypes.ArchiveInstaller
 {
-    class ArchiveInstallerUninstallController : BaseInstallController
+    class ArchiveInstallerUninstallController : ELUninstallController
     {
         internal ArchiveInstallerUninstallController(Game game, IEmuLibrary emuLibrary) : base(game, emuLibrary)
         { }
@@ -38,7 +38,7 @@ namespace EmuLibrary.RomTypes.ArchiveInstaller
                     var installDirectory = info.InstallDirectory;
                     if (string.IsNullOrEmpty(installDirectory) || !Directory.Exists(installDirectory))
                     {
-                        _emuLibrary.Logger.Warn($"Game {_game.Name} doesn't have a valid installation directory. Marking as uninstalled.");
+                        _emuLibrary.Logger.Warn($"Game {Game.Name} doesn't have a valid installation directory. Marking as uninstalled.");
                         CompleteUninstall();
                         return;
                     }
@@ -58,7 +58,7 @@ namespace EmuLibrary.RomTypes.ArchiveInstaller
                                 return;
                                 
                             deleteDir = _emuLibrary.Playnite.Dialogs.ShowMessage(
-                                $"Do you want to delete the installation directory for {_game.Name}?\n\n{installDirectory}",
+                                $"Do you want to delete the installation directory for {Game.Name}?\n\n{installDirectory}",
                                 "Delete Installation Directory",
                                 System.Windows.MessageBoxButton.YesNo) == System.Windows.MessageBoxResult.Yes;
                         });
@@ -71,8 +71,8 @@ namespace EmuLibrary.RomTypes.ArchiveInstaller
                                 _emuLibrary.Logger.Info($"Deleting installation directory: {installDirectory}");
                                 
                                 _emuLibrary.Playnite.Notifications.Add(
-                                    _game.GameId,
-                                    $"Deleting installation directory for {_game.Name}...",
+                                    Game.GameId,
+                                    $"Deleting installation directory for {Game.Name}...",
                                     NotificationType.Info
                                 );
                                 
@@ -82,9 +82,9 @@ namespace EmuLibrary.RomTypes.ArchiveInstaller
                                 if (!deleted)
                                 {
                                     _emuLibrary.Playnite.Notifications.Add(
-                                        _game.GameId,
-                                        $"Could not delete some files in {_game.Name}'s installation directory. You may need to delete them manually.",
-                                        NotificationType.Warning
+                                        Game.GameId,
+                                        $"Could not delete some files in {Game.Name}'s installation directory. You may need to delete them manually.",
+                                        NotificationType.Error
                                     );
                                 }
                             }
@@ -93,8 +93,8 @@ namespace EmuLibrary.RomTypes.ArchiveInstaller
                                 _emuLibrary.Logger.Error($"Error deleting installation directory: {ex.Message}");
                                 
                                 _emuLibrary.Playnite.Notifications.Add(
-                                    _game.GameId,
-                                    $"Failed to delete installation directory for {_game.Name}: {ex.Message}",
+                                    Game.GameId,
+                                    $"Failed to delete installation directory for {Game.Name}: {ex.Message}",
                                     NotificationType.Error
                                 );
                             }
@@ -105,36 +105,36 @@ namespace EmuLibrary.RomTypes.ArchiveInstaller
                     CompleteUninstall();
                     
                     _emuLibrary.Playnite.Notifications.Add(
-                        _game.GameId,
-                        $"{_game.Name} has been uninstalled.",
+                        Game.GameId,
+                        $"{Game.Name} has been uninstalled.",
                         NotificationType.Info
                     );
                 }
                 catch (OperationCanceledException)
                 {
-                    _emuLibrary.Logger.Info($"Uninstallation of {_game.Name} was cancelled");
+                    _emuLibrary.Logger.Info($"Uninstallation of {Game.Name} was cancelled");
                     
                     _emuLibrary.Playnite.Notifications.Add(
-                        _game.GameId,
-                        $"Uninstallation of {_game.Name} was cancelled.",
+                        Game.GameId,
+                        $"Uninstallation of {Game.Name} was cancelled.",
                         NotificationType.Info
                     );
                     
-                    _game.IsUninstalling = false;
-                    _emuLibrary.Playnite.Database.Games.Update(_game);
+                    Game.IsUninstalling = false;
+                    _emuLibrary.Playnite.Database.Games.Update(Game);
                 }
                 catch (Exception ex)
                 {
-                    _emuLibrary.Logger.Error($"Failed to uninstall {_game.Name}: {ex.Message}");
+                    _emuLibrary.Logger.Error($"Failed to uninstall {Game.Name}: {ex.Message}");
                     
                     _emuLibrary.Playnite.Notifications.Add(
-                        _game.GameId,
-                        $"Failed to uninstall {_game.Name}: {ex.Message}",
+                        Game.GameId,
+                        $"Failed to uninstall {Game.Name}: {ex.Message}",
                         NotificationType.Error
                     );
                     
-                    _game.IsUninstalling = false;
-                    _emuLibrary.Playnite.Database.Games.Update(_game);
+                    Game.IsUninstalling = false;
+                    _emuLibrary.Playnite.Database.Games.Update(Game);
                 }
             });
         }
@@ -181,8 +181,8 @@ namespace EmuLibrary.RomTypes.ArchiveInstaller
                 _emuLibrary.Logger.Info($"Running uninstaller: {selectedUninstaller}");
                 
                 _emuLibrary.Playnite.Notifications.Add(
-                    _game.GameId,
-                    $"Running uninstaller for {_game.Name}. Please follow the uninstallation prompts.",
+                    Game.GameId,
+                    $"Running uninstaller for {Game.Name}. Please follow the uninstallation prompts.",
                     NotificationType.Info
                 );
                 
@@ -304,7 +304,7 @@ namespace EmuLibrary.RomTypes.ArchiveInstaller
         private void CompleteUninstall()
         {
             // Clear installation information
-            var gameInfo = _game.GetArchiveInstallerGameInfo();
+            var gameInfo = Game.GetArchiveInstallerGameInfo();
             gameInfo.InstallDirectory = null;
             gameInfo.PrimaryExecutable = null;
             gameInfo.ExtractedISOPath = null;
@@ -314,17 +314,17 @@ namespace EmuLibrary.RomTypes.ArchiveInstaller
             gameInfo.SelectedInstaller = null;
             
             // Clear game actions
-            if (_game.GameActions != null)
+            if (Game.GameActions != null)
             {
-                _game.GameActions.Clear();
+                Game.GameActions.Clear();
             }
             
             // Mark as uninstalled
-            _game.IsInstalled = false;
-            _game.IsUninstalling = false;
+            Game.IsInstalled = false;
+            Game.IsUninstalling = false;
             
             // Update the game
-            _emuLibrary.Playnite.Database.Games.Update(_game);
+            _emuLibrary.Playnite.Database.Games.Update(Game);
             
             // Call event handler
             InvokeOnUninstalled(null);

@@ -32,3 +32,9 @@
 //ROGDOG/bob/projects/Playnite-EmuLibrary/EmuLibrary/obj/Debug/net462/EmuLibrary.pdb
 /home/bob/projects/Playnite-EmuLibrary/EmuLibrary/obj/Debug/net462/EmuLibrary.dll
 /home/bob/projects/Playnite-EmuLibrary/EmuLibrary/obj/Debug/net462/EmuLibrary.pdb
+\\ROGDOG\bob\projects\Playnite-EmuLibrary\EmuLibrary\obj\Debug\net462\EmuLibrary.csproj.AssemblyReference.cache
+\\ROGDOG\bob\projects\Playnite-EmuLibrary\EmuLibrary\obj\Debug\net462\Settings\SettingsView.g.cs
+\\ROGDOG\bob\projects\Playnite-EmuLibrary\EmuLibrary\obj\Debug\net462\EmuLibrary_MarkupCompile.cache
+\\ROGDOG\bob\projects\Playnite-EmuLibrary\EmuLibrary\obj\Debug\net462\EmuLibrary_MarkupCompile.lref
+\\ROGDOG\bob\projects\Playnite-EmuLibrary\EmuLibrary\obj\Debug\net462\EmuLibrary.dll
+\\ROGDOG\bob\projects\Playnite-EmuLibrary\EmuLibrary\obj\Debug\net462\EmuLibrary.pdb

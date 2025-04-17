@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "lmdUY7sxnv4=",
+  "dgSpecHash": "DrFgRzEh8sE=",
   "success": true,
   "projectFilePath": "\\\\ROGDOG\\bob\\projects\\Playnite-EmuLibrary\\EmuLibrary\\EmuLibrary.csproj",
   "expectedPackageFiles": [
@@ -8,6 +8,7 @@
     "C:\\Users\\Bob\\.nuget\\packages\\libhac\\0.7.0\\libhac.0.7.0.nupkg.sha512",
     "C:\\Users\\Bob\\.nuget\\packages\\microsoft.bcl.asyncinterfaces\\5.0.0\\microsoft.bcl.asyncinterfaces.5.0.0.nupkg.sha512",
     "C:\\Users\\Bob\\.nuget\\packages\\microsoft.netcore.platforms\\1.1.0\\microsoft.netcore.platforms.1.1.0.nupkg.sha512",
+    "C:\\Users\\Bob\\.nuget\\packages\\microsoft.powershell.5.referenceassemblies\\1.1.0\\microsoft.powershell.5.referenceassemblies.1.1.0.nupkg.sha512",
     "C:\\Users\\Bob\\.nuget\\packages\\netstandard.library\\2.0.3\\netstandard.library.2.0.3.nupkg.sha512",
     "C:\\Users\\Bob\\.nuget\\packages\\newtonsoft.json\\10.0.1\\newtonsoft.json.10.0.1.nupkg.sha512",
     "C:\\Users\\Bob\\.nuget\\packages\\playnitesdk\\6.4.0\\playnitesdk.6.4.0.nupkg.sha512",

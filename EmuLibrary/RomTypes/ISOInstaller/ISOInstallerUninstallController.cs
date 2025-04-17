@@ -5,10 +5,11 @@ using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows;
 
 namespace EmuLibrary.RomTypes.ISOInstaller
 {
-    class ISOInstallerUninstallController : BaseInstallController
+    class ISOInstallerUninstallController : ELUninstallController
     {
         internal ISOInstallerUninstallController(Game game, IEmuLibrary emuLibrary) : base(game, emuLibrary)
         { }

@@ -474,7 +474,10 @@ namespace EmuLibrary.Util.AssetImporter
                 string registryPath = Path.Combine(_cachePath, "cache_registry.json");
                 string json = Newtonsoft.Json.JsonConvert.SerializeObject(_cachedAssets);
                 
-                await File.WriteAllTextAsync(registryPath, json);
+                using (var writer = new StreamWriter(registryPath))
+                {
+                    await writer.WriteAsync(json);
+                }
             }
             catch (Exception ex)
             {

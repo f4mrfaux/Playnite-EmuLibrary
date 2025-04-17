@@ -177,7 +177,7 @@ namespace EmuLibrary
             }
         }
 
-        public override IEnumerable<UninstallController> GetUninstallActions(GetUninstallActionsArgs args)
+        public override IEnumerable<Playnite.SDK.Plugins.UninstallController> GetUninstallActions(GetUninstallActionsArgs args)
         {
             if (args.Game.PluginId == Id)
             {

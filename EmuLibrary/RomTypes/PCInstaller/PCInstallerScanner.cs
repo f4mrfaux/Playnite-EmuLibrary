@@ -763,7 +763,7 @@ namespace EmuLibrary.RomTypes.PCInstaller
             {
                 if (gameName.Contains(separator))
                 {
-                    var parts = gameName.Split(new[] { separator }, StringSplitOptions.RemoveEmptyEntries);
+                    var parts = gameName.Split(new string[] { separator }, StringSplitOptions.RemoveEmptyEntries);
                     if (parts.Length >= 2)
                     {
                         // Assume the first part is the base game name

@@ -3,16 +3,13 @@ using Playnite.SDK.Plugins;
 
 namespace EmuLibrary.RomTypes.Yuzu
 {
-    class YuzuUninstallController : UninstallController
+    class YuzuUninstallController : ELUninstallController
     {
-        private readonly IEmuLibrary _emuLibrary;
         private readonly SourceDirCache _cache;
         private readonly YuzuGameInfo _gameInfo;
 
-        public YuzuUninstallController(Game game, IEmuLibrary emuLibrary) : base(game)
+        internal YuzuUninstallController(Game game, IEmuLibrary emuLibrary) : base(game, emuLibrary)
         {
-            _emuLibrary = emuLibrary;
-
             _gameInfo = game.GetYuzuGameInfo();
             _cache = (_emuLibrary.GetScanner(RomType.Yuzu) as YuzuScanner).GetCacheForMapping(_gameInfo.MappingId);
 

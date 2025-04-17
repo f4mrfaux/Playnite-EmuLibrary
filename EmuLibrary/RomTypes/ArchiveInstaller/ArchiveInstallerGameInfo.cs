@@ -7,7 +7,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using EmuLibrary.RomTypes.PCInstaller;
-using EmuLibrary.RomTypes.PCInstaller;
 
 namespace EmuLibrary.RomTypes.ArchiveInstaller
 {
@@ -105,7 +104,7 @@ namespace EmuLibrary.RomTypes.ArchiveInstaller
             return new ArchiveInstallerInstallController(game, emuLibrary);
         }
 
-        internal override UninstallController GetUninstallController(Game game, IEmuLibrary emuLibrary)
+        internal override ELUninstallController GetUninstallController(Game game, IEmuLibrary emuLibrary)
         {
             return new ArchiveInstallerUninstallController(game, emuLibrary);
         }
