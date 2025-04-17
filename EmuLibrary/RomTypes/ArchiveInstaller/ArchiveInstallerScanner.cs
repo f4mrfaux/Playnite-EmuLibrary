@@ -141,6 +141,8 @@ namespace EmuLibrary.RomTypes.ArchiveInstaller
                     // Process multi-part archives
                     foreach (var archive in multipartArchives)
                     {
+                        GameMetadata metadataToYield = null;
+                        
                         try
                         {
                             if (args.CancelToken.IsCancellationRequested)
@@ -191,21 +193,26 @@ namespace EmuLibrary.RomTypes.ArchiveInstaller
                                     .ToList()
                             };
                             
-                            GameMetadata metadata = CreateGameMetadata(gameId, gameName, gameInfo, mapping);
-                            if (metadata != null)
-                            {
-                                yield return metadata;
-                            }
+                            metadataToYield = CreateGameMetadata(gameId, gameName, gameInfo, mapping);
                         }
                         catch (Exception ex)
                         {
                             _logger.Error($"Error processing multi-part archive {archive.Key}: {ex.Message}");
+                            continue;
+                        }
+                        
+                        // Move the yield statement outside the try block
+                        if (metadataToYield != null)
+                        {
+                            yield return metadataToYield;
                         }
                     }
                     
                     // Process single archive files
                     foreach (var archivePath in allArchives)
                     {
+                        GameMetadata metadataToYield = null;
+                        
                         try
                         {
                             if (args.CancelToken.IsCancellationRequested)
@@ -226,15 +233,18 @@ namespace EmuLibrary.RomTypes.ArchiveInstaller
                                 ArchiveParts = new List<string> { relativePath }
                             };
                             
-                            GameMetadata metadata = CreateGameMetadata(gameId, gameName, gameInfo, mapping);
-                            if (metadata != null)
-                            {
-                                yield return metadata;
-                            }
+                            metadataToYield = CreateGameMetadata(gameId, gameName, gameInfo, mapping);
                         }
                         catch (Exception ex)
                         {
                             _logger.Error($"Error processing archive {archivePath}: {ex.Message}");
+                            continue;
+                        }
+                        
+                        // Move the yield statement outside the try block
+                        if (metadataToYield != null)
+                        {
+                            yield return metadataToYield;
                         }
                     }
                 }
@@ -602,9 +612,11 @@ namespace EmuLibrary.RomTypes.ArchiveInstaller
                 Name = displayName,
                 IsInstalled = false,
                 GameActions = new List<GameAction>(),
-                Source = EmuLibrary.SourceName,
-                PluginId = EmuLibrary.PluginId
+                Source = EmuLibrary.SourceName
             };
+            
+            // Store plugin ID using extension method
+            result.AddProperty("PluginId", EmuLibrary.PluginId);
 
             if (mapping.Platform != null)
             {
@@ -647,9 +659,7 @@ namespace EmuLibrary.RomTypes.ArchiveInstaller
                 if (parentGame != null)
                 {
                     // Store the parent-child relationship in custom properties
-                    // Fixed: GameDependencies property doesn't exist in this API version
-                    // We'll use GameMetadata's properties instead
-                    result.Properties.Add("DependentGameId", parentGame.Id.ToString());
+                    result.AddProperty("DependentGameId", parentGame.Id.ToString());
                     
                     if (result.Description == null)
                     {

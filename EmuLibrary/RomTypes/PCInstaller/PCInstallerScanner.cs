@@ -355,7 +355,7 @@ namespace EmuLibrary.RomTypes.PCInstaller
                                     if (parentGame != null)
                                     {
                                         // Store the parent-child relationship in custom properties
-                                        metadata.GameDependencies = new HashSet<Guid> { parentGame.Id };
+                                        metadata.AddProperty("DependentGameId", parentGame.Id.ToString());
                                         
                                         if (metadata.Description == null)
                                         {
@@ -516,7 +516,7 @@ namespace EmuLibrary.RomTypes.PCInstaller
                                             if (parentGame != null)
                                             {
                                                 // Store the parent-child relationship
-                                                gameMetadata.GameDependencies = new HashSet<Guid> { parentGame.Id };
+                                                gameMetadata.AddProperty("DependentGameId", parentGame.Id.ToString());
                                                 
                                                 if (gameMetadata.Description == null)
                                                 {
@@ -571,8 +571,10 @@ namespace EmuLibrary.RomTypes.PCInstaller
                                                 string.Join("\n- ", addonNames);
                                                 
                                             // Set dependencies (this will show up in the UI)
-                                            gameMetadata.GameDependencies = new HashSet<Guid>(
-                                                installedAddonGames.Select(g => g.Id));
+                                            foreach (var addon in installedAddonGames)
+                                            {
+                                                gameMetadata.AddProperty($"DependentGameId_{addon.Id}", addon.Id.ToString());
+                                            }
                                         }
                                     }
                                 }
