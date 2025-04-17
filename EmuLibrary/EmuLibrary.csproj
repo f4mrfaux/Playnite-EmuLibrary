@@ -26,7 +26,7 @@
     <PackageReference Include="PlayniteSDK" Version="6.4.0" />
     <PackageReference Include="protobuf-net" Version="3.1.25" />
     <PackageReference Include="System.IO.Abstractions" Version="2.1.0.227" />
-    <PackageReference Include="System.Management.Automation" Version="7.0.0" Condition="'$(OS)' == 'Windows_NT'" />
+    <PackageReference Include="Microsoft.PowerShell.5.ReferenceAssemblies" Version="1.1.0" Condition="'$(OS)' == 'Windows_NT'" />
     <PackageReference Include="ZstdSharp.Port" Version="0.6.5" />
   </ItemGroup>
 	
