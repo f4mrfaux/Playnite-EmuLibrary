@@ -137,12 +137,16 @@ namespace EmuLibrary
                     Logger.Warn($"Emulator profile {mapping.EmulatorProfileId} for emulator {mapping.EmulatorId} not found, skipping.");
                     continue;
                 }
-
-                if (mapping.Platform == null)
+                
+                // Skip this check for PCInstaller and ISOInstaller - they can work without platform
+                if (mapping.Platform == null && 
+                    mapping.RomType != RomType.PCInstaller && 
+                    mapping.RomType != RomType.ISOInstaller)
                 {
                     Logger.Warn($"Platform {mapping.PlatformId} not found, skipping.");
                     continue;
                 }
+
 
                 if (!_scanners.TryGetValue(mapping.RomType, out RomTypeScanner scanner))
                 {

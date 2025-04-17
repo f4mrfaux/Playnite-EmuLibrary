@@ -160,7 +160,8 @@ namespace EmuLibrary.RomTypes.PCInstaller
                                 string platformName = mapping.Platform?.Name;
                                 if (string.IsNullOrEmpty(platformName))
                                 {
-                                    platformName = "PC"; // Default fallback
+                                    platformName = "PC"; // Default fallback when no platform is selected
+                                    _emuLibrary.Logger.Info($"No platform set for PCInstaller, using default '{platformName}'");
                                 }
                                 
                                 // Add store-specific platform if available
