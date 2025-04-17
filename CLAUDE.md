@@ -87,6 +87,12 @@ EmuLibrary is a library extension for Playnite, an open source video game librar
 
 ## Extension Development Patterns
 
+### Code Modification Guidelines
+- Only modify files directly related to the PCInstaller and ISOInstaller functionality when extending these features
+- Do not modify the core Yuzu, SingleFile, or MultiFile scanner classes unless absolutely necessary
+- Focus changes on the specific RomType implementation being enhanced or fixed
+- If a core component needs modification to support new features, discuss it first
+
 ### LibraryPlugin Implementation
 - Must override mandatory members:
   - `Id`: Unique plugin GUID
