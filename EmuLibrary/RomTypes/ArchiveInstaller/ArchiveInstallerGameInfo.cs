@@ -6,20 +6,15 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using EmuLibrary.RomTypes.PCInstaller;
+using EmuLibrary.RomTypes.PCInstaller;
 
 namespace EmuLibrary.RomTypes.ArchiveInstaller
 {
     [ProtoContract]
     internal class ArchiveInstallerGameInfo : ELGameInfo
     {
-        // Enum to identify content types (needs to be identical to PCInstallerGameInfo.ContentType)
-        public enum ContentType
-        {
-            BaseGame,    // The main game
-            Update,      // An update/patch for the game
-            DLC,         // Downloadable content
-            Expansion    // Expansion pack (larger DLC)
-        }
+        // Use shared content type from PCInstallerGameInfo instead of duplicating
         
         public override RomType RomType => RomType.ArchiveInstaller;
 
@@ -76,7 +71,7 @@ namespace EmuLibrary.RomTypes.ArchiveInstaller
         
         // Content type identification fields
         [ProtoMember(14)]
-        public ContentType ContentType { get; set; } = ContentType.BaseGame;
+        public PCInstaller.ContentType ContentType { get; set; } = PCInstaller.ContentType.BaseGame;
         
         [ProtoMember(15)]
         public string ParentGameId { get; set; }

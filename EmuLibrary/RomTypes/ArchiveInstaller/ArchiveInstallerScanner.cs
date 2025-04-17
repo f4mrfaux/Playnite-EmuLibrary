@@ -2,12 +2,14 @@
 using EmuLibrary.Settings;
 using Playnite.SDK;
 using Playnite.SDK.Models;
+using Playnite.SDK.Plugins;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
+using EmuLibrary.RomTypes.PCInstaller;
 
 namespace EmuLibrary.RomTypes.ArchiveInstaller
 {
@@ -329,11 +331,11 @@ namespace EmuLibrary.RomTypes.ArchiveInstaller
         /// <param name="fileName">Archive file name</param>
         /// <param name="dirName">Directory name containing the archive</param>
         /// <returns>Tuple with ContentType, Version, and ContentDescription</returns>
-        private (ArchiveInstallerGameInfo.ContentType contentType, string version, string contentDescription) 
+        private (PCInstaller.ContentType contentType, string version, string contentDescription) 
             DetectContentTypeAndVersion(string fileName, string dirName)
         {
             // Default values
-            var contentType = ArchiveInstallerGameInfo.ContentType.BaseGame;
+            var contentType = PCInstaller.ContentType.BaseGame;
             string version = null;
             string contentDescription = null;
             
@@ -350,7 +352,7 @@ namespace EmuLibrary.RomTypes.ArchiveInstaller
             // Determine content type based on keywords in file and directory names
             if (_updatePattern.IsMatch(combinedText))
             {
-                contentType = ArchiveInstallerGameInfo.ContentType.Update;
+                contentType = PCInstaller.ContentType.Update;
                 contentDescription = "Game Update";
                 
                 // Try to extract specific update information
@@ -371,7 +373,7 @@ namespace EmuLibrary.RomTypes.ArchiveInstaller
             }
             else if (_expansionPattern.IsMatch(combinedText))
             {
-                contentType = ArchiveInstallerGameInfo.ContentType.Expansion;
+                contentType = PCInstaller.ContentType.Expansion;
                 contentDescription = "Expansion Pack";
                 
                 // Try to extract specific expansion name
@@ -404,7 +406,7 @@ namespace EmuLibrary.RomTypes.ArchiveInstaller
             }
             else if (_dlcPattern.IsMatch(combinedText))
             {
-                contentType = ArchiveInstallerGameInfo.ContentType.DLC;
+                contentType = PCInstaller.ContentType.DLC;
                 contentDescription = "Downloadable Content";
                 
                 // Try to extract specific DLC name
@@ -508,7 +510,7 @@ namespace EmuLibrary.RomTypes.ArchiveInstaller
             string baseGameName = null;
             string parentGameId = null;
             
-            if (contentType != ArchiveInstallerGameInfo.ContentType.BaseGame)
+            if (contentType != PCInstaller.ContentType.BaseGame)
             {
                 // Try to extract base game name by removing content indicators
                 baseGameName = ExtractBaseGameName(name);
@@ -542,7 +544,7 @@ namespace EmuLibrary.RomTypes.ArchiveInstaller
                             {
                                 var pcBaseGameInfo = baseGameInfo as ArchiveInstallerGameInfo;
                                 if (pcBaseGameInfo != null && 
-                                    pcBaseGameInfo.ContentType == ArchiveInstallerGameInfo.ContentType.BaseGame)
+                                    pcBaseGameInfo.ContentType == PCInstaller.ContentType.BaseGame)
                                 {
                                     parentGameId = baseGame.GameId;
                                     gameInfo.ParentGameId = parentGameId;
@@ -560,7 +562,7 @@ namespace EmuLibrary.RomTypes.ArchiveInstaller
             
             // Adjust game name for DLC, Updates, etc.
             string displayName = name;
-            if (contentType != ArchiveInstallerGameInfo.ContentType.BaseGame && 
+            if (contentType != PCInstaller.ContentType.BaseGame && 
                 !string.IsNullOrEmpty(contentDescription))
             {
                 // For content that's not a base game, include content description in name
@@ -609,13 +611,13 @@ namespace EmuLibrary.RomTypes.ArchiveInstaller
             result.Tags = new HashSet<MetadataProperty>();
             switch (contentType)
             {
-                case ArchiveInstallerGameInfo.ContentType.Update:
+                case PCInstaller.ContentType.Update:
                     result.Tags.Add(new MetadataNameProperty("Update"));
                     break;
-                case ArchiveInstallerGameInfo.ContentType.DLC:
+                case PCInstaller.ContentType.DLC:
                     result.Tags.Add(new MetadataNameProperty("DLC"));
                     break;
-                case ArchiveInstallerGameInfo.ContentType.Expansion:
+                case PCInstaller.ContentType.Expansion:
                     result.Tags.Add(new MetadataNameProperty("Expansion"));
                     break;
             }

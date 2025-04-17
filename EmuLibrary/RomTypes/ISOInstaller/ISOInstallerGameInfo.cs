@@ -5,19 +5,14 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using EmuLibrary.RomTypes.PCInstaller;
+using EmuLibrary.RomTypes.PCInstaller;
 
 namespace EmuLibrary.RomTypes.ISOInstaller
 {
     internal class ISOInstallerGameInfo : ELGameInfo
     {
-        // Enum to identify content types (needs to be identical to PCInstallerGameInfo.ContentType)
-        public enum ContentType
-        {
-            BaseGame,    // The main game
-            Update,      // An update/patch for the game
-            DLC,         // Downloadable content
-            Expansion    // Expansion pack (larger DLC)
-        }
+        // Use shared content type from PCInstallerGameInfo instead of duplicating
         
         [SerializationPropertyName("MappingId")]
         public new Guid MappingId { get; set; }
@@ -51,7 +46,7 @@ namespace EmuLibrary.RomTypes.ISOInstaller
         
         // Content type identification fields
         [SerializationPropertyName("ContentType")]
-        public ContentType ContentType { get; set; } = ContentType.BaseGame;
+        public PCInstaller.ContentType ContentType { get; set; } = PCInstaller.ContentType.BaseGame;
         
         [SerializationPropertyName("ParentGameId")]
         public string ParentGameId { get; set; }

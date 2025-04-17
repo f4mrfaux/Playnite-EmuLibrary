@@ -8,16 +8,10 @@ using System.Threading.Tasks;
 
 namespace EmuLibrary.RomTypes.ISOInstaller
 {
-    class ISOInstallerUninstallController : BaseInstallController
+    class ISOInstallerUninstallController : UninstallController
     {
         internal ISOInstallerUninstallController(Game game, IEmuLibrary emuLibrary) : base(game, emuLibrary)
         { }
-
-        public override void Install(InstallActionArgs args)
-        {
-            // Implementation not needed - this is a UninstallController
-            throw new System.NotImplementedException("Install is not supported on UninstallController");
-        }
         
         public override void Uninstall(UninstallActionArgs args)
         {
