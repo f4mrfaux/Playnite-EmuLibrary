@@ -36,12 +36,8 @@ namespace EmuLibrary.RomTypes.PCInstaller
                 yield break;
             }
 
-            // Validate mapping and emulator configuration
-            if (mapping.EmulatorProfile == null)
-            {
-                _emuLibrary.Logger.Error($"No emulator profile specified for mapping {mapping.MappingId}");
-                yield break;
-            }
+            // For PC installer games, emulator profile is optional since they're native executables
+            // No validation needed for emulator profile as these games run natively
 
             // Validate paths
             var srcPath = mapping.SourcePath;

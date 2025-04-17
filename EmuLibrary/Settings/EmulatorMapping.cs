@@ -70,6 +70,7 @@ namespace EmuLibrary.Settings
                 var playnite = Settings.Instance.PlayniteAPI;
                 
                 // Special case for PCInstaller and ISOInstaller: Show all PC platforms regardless of emulator profile
+                // These types don't require an emulator since they install and run natively
                 if (RomType == RomType.PCInstaller || RomType == RomType.ISOInstaller)
                 {
                     // Get all PC-related platforms (PC, Windows, DOS, etc.)
@@ -79,6 +80,7 @@ namespace EmuLibrary.Settings
                         "pc_windows_store", "pc_steam", "pc_gog", "pc_origin", "pc_epic"
                     };
                     
+                    // Return all PC platforms regardless of whether an emulator profile is set
                     return playnite.Emulation.Platforms?
                         .Where(p => p != null && !string.IsNullOrEmpty(p.Id) && 
                                (pcPlatformSpecs.Contains(p.Id.ToLower()) || 

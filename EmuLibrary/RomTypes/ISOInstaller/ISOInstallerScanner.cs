@@ -36,12 +36,8 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                 yield break;
             }
 
-            // Validate mapping and emulator configuration
-            if (mapping.EmulatorProfile == null)
-            {
-                _emuLibrary.Logger.Error($"No emulator profile specified for mapping {mapping.MappingId}");
-                yield break;
-            }
+            // For ISO installer disc images, emulator profile is optional since they're typically mounted and installed
+            // No validation needed for emulator profile as these games run natively after installation
 
             // Validate paths
             var srcPath = mapping.SourcePath;
