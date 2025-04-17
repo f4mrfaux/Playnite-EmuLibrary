@@ -11,6 +11,8 @@ using System.Linq;
 #if WINDOWS
 using System.Management.Automation;
 #endif
+// We can keep using System.Collections.ObjectModel in all cases
+using System.Collections.ObjectModel;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -1413,7 +1415,11 @@ namespace EmuLibrary.RomTypes.ArchiveInstaller
                 var results = new Collection<PSObject>();
 #endif
                     
+#if WINDOWS
                     if (ps.HadErrors || results.Count == 0)
+#else
+                    if (results.Count == 0)
+#endif
                     {
                         _emuLibrary.Logger.Error("Failed to mount ISO: PowerShell command returned no results");
                         return null;

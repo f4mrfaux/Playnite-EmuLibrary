@@ -11,6 +11,43 @@ using System.Linq;
 #if WINDOWS
 using System.Management.Automation;
 using System.Management.Automation.Runspaces;
+#else
+// For Collection<T> used in the dummy implementation
+using System.Collections.ObjectModel;
+
+// Dummy class for non-Windows builds
+namespace System.Management.Automation
+{
+    public class PSObject
+    {
+        private string _value;
+        
+        public PSObject(string value)
+        {
+            _value = value;
+        }
+        
+        public override string ToString()
+        {
+            return _value;
+        }
+    }
+    
+    public class PowerShell : IDisposable
+    {
+        public static PowerShell Create() => new PowerShell();
+        public bool HadErrors { get; } = false;
+        
+        public PowerShell AddScript(string script) => this;
+        
+        public Collection<PSObject> Invoke()
+        {
+            return new Collection<PSObject> { new PSObject("C") };
+        }
+        
+        public void Dispose() { }
+    }
+}
 #endif
 using System.Threading;
 using System.Threading.Tasks;
