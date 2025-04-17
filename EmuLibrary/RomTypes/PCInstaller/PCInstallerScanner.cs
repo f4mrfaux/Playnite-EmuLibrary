@@ -262,7 +262,7 @@ namespace EmuLibrary.RomTypes.PCInstaller
                                 
                                 // Adjust game name for DLC, Updates, etc.
                                 string displayName = gameName;
-                                if (info.ContentType != PCInstallerGameInfo.ContentType.BaseGame && 
+                                if (info.ContentType != ContentType.BaseGame && 
                                     !string.IsNullOrEmpty(info.ContentDescription))
                                 {
                                     // For content that's not a base game, include content description in name
@@ -323,13 +323,13 @@ namespace EmuLibrary.RomTypes.PCInstaller
                                 // Add content type as tag
                                 switch (info.ContentType)
                                 {
-                                    case PCInstallerGameInfo.ContentType.Update:
+                                    case ContentType.Update:
                                         metadata.Tags.Add(new MetadataNameProperty("Update"));
                                         break;
-                                    case PCInstallerGameInfo.ContentType.DLC:
+                                    case ContentType.DLC:
                                         metadata.Tags.Add(new MetadataNameProperty("DLC"));
                                         break;
-                                    case PCInstallerGameInfo.ContentType.Expansion:
+                                    case ContentType.Expansion:
                                         metadata.Tags.Add(new MetadataNameProperty("Expansion"));
                                         break;
                                 }
@@ -476,19 +476,19 @@ namespace EmuLibrary.RomTypes.PCInstaller
                                     };
                                     
                                     // Handle content type-specific metadata
-                                    if (gameInfo.ContentType != PCInstallerGameInfo.ContentType.BaseGame)
+                                    if (gameInfo.ContentType != ContentType.BaseGame)
                                     {
                                         // Add content type as tag
                                         gameMetadata.Tags = new HashSet<MetadataProperty>();
                                         switch (gameInfo.ContentType)
                                         {
-                                            case PCInstallerGameInfo.ContentType.Update:
+                                            case ContentType.Update:
                                                 gameMetadata.Tags.Add(new MetadataNameProperty("Update"));
                                                 break;
-                                            case PCInstallerGameInfo.ContentType.DLC:
+                                            case ContentType.DLC:
                                                 gameMetadata.Tags.Add(new MetadataNameProperty("DLC"));
                                                 break;
-                                            case PCInstallerGameInfo.ContentType.Expansion:
+                                            case ContentType.Expansion:
                                                 gameMetadata.Tags.Add(new MetadataNameProperty("Expansion"));
                                                 break;
                                         }
@@ -626,11 +626,11 @@ namespace EmuLibrary.RomTypes.PCInstaller
         /// <param name="fileName">File name</param>
         /// <param name="dirName">Directory name</param>
         /// <returns>Tuple with ContentType, Version, and ContentDescription</returns>
-        private (PCInstallerGameInfo.ContentType contentType, string version, string contentDescription) 
+        private (ContentType contentType, string version, string contentDescription) 
             DetectContentTypeAndVersion(string filePath, string fileName, string dirName)
         {
             // Default values
-            var contentType = PCInstallerGameInfo.ContentType.BaseGame;
+            var contentType = ContentType.BaseGame;
             string version = null;
             string contentDescription = null;
             
@@ -647,7 +647,7 @@ namespace EmuLibrary.RomTypes.PCInstaller
             // Determine content type based on keywords in file and directory names
             if (_updatePattern.IsMatch(combinedText))
             {
-                contentType = PCInstallerGameInfo.ContentType.Update;
+                contentType = ContentType.Update;
                 contentDescription = "Game Update";
                 
                 // Try to extract specific update information
@@ -668,7 +668,7 @@ namespace EmuLibrary.RomTypes.PCInstaller
             }
             else if (_expansionPattern.IsMatch(combinedText))
             {
-                contentType = PCInstallerGameInfo.ContentType.Expansion;
+                contentType = ContentType.Expansion;
                 contentDescription = "Expansion Pack";
                 
                 // Try to extract specific expansion name
@@ -701,7 +701,7 @@ namespace EmuLibrary.RomTypes.PCInstaller
             }
             else if (_dlcPattern.IsMatch(combinedText))
             {
-                contentType = PCInstallerGameInfo.ContentType.DLC;
+                contentType = ContentType.DLC;
                 contentDescription = "Downloadable Content";
                 
                 // Try to extract specific DLC name
@@ -787,75 +787,6 @@ namespace EmuLibrary.RomTypes.PCInstaller
                 
             // If all else fails, return null to indicate we couldn't extract the base name
             return null;
-        }
-            else if (_expansionPattern.IsMatch(combinedText))
-            {
-                contentType = PCInstallerGameInfo.ContentType.Expansion;
-                contentDescription = "Expansion Pack";
-                
-                // Try to extract specific expansion name
-                foreach (var phrase in _commonExpansionPhrases)
-                {
-                    if (combinedText.Contains(phrase))
-                    {
-                        var index = combinedText.IndexOf(phrase, StringComparison.OrdinalIgnoreCase);
-                        if (index > 0)
-                        {
-                            // Extract content before the phrase
-                            var beforePhrase = combinedText.Substring(0, index).Trim();
-                            if (!string.IsNullOrEmpty(beforePhrase))
-                            {
-                                contentDescription = beforePhrase + " Expansion";
-                            }
-                        }
-                        else if (index == 0 && combinedText.Length > phrase.Length)
-                        {
-                            // Extract content after the phrase
-                            var afterPhrase = combinedText.Substring(phrase.Length).Trim();
-                            if (!string.IsNullOrEmpty(afterPhrase))
-                            {
-                                contentDescription = "Expansion: " + afterPhrase;
-                            }
-                        }
-                        break;
-                    }
-                }
-            }
-            else if (_dlcPattern.IsMatch(combinedText))
-            {
-                contentType = PCInstallerGameInfo.ContentType.DLC;
-                contentDescription = "Downloadable Content";
-                
-                // Try to extract specific DLC name
-                foreach (var phrase in _commonDlcPhrases)
-                {
-                    if (combinedText.Contains(phrase))
-                    {
-                        var index = combinedText.IndexOf(phrase, StringComparison.OrdinalIgnoreCase);
-                        if (index > 0)
-                        {
-                            // Extract content before the phrase
-                            var beforePhrase = combinedText.Substring(0, index).Trim();
-                            if (!string.IsNullOrEmpty(beforePhrase))
-                            {
-                                contentDescription = beforePhrase + " DLC";
-                            }
-                        }
-                        else if (index == 0 && combinedText.Length > phrase.Length)
-                        {
-                            // Extract content after the phrase
-                            var afterPhrase = combinedText.Substring(phrase.Length).Trim();
-                            if (!string.IsNullOrEmpty(afterPhrase))
-                            {
-                                contentDescription = "DLC: " + afterPhrase;
-                            }
-                        }
-                        break;
-                    }
-                }
-            }
-            
-            return (contentType, version, contentDescription);
         }
 
         public override IEnumerable<Game> GetUninstalledGamesMissingSourceFiles(CancellationToken ct)
