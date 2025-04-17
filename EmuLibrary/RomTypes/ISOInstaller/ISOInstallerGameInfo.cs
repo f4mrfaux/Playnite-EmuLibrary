@@ -10,6 +10,15 @@ namespace EmuLibrary.RomTypes.ISOInstaller
 {
     internal class ISOInstallerGameInfo : ELGameInfo
     {
+        // Enum to identify content types (needs to be identical to PCInstallerGameInfo.ContentType)
+        public enum ContentType
+        {
+            BaseGame,    // The main game
+            Update,      // An update/patch for the game
+            DLC,         // Downloadable content
+            Expansion    // Expansion pack (larger DLC)
+        }
+        
         [SerializationPropertyName("MappingId")]
         public new Guid MappingId { get; set; }
 
@@ -39,6 +48,22 @@ namespace EmuLibrary.RomTypes.ISOInstaller
 
         [SerializationPropertyName("MountPoint")]
         public string MountPoint { get; set; }
+        
+        // Content type identification fields
+        [SerializationPropertyName("ContentType")]
+        public ContentType ContentTypeValue { get; set; } = ContentType.BaseGame;
+        
+        [SerializationPropertyName("ParentGameId")]
+        public string ParentGameId { get; set; }
+        
+        [SerializationPropertyName("Version")]
+        public string Version { get; set; }
+        
+        [SerializationPropertyName("InstalledAddons")]
+        public List<string> InstalledAddons { get; set; } = new List<string>();
+        
+        [SerializationPropertyName("ContentDescription")]
+        public string ContentDescription { get; set; }
 
         public override RomType RomType => RomType.ISOInstaller;
 
@@ -83,6 +108,22 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                 
             if (!string.IsNullOrEmpty(StoreGameId))
                 yield return $"{nameof(StoreGameId)}: {StoreGameId}";
+                
+            // Content type information
+            if (ContentTypeValue != ContentType.BaseGame)
+                yield return $"{nameof(ContentTypeValue)}: {ContentTypeValue}";
+                
+            if (!string.IsNullOrEmpty(Version))
+                yield return $"{nameof(Version)}: {Version}";
+                
+            if (!string.IsNullOrEmpty(ContentDescription))
+                yield return $"{nameof(ContentDescription)}: {ContentDescription}";
+                
+            if (!string.IsNullOrEmpty(ParentGameId))
+                yield return $"{nameof(ParentGameId)}: {ParentGameId}";
+                
+            if (InstalledAddons != null && InstalledAddons.Count > 0)
+                yield return $"{nameof(InstalledAddons)}: {string.Join(", ", InstalledAddons)}";
         }
 
         public override void BrowseToSource()

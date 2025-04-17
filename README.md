@@ -43,8 +43,9 @@ The ISOInstaller type supports PC game installations from disc images (ISO, BIN/
 * Mount the disc images for installation
 * Install games to a specified location
 * Manage disc-based PC games alongside your other games
+* Handle DLC, updates, and expansions from disc images
 
-ISOInstaller has similar features to PCInstaller, including special handling for GOG disc images and store detection.
+ISOInstaller has similar features to PCInstaller, including special handling for GOG disc images and store detection, as well as complete support for DLC, updates, and expansions with parent-child relationships.
 
 ### PCInstaller
 
@@ -53,6 +54,7 @@ The PCInstaller type supports PC game installer executables (.exe files). This t
 * Scan folders containing PC game installers (.exe files)
 * Install these games to a specified location
 * Manage PC games alongside your emulated games collection
+* Handle DLC, updates, and expansions with parent-child relationships
 
 When using the PCInstaller type, you'll be able to select from PC-related platforms (Windows, Steam, GOG, etc.) regardless of which emulator or profile you've selected. This makes it suitable for organizing PC game installers from various sources.
 
@@ -68,6 +70,32 @@ PCInstaller has special handling for GOG games:
 
 The PCInstaller type preserves the store information and properly categorizes PC games based on their origin (GOG, Steam, etc.), helping with organization and filtering in Playnite.
 
+#### DLC, Updates, and Expansions Support
+
+PCInstaller provides comprehensive support for additional content types:
+
+* **Automatic Content Detection**: Intelligently identifies updates, DLC, and expansions by analyzing file and directory names
+* **Content Type Classification**:
+  - **Base Games**: The main game installation
+  - **Updates/Patches**: Game updates and patches with version tracking
+  - **DLC**: Downloadable content packages
+  - **Expansions**: Larger content additions (treated as a special type of DLC)
+
+* **Parent-Child Relationships**: 
+  - Automatically links DLC and updates to their parent games
+  - Shows relationships in the Playnite UI via dependencies
+  - Tracks installed addons for each base game
+
+* **Version Tracking**:
+  - Detects and extracts version information from filenames
+  - Displays version information in game metadata
+  - Helps organize multiple versions of the same game
+
+* **Smart Naming**:
+  - Enhances displayed names with content type and version information
+  - Maintains consistent naming conventions across different content types
+  - Makes related content easily identifiable in your library
+
 ### ArchiveInstaller
 
 The ArchiveInstaller type extends the functionality of ISOInstaller by handling archives (ZIP, RAR, 7z) that contain disc images with installers. This type is designed for PC game installations from archived disc images, which is common for large collections. This type allows you to:
@@ -78,6 +106,9 @@ The ArchiveInstaller type extends the functionality of ISOInstaller by handling 
 * Mount the contained disc images
 * Install games to a specified location
 * Manage archived disc-based PC games alongside your other games
+* Handle DLC, updates, and expansions from archived disc images
+
+Just like PCInstaller and ISOInstaller, the ArchiveInstaller type fully supports content type detection and relationship management for DLC, updates, and expansions - all with the added benefit of archive handling.
 
 #### Requirements
 * 7-Zip executable must be installed and available in your PATH
@@ -247,6 +278,38 @@ For multi-disc games stored in archives:
    - Finally, it will locate ISO files in the fully extracted content
 
 This functionality is particularly useful for complex game collections that use advanced archiving techniques.
+
+### Example: Managing DLC, Updates, and Expansions
+
+EmuLibrary provides comprehensive support for managing game content relationships across all PC game types:
+
+1. **Content Organization Recommendations**:
+   - Organize files with consistent naming conventions for reliable detection
+   - Use common patterns like "Game Name + DLC Name", "Game Name - Update v1.2", etc.
+   - Group related content in the same directory when possible
+
+2. **Content Detection and Relationships**:
+   - The system automatically detects content types by analyzing file and folder names
+   - It recognizes common indicators like "DLC", "Expansion", "Update", "Patch", "v1.2", etc.
+   - Base games are automatically linked with their related content
+
+3. **Installation Workflow**:
+   - Installing a base game first makes it easier to relate DLC and updates
+   - When installing DLC or updates, the system will automatically link to the parent game
+   - You can view relationship information in game properties and via dependencies in the UI
+
+4. **Managing Version Updates**:
+   - Install updates to keep your games current
+   - The system tracks version information when available
+   - Base games show information about all installed add-ons
+
+5. **Display and Organization**:
+   - Content is displayed with appropriate type indicators
+   - Updates show version information when available
+   - DLC and expansions show descriptive names
+   - Related content is grouped logically in the UI via dependencies
+
+This system provides a comprehensive way to manage complex game libraries with multiple content types across all PC installation methods.
 
 ## Support
 
