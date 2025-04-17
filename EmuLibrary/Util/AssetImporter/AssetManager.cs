@@ -81,13 +81,17 @@ namespace EmuLibrary.Util.AssetImporter
                         (File.Exists(cachedPath) || Directory.Exists(cachedPath)))
                     {
                         _logger.Info($"Using cached asset for {sourcePath} at {cachedPath}");
+                        long cachedSize;
+                        if (File.Exists(cachedPath))
+                            cachedSize = new FileInfo(cachedPath).Length;
+                        else
+                            cachedSize = GetDirectorySize(new DirectoryInfo(cachedPath));
+                            
                         return new ImportResult(
                             cachedPath,
                             true,
                             null,
-                            File.Exists(cachedPath) 
-                                ? new FileInfo(cachedPath).Length 
-                                : GetDirectorySize(new DirectoryInfo(cachedPath)),
+                            cachedSize,
                             true);
                     }
                 }
@@ -137,8 +141,14 @@ namespace EmuLibrary.Util.AssetImporter
                 
                 // Create temp directory for this import
                 string importId = Guid.NewGuid().ToString();
+                string basePath;
+                if (Settings.Instance.EnableAssetCaching)
+                    basePath = _cachePath;
+                else
+                    basePath = Path.GetTempPath();
+                    
                 string tempDirPath = Path.Combine(
-                    Settings.Instance.EnableAssetCaching ? _cachePath : Path.GetTempPath(),
+                    basePath,
                     "EmuLibrary_Assets", 
                     importId);
                 
@@ -168,9 +178,11 @@ namespace EmuLibrary.Util.AssetImporter
                             }
                             
                             // Use Windows File Copier to show progress dialog if requested
-                            IFileCopier copier = showProgress 
-                                ? new WindowsFileCopier(source, destination)
-                                : new SimpleFileCopier(source, destination);
+                            IFileCopier copier;
+                            if (showProgress)
+                                copier = new WindowsFileCopier(source, destination);
+                            else
+                                copier = new SimpleFileCopier(source, destination);
                             
                             // Track progress for the copy operation
                             var progressTracker = new Progress<FileCopyProgress>(progress => 
@@ -272,13 +284,17 @@ namespace EmuLibrary.Util.AssetImporter
                     _logger.Info($"Successfully imported asset to {resultPath}");
                     
                     // Return the result
+                    long resultSize;
+                    if (File.Exists(resultPath))
+                        resultSize = new FileInfo(resultPath).Length;
+                    else
+                        resultSize = GetDirectorySize(new DirectoryInfo(resultPath));
+                        
                     return new ImportResult(
                         resultPath,
                         true,
                         null,
-                        File.Exists(resultPath) 
-                            ? new FileInfo(resultPath).Length 
-                            : GetDirectorySize(new DirectoryInfo(resultPath)),
+                        resultSize,
                         false);
                 }
                 catch (Exception)

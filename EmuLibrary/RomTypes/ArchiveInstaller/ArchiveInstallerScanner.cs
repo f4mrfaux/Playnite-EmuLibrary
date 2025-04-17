@@ -191,7 +191,11 @@ namespace EmuLibrary.RomTypes.ArchiveInstaller
                                     .ToList()
                             };
                             
-                            yield return CreateGameMetadata(gameId, gameName, gameInfo, mapping);
+                            GameMetadata metadata = CreateGameMetadata(gameId, gameName, gameInfo, mapping);
+                            if (metadata != null)
+                            {
+                                yield return metadata;
+                            }
                         }
                         catch (Exception ex)
                         {
@@ -222,7 +226,11 @@ namespace EmuLibrary.RomTypes.ArchiveInstaller
                                 ArchiveParts = new List<string> { relativePath }
                             };
                             
-                            yield return CreateGameMetadata(gameId, gameName, gameInfo, mapping);
+                            GameMetadata metadata = CreateGameMetadata(gameId, gameName, gameInfo, mapping);
+                            if (metadata != null)
+                            {
+                                yield return metadata;
+                            }
                         }
                         catch (Exception ex)
                         {
@@ -600,7 +608,7 @@ namespace EmuLibrary.RomTypes.ArchiveInstaller
 
             if (mapping.Platform != null)
             {
-                result.Platforms = new HashSet<MetadataProperty> { new MetadataProperty(mapping.Platform.Name, mapping.Platform.Id) };
+                result.Platforms = new HashSet<MetadataProperty> { new MetadataNameProperty(mapping.Platform.Name) };
             }
             
             // Add content type as tag
