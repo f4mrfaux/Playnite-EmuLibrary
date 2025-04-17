@@ -19,5 +19,9 @@
         // ISO installers don't require an emulator profile since they're mounted and installed natively
         [RomTypeInfo(typeof(ISOInstaller.ISOInstallerGameInfo), typeof(ISOInstaller.ISOInstallerScanner))]
         ISOInstaller = 6,
+        
+        // Archive installers handle archives (ZIP, RAR, 7z) containing ISOs with installers
+        [RomTypeInfo(typeof(ArchiveInstaller.ArchiveInstallerGameInfo), typeof(ArchiveInstaller.ArchiveInstallerScanner))]
+        ArchiveInstaller = 7,
     }
 }

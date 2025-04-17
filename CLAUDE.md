@@ -161,12 +161,22 @@ EmuLibrary is a library extension for Playnite, an open source video game librar
   - Similar to PCInstaller but handles disc image formats
   - Supports common ISO formats like .iso, .bin/.cue, .mdf/.mds
   - Mounts disc images before executing installers
-- **ArchiveInstaller** (planned):
-  - Will handle archives containing ISOs with installers
-  - Required to import all assets locally before operations
+- **ArchiveInstaller**:
+  - Handles archives containing ISOs with installers
+  - Supports common archive formats (.zip, .rar, .7z)
+  - Handles multi-part archives (especially split RAR files)
+  - Requires 7-Zip executable to be in PATH
+  - Imports all assets locally before any operations (extraction, mounting, installation)
   - No direct network operations for extraction/mounting
-  - Multi-step process: import→extract→mount→install
-  - Will implement proper asset validation and cleanup
+  - Multi-step workflow:
+    1. Import archive to local temp storage
+    2. Extract archive locally using 7-Zip
+    3. Find and select ISO files from extracted content
+    4. Mount ISO file
+    5. Run installer from mounted ISO
+    6. Clean up temp files after installation
+  - Special handling for multi-part archives requiring parent directory import
+  - Password support for protected archives
 
 ### Game Metadata Structure
 - Create specialized GameInfo classes for different game types
@@ -298,64 +308,6 @@ Example (Total Commander): `"c:\Programs\totalcmd\TOTALCMD64.EXE" /L="{Dir}" /O 
 - Handle network disconnections gracefully during file operations
 - Ensure proper cleanup of temp files after operations complete
 - Implement timeout handling for long-running operations
-
-### Asset Import System
-- `AssetImporter` class handles importing assets to local temp storage
-  - Always use AssetImporter for network file operations
-  - Provides caching for better performance
-  - Supports progress reporting via events
-  - Handles network retry logic automatically
-  - Implements asset verification
-  - Example usage:
-    ```csharp
-    // Get or create AssetImporter instance
-    var assetImporter = AssetImporter.Instance ?? 
-        new AssetImporter(_logger, _playnite);
-        
-    // Register for progress updates
-    assetImporter.ImportProgress += (sender, e) => {
-        UpdateProgress($"Importing: {e.BytesTransferred / (1024 * 1024)} MB / {e.TotalBytes / (1024 * 1024)} MB", 
-            (int)(e.Progress * 100));
-    };
-    
-    // Import the asset (with or without progress dialog)
-    var importResult = await assetImporter.ImportAsync(
-        sourcePath, 
-        showWindowsDialog, 
-        cancellationToken);
-        
-    if (importResult.Success) {
-        // Use the local asset path: importResult.Path
-        // Check if from cache: importResult.FromCache
-    }
-    
-    // Clean up when done (if not cached)
-    assetImporter.CleanupTempDirectory(importResult.Path);
-    ```
-
-### File Copy System
-- `FileCopier` classes handle file copy operations with progress reporting
-  - `BaseFileCopier`: Abstract base class with common functionality
-  - `SimpleFileCopier`: Implementation for standard file copy
-  - `WindowsFileCopier`: Shows Windows copy dialog
-  - Supports cancellation via CancellationToken
-  - Reports progress via IProgress<FileCopyProgress>
-  - Example usage:
-    ```csharp
-    // Choose copy implementation based on user preferences
-    IFileCopier copier = showDialog 
-        ? new WindowsFileCopier(sourceInfo, destinationDir)
-        : new SimpleFileCopier(sourceInfo, destinationDir);
-        
-    // Copy with progress reporting
-    var progress = new Progress<FileCopyProgress>(p => {
-        UpdateProgress($"{p.ProgressPercentage}% complete", 
-            (int)p.ProgressPercentage);
-    });
-    
-    // Execute copy operation with progress reporting
-    await copier.CopyWithProgressAsync(cancellationToken, progress);
-    ```
 
 ### Asset Import System
 - `AssetImporter` class handles importing assets to local temp storage
