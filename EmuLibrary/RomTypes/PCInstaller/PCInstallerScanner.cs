@@ -788,6 +788,16 @@ namespace EmuLibrary.RomTypes.PCInstaller
             // If all else fails, return null to indicate we couldn't extract the base name
             return null;
         }
+        
+        /// <summary>
+        /// Detects content type, version and other metadata from file and directory names
+        /// </summary>
+        /// <param name="filePath">Full file path to the installer</param>
+        /// <param name="fileName">File name</param>
+        /// <param name="dirName">Directory name</param>
+        /// <returns>Tuple with ContentType, Version, and ContentDescription</returns>
+        private (PCInstallerGameInfo.ContentType contentType, string version, string contentDescription) 
+            DetectContentTypeAndVersion(string filePath, string fileName, string dirName)
         {
             // Default values
             var contentType = PCInstallerGameInfo.ContentType.BaseGame;
