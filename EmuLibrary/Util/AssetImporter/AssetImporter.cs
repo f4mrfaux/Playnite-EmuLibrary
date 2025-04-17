@@ -10,7 +10,7 @@ namespace EmuLibrary.Util.AssetImporter
     /// <summary>
     /// Simple asset importer that copies network files to local temp storage before processing
     /// </summary>
-    public class AssetImporter
+    public class AssetImporter : IAssetImporter
     {
         private readonly ILogger _logger;
         private readonly IPlayniteAPI _playnite;

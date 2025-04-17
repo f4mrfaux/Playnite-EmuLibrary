@@ -120,13 +120,19 @@ namespace EmuLibrary
                 if (args.CancelToken.IsCancellationRequested)
                     yield break;
 
-                if (mapping.Emulator == null)
+                // PCInstaller and ISOInstaller don't require an emulator
+                if (mapping.Emulator == null && 
+                    mapping.RomType != RomType.PCInstaller && 
+                    mapping.RomType != RomType.ISOInstaller)
                 {
                     Logger.Warn($"Emulator {mapping.EmulatorId} not found, skipping.");
                     continue;
                 }
 
-                if (mapping.EmulatorProfile == null)
+                // PCInstaller and ISOInstaller don't require an emulator profile
+                if (mapping.EmulatorProfile == null && 
+                    mapping.RomType != RomType.PCInstaller && 
+                    mapping.RomType != RomType.ISOInstaller)
                 {
                     Logger.Warn($"Emulator profile {mapping.EmulatorProfileId} for emulator {mapping.EmulatorId} not found, skipping.");
                     continue;
