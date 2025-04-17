@@ -4,8 +4,8 @@ using Playnite.SDK;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
@@ -13,23 +13,24 @@ using System.Threading.Tasks;
 namespace EmuLibrary.Util.AssetImporter
 {
     /// <summary>
-    /// Asset importer that copies network files to local temp storage before processing
-    /// Enhanced with progress tracking, caching, and error handling
+    /// Manages importing and caching of assets from network to local temp storage
     /// </summary>
-    public class AssetImporter : IAssetImporter
+    public class AssetManager : IDisposable
     {
-        private static AssetImporter _instance;
-        public static AssetImporter Instance => _instance;
-        
         private readonly ILogger _logger;
         private readonly IPlayniteAPI _playnite;
         private readonly string _cachePath;
+        private readonly ConcurrentDictionary<string, string> _activeImports = new ConcurrentDictionary<string, string>();
         private readonly ConcurrentDictionary<string, string> _cachedAssets = new ConcurrentDictionary<string, string>();
         private readonly SemaphoreSlim _cacheLock = new SemaphoreSlim(1, 1);
         
+        // Singleton instance
+        private static AssetManager _instance;
+        public static AssetManager Instance => _instance;
+        
         public event EventHandler<ImportProgressEventArgs> ImportProgress;
         
-        public AssetImporter(ILogger logger, IPlayniteAPI playnite)
+        public AssetManager(ILogger logger, IPlayniteAPI playnite)
         {
             _logger = logger;
             _playnite = playnite;
@@ -41,41 +42,43 @@ namespace EmuLibrary.Util.AssetImporter
                 Directory.CreateDirectory(_cachePath);
             }
             
-            // Load cache registry if it exists
-            if (Settings.Settings.Instance.EnableAssetCaching)
-            {
-                LoadCacheRegistry();
-            }
-            
             _instance = this;
+            
+            // Load cached asset registry if it exists
+            LoadCacheRegistry();
         }
-
+        
         /// <summary>
-        /// Imports a source file/directory to local temp storage with advanced features
+        /// Imports a source file/directory to local temp storage with resilience and progress reporting
         /// </summary>
-        /// <param name="sourcePath">Path to the network source file/directory</param>
+        /// <param name="sourcePath">Path to source file/directory</param>
         /// <param name="showProgress">Whether to show Windows copy dialog</param>
         /// <param name="cancellationToken">Cancellation token</param>
-        /// <returns>Object with details about the imported asset</returns>
-        public async Task<ImportResult> ImportAsync(string sourcePath, bool showProgress, CancellationToken cancellationToken)
+        /// <returns>Path to local copy of the asset</returns>
+        public async Task<ImportResult> ImportAssetAsync(
+            string sourcePath, 
+            bool showProgress, 
+            CancellationToken cancellationToken)
         {
             if (string.IsNullOrEmpty(sourcePath))
             {
                 throw new ArgumentException("Source path cannot be null or empty", nameof(sourcePath));
             }
             
-            // Create a unique identifier for this import
+            // Create a unique identifier for this import based on the source path
+            // This helps with caching and preventing duplicate imports
             string sourceKey = GenerateSourceKey(sourcePath);
             
             try
             {
-                _logger.Info($"Importing asset from {sourcePath} to local temp storage");
+                _logger.Info($"Starting asset import for {sourcePath}");
                 
-                // Check cache if enabled
-                if (Settings.Settings.Instance.EnableAssetCaching)
+                // Check for cached asset if caching is enabled
+                if (Settings.Instance.EnableAssetCaching)
                 {
                     string cachedPath = GetCachedAsset(sourceKey);
-                    if (!string.IsNullOrEmpty(cachedPath) && (File.Exists(cachedPath) || Directory.Exists(cachedPath)))
+                    if (!string.IsNullOrEmpty(cachedPath) && 
+                        (File.Exists(cachedPath) || Directory.Exists(cachedPath)))
                     {
                         _logger.Info($"Using cached asset for {sourcePath} at {cachedPath}");
                         return new ImportResult(
@@ -89,15 +92,6 @@ namespace EmuLibrary.Util.AssetImporter
                     }
                 }
                 
-                // Determine the root temp directory
-                string baseTempDir = Settings.Settings.Instance.EnableAssetCaching 
-                    ? _cachePath 
-                    : Path.GetTempPath();
-                
-                // Create a unique temp directory for this import
-                string tempDir = Path.Combine(baseTempDir, "EmuLibrary_Assets", Guid.NewGuid().ToString());
-                Directory.CreateDirectory(tempDir);
-                
                 // Check if source file/directory exists
                 FileSystemInfo source;
                 if (Directory.Exists(sourcePath))
@@ -108,10 +102,9 @@ namespace EmuLibrary.Util.AssetImporter
                 {
                     source = new FileInfo(sourcePath);
                     
-                    // Show warning for large files if configured
+                    // Check if this is a large file and should show a warning
                     if (source is FileInfo fileInfo && 
-                        Settings.Settings.Instance.LargeFileSizeWarningThresholdMB > 0 &&
-                        fileInfo.Length > Settings.Settings.Instance.LargeFileSizeWarningThresholdMB * 1024 * 1024)
+                        fileInfo.Length > Settings.Instance.LargeFileSizeWarningThresholdMB * 1024 * 1024)
                     {
                         bool proceed = true;
                         
@@ -128,7 +121,12 @@ namespace EmuLibrary.Util.AssetImporter
                         if (!proceed)
                         {
                             _logger.Info($"User cancelled import of large file: {sourcePath}");
-                            return new ImportResult(null, false, new OperationCanceledException("User cancelled large file import"), 0, false);
+                            return new ImportResult(
+                                null,
+                                false,
+                                new OperationCanceledException("User cancelled large file import"),
+                                0,
+                                false);
                         }
                     }
                 }
@@ -137,144 +135,157 @@ namespace EmuLibrary.Util.AssetImporter
                     throw new FileNotFoundException($"Source path not found: {sourcePath}");
                 }
                 
-                DirectoryInfo destination = new DirectoryInfo(tempDir);
-                string resultPath = null;
+                // Create temp directory for this import
+                string importId = Guid.NewGuid().ToString();
+                string tempDirPath = Path.Combine(
+                    Settings.Instance.EnableAssetCaching ? _cachePath : Path.GetTempPath(),
+                    "EmuLibrary_Assets", 
+                    importId);
                 
-                // Implement retry logic for network operations
-                int retryCount = 0;
-                int maxRetries = Settings.Settings.Instance.NetworkRetryAttempts;
-                Exception lastException = null;
-                bool success = false;
+                Directory.CreateDirectory(tempDirPath);
+                _activeImports[sourceKey] = tempDirPath;
                 
-                while (retryCount <= maxRetries && !success)
+                try
                 {
-                    try
+                    DirectoryInfo destination = new DirectoryInfo(tempDirPath);
+                    string resultPath = null;
+                    
+                    // Implement retry logic for network operations
+                    int maxRetries = Settings.Instance.NetworkRetryAttempts;
+                    int retryCount = 0;
+                    bool success = false;
+                    Exception lastException = null;
+                    
+                    while (retryCount <= maxRetries && !success)
                     {
-                        if (retryCount > 0)
-                        {
-                            _logger.Info($"Retry {retryCount}/{maxRetries} for {sourcePath}");
-                            await Task.Delay(500 * retryCount, cancellationToken);
-                        }
-                        
-                        // Setup progress tracking if needed
-                        IProgress<FileCopyProgress> progress = null;
-                        if (!showProgress) // Only track progress internally when not showing Windows dialog
-                        {
-                            progress = new Progress<FileCopyProgress>(p => 
-                            {
-                                OnImportProgress(new ImportProgressEventArgs(
-                                    p.ProgressPercentage / 100.0,
-                                    p.BytesTransferred,
-                                    p.TotalBytes,
-                                    p.BytesPerSecond,
-                                    p.SecondsRemaining
-                                ));
-                            });
-                        }
-                        
-                        // Use Windows File Copier to show progress dialog if requested
-                        IFileCopier copier = showProgress 
-                            ? new WindowsFileCopier(source, destination)
-                            : new SimpleFileCopier(source, destination);
-                        
-                        // Copy with or without progress tracking
-                        if (progress != null)
-                        {
-                            await copier.CopyWithProgressAsync(cancellationToken, progress);
-                        }
-                        else
-                        {
-                            await copier.CopyAsync(cancellationToken);
-                        }
-                        
-                        if (source is FileInfo)
-                        {
-                            // For files, return the path to the copied file
-                            resultPath = Path.Combine(tempDir, Path.GetFileName(sourcePath));
-                        }
-                        else
-                        {
-                            // For directories, return the temp directory path
-                            resultPath = tempDir;
-                        }
-                        
-                        // Verify the import if enabled
-                        if (Settings.Settings.Instance.VerifyImportedAssets && source is FileInfo)
-                        {
-                            _logger.Info($"Verifying imported asset: {resultPath}");
-                            
-                            // Check file size
-                            var sourceInfo = new FileInfo(sourcePath);
-                            var destInfo = new FileInfo(resultPath);
-                            
-                            if (sourceInfo.Length != destInfo.Length)
-                            {
-                                throw new IOException($"Verification failed: File sizes don't match. " +
-                                    $"Source: {sourceInfo.Length}, Destination: {destInfo.Length}");
-                            }
-                            
-                            // Check hash for smaller files
-                            if (sourceInfo.Length < 100 * 1024 * 1024) // Only for files under 100MB
-                            {
-                                string sourceHash = ComputeFileHash(sourcePath);
-                                string destHash = ComputeFileHash(resultPath);
-                                
-                                if (sourceHash != destHash)
-                                {
-                                    throw new IOException($"Verification failed: File checksums don't match.");
-                                }
-                            }
-                        }
-                        
-                        success = true;
-                    }
-                    catch (WindowsCopyDialogClosedException)
-                    {
-                        _logger.Warn("Asset import cancelled by user");
-                        throw; // Don't retry if explicitly cancelled
-                    }
-                    catch (OperationCanceledException)
-                    {
-                        _logger.Warn("Asset import cancelled");
-                        throw; // Don't retry if cancelled
-                    }
-                    catch (Exception ex)
-                    {
-                        lastException = ex;
-                        _logger.Error($"Import attempt {retryCount + 1} failed: {ex.Message}");
-                        retryCount++;
-                        
-                        // Clean up for retry
                         try
                         {
-                            if (Directory.Exists(tempDir))
+                            if (retryCount > 0)
                             {
-                                Directory.Delete(tempDir, true);
-                                Directory.CreateDirectory(tempDir);
+                                _logger.Info($"Retry {retryCount}/{maxRetries} for {sourcePath}");
+                                // Small delay before retry to allow transient issues to clear
+                                await Task.Delay(500 * retryCount, cancellationToken);
+                            }
+                            
+                            // Use Windows File Copier to show progress dialog if requested
+                            IFileCopier copier = showProgress 
+                                ? new WindowsFileCopier(source, destination)
+                                : new SimpleFileCopier(source, destination);
+                            
+                            // Track progress for the copy operation
+                            var progressTracker = new Progress<FileCopyProgress>(progress => 
+                            {
+                                OnImportProgress(new ImportProgressEventArgs(
+                                    progress.ProgressPercentage / 100.0,
+                                    progress.BytesTransferred,
+                                    progress.TotalBytes,
+                                    progress.BytesPerSecond,
+                                    progress.SecondsRemaining));
+                            });
+                            
+                            // Perform the copy operation with progress tracking
+                            await copier.CopyWithProgressAsync(cancellationToken, progressTracker);
+                            
+                            // Determine the result path
+                            if (source is FileInfo)
+                            {
+                                resultPath = Path.Combine(tempDirPath, Path.GetFileName(sourcePath));
+                            }
+                            else
+                            {
+                                resultPath = tempDirPath;
+                            }
+                            
+                            // Verify the imported asset if required
+                            if (Settings.Instance.VerifyImportedAssets && source is FileInfo)
+                            {
+                                _logger.Info($"Verifying imported asset: {resultPath}");
+                                
+                                // Verify the file size
+                                var sourceInfo = new FileInfo(sourcePath);
+                                var destInfo = new FileInfo(resultPath);
+                                
+                                if (sourceInfo.Length != destInfo.Length)
+                                {
+                                    throw new IOException($"Verification failed: File sizes don't match. " +
+                                        $"Source: {sourceInfo.Length}, Destination: {destInfo.Length}");
+                                }
+                                
+                                // For extra verification, compute checksums for smaller files
+                                if (sourceInfo.Length < 100 * 1024 * 1024) // Only verify files smaller than 100MB
+                                {
+                                    string sourceHash = ComputeFileHash(sourcePath);
+                                    string destHash = ComputeFileHash(resultPath);
+                                    
+                                    if (sourceHash != destHash)
+                                    {
+                                        throw new IOException($"Verification failed: File checksums don't match.");
+                                    }
+                                }
+                            }
+                            
+                            success = true;
+                        }
+                        catch (WindowsCopyDialogClosedException)
+                        {
+                            _logger.Warn("Asset import cancelled by user");
+                            throw; // Don't retry if user explicitly cancelled
+                        }
+                        catch (OperationCanceledException)
+                        {
+                            _logger.Warn("Asset import cancelled");
+                            throw; // Don't retry if cancelled
+                        }
+                        catch (Exception ex)
+                        {
+                            lastException = ex;
+                            _logger.Error($"Import attempt {retryCount + 1} failed: {ex.Message}");
+                            retryCount++;
+                            
+                            // Clean up the destination directory for retry
+                            try
+                            {
+                                if (Directory.Exists(tempDirPath))
+                                {
+                                    Directory.Delete(tempDirPath, true);
+                                    Directory.CreateDirectory(tempDirPath);
+                                }
+                            }
+                            catch (Exception cleanupEx)
+                            {
+                                _logger.Error($"Failed to clean up for retry: {cleanupEx.Message}");
                             }
                         }
-                        catch (Exception cleanupEx)
-                        {
-                            _logger.Error($"Failed to clean up for retry: {cleanupEx.Message}");
-                        }
                     }
+                    
+                    if (!success)
+                    {
+                        throw new IOException($"Import failed after {maxRetries} attempts", lastException);
+                    }
+                    
+                    // If caching is enabled, add to cache registry
+                    if (Settings.Instance.EnableAssetCaching)
+                    {
+                        await UpdateCacheRegistryAsync(sourceKey, tempDirPath);
+                    }
+                    
+                    _logger.Info($"Successfully imported asset to {resultPath}");
+                    
+                    // Return the result
+                    return new ImportResult(
+                        resultPath,
+                        true,
+                        null,
+                        File.Exists(resultPath) 
+                            ? new FileInfo(resultPath).Length 
+                            : GetDirectorySize(new DirectoryInfo(resultPath)),
+                        false);
                 }
-                
-                if (!success)
+                catch (Exception)
                 {
-                    throw new IOException($"Import failed after {maxRetries} attempts", lastException);
+                    _activeImports.TryRemove(sourceKey, out _);
+                    throw;
                 }
-                
-                // Update cache registry if caching is enabled
-                if (Settings.Settings.Instance.EnableAssetCaching)
-                {
-                    await UpdateCacheRegistryAsync(sourceKey, resultPath);
-                }
-                
-                long fileSize = CalculateAssetSize(resultPath);
-                _logger.Info($"Successfully imported asset to {resultPath}, size: {fileSize / (1024 * 1024)} MB");
-                
-                return new ImportResult(resultPath, true, null, fileSize, false);
             }
             catch (WindowsCopyDialogClosedException)
             {
@@ -294,61 +305,62 @@ namespace EmuLibrary.Util.AssetImporter
         }
         
         /// <summary>
-        /// Legacy interface method - use ImportAsync instead for new code
+        /// Cleans up temporary files associated with an import
         /// </summary>
-        public async Task<string> ImportToLocalAsync(string sourcePath, bool showProgress, CancellationToken cancellationToken)
+        /// <param name="importPath">Path to the imported asset</param>
+        /// <returns>True if cleanup was successful</returns>
+        public bool CleanupImport(string importPath)
         {
-            var result = await ImportAsync(sourcePath, showProgress, cancellationToken);
-            return result.Success ? result.Path : null;
-        }
-        
-        /// <summary>
-        /// Cleans up the temp directory after processing
-        /// </summary>
-        /// <param name="tempPath">Path to the temp directory</param>
-        public void CleanupTempDirectory(string tempPath)
-        {
+            if (string.IsNullOrEmpty(importPath))
+            {
+                return false;
+            }
+            
             try
             {
-                // Skip cleanup if this is a cached asset and caching is enabled
-                if (Settings.Settings.Instance.EnableAssetCaching && 
-                    !string.IsNullOrEmpty(tempPath) && 
-                    tempPath.StartsWith(_cachePath))
+                // Don't delete cached assets
+                if (Settings.Instance.EnableAssetCaching && 
+                    importPath.StartsWith(_cachePath, StringComparison.OrdinalIgnoreCase))
                 {
-                    _logger.Info($"Skipping cleanup of cached asset: {tempPath}");
-                    return;
+                    // This is a cached asset, don't delete it
+                    _logger.Info($"Not deleting cached asset: {importPath}");
+                    return true;
                 }
                 
-                // Clean up the file or directory
-                if (Directory.Exists(tempPath))
+                if (File.Exists(importPath))
                 {
-                    Directory.Delete(tempPath, true);
-                    _logger.Info($"Cleaned up temp directory: {tempPath}");
-                }
-                else if (File.Exists(tempPath))
-                {
-                    // For single file, get the parent directory and determine if it's a temp directory
-                    string parentDir = Path.GetDirectoryName(tempPath);
-                    if (parentDir != null && parentDir.Contains("EmuLibrary_Assets"))
+                    // Get the parent directory
+                    string parentDir = Path.GetDirectoryName(importPath);
+                    if (parentDir.Contains("EmuLibrary_Assets"))
                     {
+                        // This is one of our temp directories, delete the whole directory
                         Directory.Delete(parentDir, true);
                         _logger.Info($"Cleaned up temp directory: {parentDir}");
                     }
                     else
                     {
-                        File.Delete(tempPath);
-                        _logger.Info($"Cleaned up temp file: {tempPath}");
+                        // Just delete the file
+                        File.Delete(importPath);
+                        _logger.Info($"Cleaned up temp file: {importPath}");
                     }
                 }
+                else if (Directory.Exists(importPath))
+                {
+                    Directory.Delete(importPath, true);
+                    _logger.Info($"Cleaned up temp directory: {importPath}");
+                }
+                
+                return true;
             }
             catch (Exception ex)
             {
-                _logger.Error($"Failed to clean up temp directory {tempPath}: {ex.Message}");
+                _logger.Error($"Failed to clean up import {importPath}: {ex.Message}");
+                return false;
             }
         }
         
         /// <summary>
-        /// Clears the asset cache
+        /// Cleans up all cached assets
         /// </summary>
         public void ClearCache()
         {
@@ -395,8 +407,9 @@ namespace EmuLibrary.Util.AssetImporter
         }
         
         /// <summary>
-        /// Gets information about the cache
+        /// Gets info about the current cache state
         /// </summary>
+        /// <returns>Cache information</returns>
         public CacheInfo GetCacheInfo()
         {
             try
@@ -418,7 +431,7 @@ namespace EmuLibrary.Util.AssetImporter
             }
         }
         
-        #region Private methods
+        #region Private Methods
         
         private void LoadCacheRegistry()
         {
@@ -479,46 +492,6 @@ namespace EmuLibrary.Util.AssetImporter
             return path;
         }
         
-        private long CalculateAssetSize(string path)
-        {
-            if (File.Exists(path))
-            {
-                return new FileInfo(path).Length;
-            }
-            else if (Directory.Exists(path))
-            {
-                return GetDirectorySize(new DirectoryInfo(path));
-            }
-            
-            return 0;
-        }
-        
-        private long GetDirectorySize(DirectoryInfo directory)
-        {
-            long size = 0;
-            
-            try
-            {
-                // Add size of all files
-                foreach (FileInfo file in directory.GetFiles())
-                {
-                    size += file.Length;
-                }
-                
-                // Add size of all subdirectories
-                foreach (DirectoryInfo dir in directory.GetDirectories())
-                {
-                    size += GetDirectorySize(dir);
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.Error($"Error calculating directory size: {ex.Message}");
-            }
-            
-            return size;
-        }
-        
         private string GenerateSourceKey(string sourcePath)
         {
             using (var sha = SHA256.Create())
@@ -538,6 +511,25 @@ namespace EmuLibrary.Util.AssetImporter
             }
         }
         
+        private long GetDirectorySize(DirectoryInfo directory)
+        {
+            long size = 0;
+            
+            // Add size of all files
+            foreach (FileInfo file in directory.GetFiles())
+            {
+                size += file.Length;
+            }
+            
+            // Add size of all subdirectories
+            foreach (DirectoryInfo dir in directory.GetDirectories())
+            {
+                size += GetDirectorySize(dir);
+            }
+            
+            return size;
+        }
+        
         private void OnImportProgress(ImportProgressEventArgs args)
         {
             ImportProgress?.Invoke(this, args);
@@ -547,11 +539,8 @@ namespace EmuLibrary.Util.AssetImporter
         
         public void Dispose()
         {
-            _cacheLock?.Dispose();
-            if (_instance == this)
-            {
-                _instance = null;
-            }
+            _cacheLock.Dispose();
+            _instance = null;
         }
     }
     

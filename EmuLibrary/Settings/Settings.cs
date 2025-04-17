@@ -28,6 +28,12 @@ namespace EmuLibrary.Settings
         public bool AutoRemoveUninstalledGamesMissingFromSource { get; set; } = false;
         public bool UseWindowsCopyDialogInDesktopMode { get; set; } = false;
         public bool UseWindowsCopyDialogInFullscreenMode { get; set; } = false;
+        
+        // Asset Import Settings
+        public bool EnableAssetCaching { get; set; } = false;
+        public long LargeFileSizeWarningThresholdMB { get; set; } = 1000; // 1GB threshold
+        public int NetworkRetryAttempts { get; set; } = 3; 
+        public bool VerifyImportedAssets { get; set; } = true;
         public ObservableCollection<EmulatorMapping> Mappings { get; set; }
 
         // Hidden settings

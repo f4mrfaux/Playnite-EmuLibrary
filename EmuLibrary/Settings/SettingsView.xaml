@@ -167,6 +167,44 @@
                 <CheckBox IsChecked="{Binding UseWindowsCopyDialogInFullscreenMode, Mode=TwoWay}" Margin="0,0,0,10" ToolTip="Game installs will be performed natively by Windows. The Copy&#x0a;File dialog box will be displayed to show installation progress.&#x0a;Please note that enabling this option may cause issues with focus&#x0a;in fullscreen mode.">
                     <TextBlock Text="Show Windows copy dialog in fullscreen mode" TextWrapping="Wrap"/>
                 </CheckBox>
+                
+                <Label Content="Asset Import and Caching" FontWeight="Bold" Margin="0,10,0,0" />
+                <Separator Margin="0,5,0,10" />
+                <CheckBox IsChecked="{Binding EnableAssetCaching, Mode=TwoWay}" Margin="0,0,0,10" ToolTip="When enabled, imported assets will be cached to improve performance&#x0a;for subsequent operations on the same files.">
+                    <TextBlock Text="Enable asset caching" TextWrapping="Wrap"/>
+                </CheckBox>
+                <CheckBox IsChecked="{Binding VerifyImportedAssets, Mode=TwoWay}" Margin="0,0,0,10" ToolTip="When enabled, verifies that imported assets are not corrupted&#x0a;by comparing file sizes and checksums (for small files).">
+                    <TextBlock Text="Verify imported assets" TextWrapping="Wrap"/>
+                </CheckBox>
+                
+                <Grid Margin="0,0,0,10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="100"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="File size warning threshold (MB):" VerticalAlignment="Center"
+                               ToolTip="Shows a confirmation dialog when importing files larger than this size."/>
+                    <TextBox Grid.Column="1" Text="{Binding LargeFileSizeWarningThresholdMB, Mode=TwoWay}" 
+                             VerticalAlignment="Center"/>
+                </Grid>
+                
+                <Grid Margin="0,0,0,10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="100"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="Network retry attempts:" VerticalAlignment="Center"
+                               ToolTip="Number of times to retry network operations if they fail."/>
+                    <TextBox Grid.Column="1" Text="{Binding NetworkRetryAttempts, Mode=TwoWay}" 
+                             VerticalAlignment="Center"/>
+                </Grid>
+                
+                <DockPanel LastChildFill="False" Margin="0,10,0,10" HorizontalAlignment="Right">
+                    <Button DockPanel.Dock="Right" Content="Clear Asset Cache" Click="Click_ClearAssetCache" 
+                            Padding="10,5" Margin="5,0,0,0"/>
+                    <Button DockPanel.Dock="Right" Content="View Cache Info" Click="Click_ViewCacheInfo" 
+                            Padding="10,5"/>
+                </DockPanel>
             </StackPanel>
         </ScrollViewer>
     </DockPanel>

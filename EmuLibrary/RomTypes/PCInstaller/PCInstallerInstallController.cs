@@ -73,15 +73,50 @@ namespace EmuLibrary.RomTypes.PCInstaller
                         NotificationType.Info
                     );
                     
-                    var assetImporter = new AssetImporter.AssetImporter(_emuLibrary.Logger, _emuLibrary.Playnite);
-                    string tempInstallerPath = await assetImporter.ImportToLocalAsync(info.SourceFullPath, true, cancellationToken);
+                    // Get or create the AssetImporter
+                    var assetImporter = AssetImporter.AssetImporter.Instance ?? 
+                        new AssetImporter.AssetImporter(_emuLibrary.Logger, _emuLibrary.Playnite);
                     
-                    if (string.IsNullOrEmpty(tempInstallerPath) || !File.Exists(tempInstallerPath))
+                    // Register for progress updates
+                    assetImporter.ImportProgress += (sender, e) => {
+                        // Calculate progress percentage from 5% to 10% during import
+                        int progressValue = 5 + (int)(e.Progress * 5);
+                        UpdateProgress($"Importing installer: {e.BytesTransferred / (1024 * 1024)} MB / {e.TotalBytes / (1024 * 1024)} MB", progressValue);
+                    };
+                    
+                    // Use app mode to determine dialog visibility
+                    bool showDialog = _emuLibrary.Playnite.ApplicationInfo.Mode == ApplicationMode.Desktop ?
+                        Settings.Settings.Instance.UseWindowsCopyDialogInDesktopMode :
+                        Settings.Settings.Instance.UseWindowsCopyDialogInFullscreenMode;
+                    
+                    // Import the asset
+                    var importResult = await assetImporter.ImportAsync(
+                        info.SourceFullPath, 
+                        showDialog, 
+                        cancellationToken);
+                    
+                    if (!importResult.Success || string.IsNullOrEmpty(importResult.Path) || !File.Exists(importResult.Path))
                     {
-                        throw new FileNotFoundException($"Failed to import installer to local storage: {info.SourceFullPath}");
+                        if (importResult.Error != null)
+                        {
+                            throw new Exception($"Failed to import installer: {importResult.Error.Message}", importResult.Error);
+                        }
+                        else
+                        {
+                            throw new FileNotFoundException($"Failed to import installer to local storage: {info.SourceFullPath}");
+                        }
                     }
                     
-                    _emuLibrary.Logger.Info($"Installer imported successfully to {tempInstallerPath}");
+                    string tempInstallerPath = importResult.Path;
+                    
+                    if (importResult.FromCache)
+                    {
+                        _emuLibrary.Logger.Info($"Using cached installer: {tempInstallerPath}");
+                    }
+                    else
+                    {
+                        _emuLibrary.Logger.Info($"Installer imported successfully to {tempInstallerPath}");
+                    }
                     
                     if (cancellationToken.IsCancellationRequested)
                     {
@@ -254,13 +289,20 @@ namespace EmuLibrary.RomTypes.PCInstaller
                             Directory.Delete(tempDir, true);
                         }
                         
-                        // Clean up the imported installer file
-                        assetImporter.CleanupTempDirectory(Path.GetDirectoryName(tempInstallerPath));
+                        // Clean up the imported installer file if not cached
+                        if (!Settings.Settings.Instance.EnableAssetCaching)
+                        {
+                            // Get or create the AssetImporter
+                            var assetImporter = AssetImporter.AssetImporter.Instance ?? 
+                                new AssetImporter.AssetImporter(_emuLibrary.Logger, _emuLibrary.Playnite);
+                                
+                            assetImporter.CleanupTempDirectory(tempInstallerPath);
+                        }
                     }
                     catch (Exception ex)
                     {
                         // Log the full exception details
-                        _emuLibrary.Logger.Warn($"Failed to clean up temp directory: {ex.Message}");
+                        _emuLibrary.Logger.Warn($"Failed to clean up temp directories: {ex.Message}");
                     }
                     
                     // Create GameInstallationData

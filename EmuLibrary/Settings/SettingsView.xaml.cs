@@ -1,4 +1,5 @@
-﻿using System;
+﻿using EmuLibrary.Util.AssetImporter;
+using System;
 using System.Diagnostics;
 using System.Linq;
 using System.Windows;
@@ -85,6 +86,59 @@ namespace EmuLibrary.Settings
         {
             Process.Start(e.Uri.AbsoluteUri);
             e.Handled = true;
+        }
+        
+        private void Click_ClearAssetCache(object sender, RoutedEventArgs e)
+        {
+            var result = Settings.Instance.PlayniteAPI.Dialogs.ShowMessage(
+                "Are you sure you want to clear the asset cache? This will delete all cached asset files.",
+                "Clear Asset Cache",
+                MessageBoxButton.YesNo);
+                
+            if (result == MessageBoxResult.Yes)
+            {
+                // Get or create AssetImporter instance
+                var assetImporter = AssetImporter.Instance ?? 
+                    new AssetImporter(Settings.Instance.EmuLibrary.Logger, Settings.Instance.PlayniteAPI);
+                
+                assetImporter.ClearCache();
+                
+                Settings.Instance.PlayniteAPI.Dialogs.ShowMessage(
+                    "Asset cache has been cleared.",
+                    "Cache Cleared",
+                    MessageBoxButton.OK);
+            }
+        }
+        
+        private void Click_ViewCacheInfo(object sender, RoutedEventArgs e)
+        {
+            // Get or create AssetImporter instance
+            var assetImporter = AssetImporter.Instance ?? 
+                new AssetImporter(Settings.Instance.EmuLibrary.Logger, Settings.Instance.PlayniteAPI);
+            
+            var cacheInfo = assetImporter.GetCacheInfo();
+            
+            // Format the cache size in a readable form (MB/GB)
+            string sizeText;
+            if (cacheInfo.TotalSize < 1024 * 1024)
+            {
+                sizeText = $"{cacheInfo.TotalSize / 1024.0:F2} KB";
+            }
+            else if (cacheInfo.TotalSize < 1024 * 1024 * 1024)
+            {
+                sizeText = $"{cacheInfo.TotalSize / (1024.0 * 1024):F2} MB";
+            }
+            else
+            {
+                sizeText = $"{cacheInfo.TotalSize / (1024.0 * 1024 * 1024):F2} GB";
+            }
+            
+            Settings.Instance.PlayniteAPI.Dialogs.ShowMessage(
+                $"Asset Cache Information:\n\n" +
+                $"Total Size: {sizeText}\n" +
+                $"Items Cached: {cacheInfo.ItemCount}",
+                "Cache Information",
+                MessageBoxButton.OK);
         }
     }
 }
