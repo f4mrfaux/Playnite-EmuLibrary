@@ -1,4 +1,5 @@
-﻿using Playnite.SDK;
+﻿using EmuLibrary.Util.AssetImporter;
+using Playnite.SDK;
 using Playnite.SDK.Models;
 using Playnite.SDK.Plugins;
 using System;
@@ -73,7 +74,26 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                         throw new FileNotFoundException($"ISO file not found: {info.SourceFullPath}");
                     }
                     
-                    // Mount the ISO file using PowerShell
+                    // Import the ISO file to local temp storage first
+                    UpdateProgress("Importing ISO file to local storage...", 5);
+                    
+                    _emuLibrary.Playnite.Notifications.Add(
+                        Game.GameId,
+                        $"Importing ISO file for {Game.Name} to local storage...",
+                        NotificationType.Info
+                    );
+                    
+                    var assetImporter = new AssetImporter.AssetImporter(_emuLibrary.Logger, _emuLibrary.Playnite);
+                    string localISOPath = await assetImporter.ImportToLocalAsync(info.SourceFullPath, true, cancellationToken);
+                    
+                    if (string.IsNullOrEmpty(localISOPath) || !File.Exists(localISOPath))
+                    {
+                        throw new FileNotFoundException($"Failed to import ISO file to local storage: {info.SourceFullPath}");
+                    }
+                    
+                    _emuLibrary.Logger.Info($"ISO file imported successfully to {localISOPath}");
+                    
+                    // Mount the ISO file using PowerShell (now using the local copy)
                     UpdateProgress("Mounting ISO file...", 10);
                     
                     _emuLibrary.Playnite.Notifications.Add(
@@ -82,7 +102,7 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                         NotificationType.Info
                     );
                     
-                    mountPoint = MountIsoFile(info.SourceFullPath);
+                    mountPoint = MountIsoFile(localISOPath);
                     if (string.IsNullOrEmpty(mountPoint))
                     {
                         throw new Exception("Failed to mount ISO file. Make sure the ISO is not corrupted.");
@@ -398,10 +418,14 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                     
                     try
                     {
+                        // Clean up temp directories
                         if (Directory.Exists(tempDir))
                         {
                             Directory.Delete(tempDir, true);
                         }
+                        
+                        // Clean up the imported ISO file
+                        assetImporter.CleanupTempDirectory(Path.GetDirectoryName(localISOPath));
                     }
                     catch (Exception ex)
                     {
@@ -479,11 +503,18 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                             UnmountIsoFile(mountPoint);
                         }
                         
-                        // Also clean up temp directory
+                        // Clean up temp directories
                         if (!string.IsNullOrEmpty(tempDir) && Directory.Exists(tempDir))
                         {
                             _emuLibrary.Logger.Info($"Cleaning up temp directory {tempDir} after cancellation");
                             Directory.Delete(tempDir, true);
+                        }
+                        
+                        // Clean up the imported ISO file if it exists
+                        if (!string.IsNullOrEmpty(localISOPath) && File.Exists(localISOPath))
+                        {
+                            _emuLibrary.Logger.Info($"Cleaning up imported ISO file {localISOPath} after cancellation");
+                            assetImporter.CleanupTempDirectory(Path.GetDirectoryName(localISOPath));
                         }
                     }
                     catch (Exception ex)
@@ -511,11 +542,18 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                             UnmountIsoFile(mountPoint);
                         }
                         
-                        // Also clean up temp directory
+                        // Clean up temp directories
                         if (!string.IsNullOrEmpty(tempDir) && Directory.Exists(tempDir))
                         {
                             _emuLibrary.Logger.Info($"Cleaning up temp directory {tempDir} after failure");
                             Directory.Delete(tempDir, true);
+                        }
+                        
+                        // Clean up the imported ISO file if it exists
+                        if (!string.IsNullOrEmpty(localISOPath) && File.Exists(localISOPath))
+                        {
+                            _emuLibrary.Logger.Info($"Cleaning up imported ISO file {localISOPath} after failure");
+                            assetImporter.CleanupTempDirectory(Path.GetDirectoryName(localISOPath));
                         }
                     }
                     catch (Exception cleanupEx)

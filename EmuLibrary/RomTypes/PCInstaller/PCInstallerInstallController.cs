@@ -1,4 +1,5 @@
-﻿using Playnite.SDK;
+﻿using EmuLibrary.Util.AssetImporter;
+using Playnite.SDK;
 using Playnite.SDK.Models;
 using Playnite.SDK.Plugins;
 using System;
@@ -63,11 +64,24 @@ namespace EmuLibrary.RomTypes.PCInstaller
                         throw new FileNotFoundException($"Installer file not found: {info.SourceFullPath}");
                     }
                     
-                    // Copy the installer to the temp directory
-                    UpdateProgress("Copying installer file...", 10);
-                    var installerFileName = Path.GetFileName(info.SourceFullPath);
-                    var tempInstallerPath = Path.Combine(tempDir, installerFileName);
-                    File.Copy(info.SourceFullPath, tempInstallerPath);
+                    // Import the installer to local temp storage
+                    UpdateProgress("Importing installer to local storage...", 5);
+                    
+                    _emuLibrary.Playnite.Notifications.Add(
+                        Game.GameId,
+                        $"Importing installer for {Game.Name} to local storage...",
+                        NotificationType.Info
+                    );
+                    
+                    var assetImporter = new AssetImporter.AssetImporter(_emuLibrary.Logger, _emuLibrary.Playnite);
+                    string tempInstallerPath = await assetImporter.ImportToLocalAsync(info.SourceFullPath, true, cancellationToken);
+                    
+                    if (string.IsNullOrEmpty(tempInstallerPath) || !File.Exists(tempInstallerPath))
+                    {
+                        throw new FileNotFoundException($"Failed to import installer to local storage: {info.SourceFullPath}");
+                    }
+                    
+                    _emuLibrary.Logger.Info($"Installer imported successfully to {tempInstallerPath}");
                     
                     if (cancellationToken.IsCancellationRequested)
                     {
@@ -229,15 +243,19 @@ namespace EmuLibrary.RomTypes.PCInstaller
                         _emuLibrary.Logger.Error($"Error finding executable files: {ex.Message}");
                     }
                     
-                    // Clean up temp directory
-                    UpdateProgress("Cleaning up...", 90);
+                    // Clean up temp files and directories
+                    UpdateProgress("Cleaning up temporary files...", 90);
                     
                     try
                     {
+                        // Clean up temp directories
                         if (Directory.Exists(tempDir))
                         {
                             Directory.Delete(tempDir, true);
                         }
+                        
+                        // Clean up the imported installer file
+                        assetImporter.CleanupTempDirectory(Path.GetDirectoryName(tempInstallerPath));
                     }
                     catch (Exception ex)
                     {
