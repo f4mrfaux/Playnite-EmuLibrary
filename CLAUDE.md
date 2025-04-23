@@ -15,10 +15,18 @@ EmuLibrary is a library extension for Playnite, an open source video game librar
 ## Development Environment
 - Required SDK: Playnite SDK 6.4.0 (included in toolbox directory)
 - Target Framework: .NET Framework 4.6.2
-- Dependencies:
+
+## Critical Dependency Management
+- NEVER change dependency versions without careful consideration 
+- NEVER upgrade Newtonsoft.Json above version 10.0.1 - Playnite requires exactly version 10.0.1
+- NEVER enable binding redirects - this will break compatibility with Playnite
+- NEVER add dependencies that conflict with Playnite's dependencies
+- ALWAYS test on Windows after changing dependencies
+
+## Dependencies (EXACT VERSIONS REQUIRED)
   - ini-parser 2.5.2
   - LibHac 0.7.0
-  - Newtonsoft.Json 10.0.1
+  - Newtonsoft.Json 10.0.1 (CRITICAL: Must be EXACTLY 10.0.1 to match Playnite)
   - protobuf-net 3.1.25
   - System.IO.Abstractions 2.1.0.227
   - ZstdSharp.Port 0.6.5
