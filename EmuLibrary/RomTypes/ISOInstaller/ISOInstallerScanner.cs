@@ -881,11 +881,8 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                     _emuLibrary.Logger.Error($"Error in diagnostic check: {ex.Message}");
                 }
                 
-                // Return empty collection
-                foreach (var game in sourcedGames)
-                {
-                    yield return game;
-                }
+                // This block is in the "no games found" branch, so sourcedGames will be empty
+                // No need to enumerate an empty collection
             }
             #endregion
             
