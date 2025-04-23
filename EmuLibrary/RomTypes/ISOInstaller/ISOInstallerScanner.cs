@@ -347,21 +347,17 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                         InstallDirectory = null, // Will be set during installation
                     };
                     
-                    // Set platform - always use PC for ISO installers
-                    string platformName = "PC";
+                    // EXACTLY like PCInstallerScanner - use the platform from the mapping
+                    string platformName = mapping.Platform?.Name;
                     
-                    // Check if platform exists in database
-                    var pcPlatform = _playniteAPI.Database.Platforms
-                        .FirstOrDefault(p => p.Name == "PC" || p.Name == "Windows");
-                        
-                    if (pcPlatform != null)
+                    if (string.IsNullOrEmpty(platformName))
                     {
-                        platformName = pcPlatform.Name;
-                        _emuLibrary.Logger.Info($"[ISO SCANNER] Using platform {platformName}");
+                        platformName = "PC"; // Default fallback
+                        _emuLibrary.Logger.Info($"[ISO SCANNER] No platform in mapping, using default: {platformName}");
                     }
                     else
                     {
-                        _emuLibrary.Logger.Warn($"[ISO SCANNER] PC platform not found in database, using generic PC name");
+                        _emuLibrary.Logger.Info($"[ISO SCANNER] Using platform from mapping: {platformName}");
                     }
                     
                     // Create game metadata
@@ -373,7 +369,8 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                         Name = gameName,
                         IsInstalled = false,
                         GameId = info.AsGameId(),
-                        // PluginId will be set on Game object after import
+                        // CRITICAL: Must set PluginId or games won't appear in Playnite UI
+                        PluginId = EmuLibrary.PluginId,
                         Platforms = new HashSet<MetadataProperty>() { new MetadataNameProperty(platformName) },
                         InstallSize = (ulong)new FileInfo(isoFile).Length,
                         GameActions = new List<GameAction>() 
@@ -421,7 +418,9 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                         _emuLibrary.Logger.Debug($"[ISO SCANNER] Failed to extract release year: {ex.Message}");
                     }
                     
+                    // Log detailed information about the game being added
                     _emuLibrary.Logger.Info($"[ISO SCANNER] Adding game: {gameName} from {isoFile}");
+                    _emuLibrary.Logger.Info($"[ISO SCANNER] Game details: GameId={metadata.GameId}, PluginId={metadata.PluginId}, Platform={platformName}");
                     sourcedGames.Add(metadata);
                 }
                 catch (Exception ex)
@@ -488,7 +487,8 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                                         Name = game.Name,
                                         IsInstalled = true,
                                         GameId = gameInfo.AsGameId(),
-                                        // PluginId will be set by Playnite on Game object
+                                        // CRITICAL: Must set PluginId or games won't appear in Playnite UI
+                                        PluginId = EmuLibrary.PluginId,
                                         InstallDirectory = gameInfo.InstallDirectory,
                                         Platforms = new HashSet<MetadataProperty>() { new MetadataNameProperty(mapping.Platform?.Name ?? "PC") },
                                         GameActions = new List<GameAction>() 

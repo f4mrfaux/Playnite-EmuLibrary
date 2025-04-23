@@ -369,10 +369,19 @@ private readonly Dictionary<RomType, RomTypeScanner> _scanners = new Dictionary<
                         Logger.Warn($"Game {g.Name} has no platforms");
                     }
                     
+                    // CRITICAL: Ensure PluginId is set correctly - Playnite requires this for the game to appear 
+                    // in the UI, but it's not always set automatically during the scanning process
+                    if (g.PluginId != Id)
+                    {
+                        Logger.Info($"Setting PluginId for game {g.Name} to {Id} (was: {g.PluginId ?? "null"})");
+                        g.PluginId = Id;
+                    }
+                    
                     // Log game details for ISO games
                     if (mapping.RomType == RomType.ISOInstaller)
                     {
                         Logger.Info($"ISO game details - Name: {g.Name}, Source: {g.Source}, Platform count: {g.Platforms?.Count ?? 0}");
+                        Logger.Info($"PluginId: {g.PluginId}");
                         
                         if (g.Platforms != null)
                         {
@@ -713,11 +722,16 @@ private readonly Dictionary<RomType, RomTypeScanner> _scanners = new Dictionary<
                                     var game = PlayniteApi.Database.ImportGame(gameMetadata);
                                     
                                     // Set the PluginId to match our plugin
-                                    game.PluginId = Id;
-                                    // Update the game in the database
-                                    PlayniteApi.Database.Games.Update(game);
+                                    // CRITICAL: PluginId must be set for the game to appear in Playnite's UI
+                                    if (game.PluginId != Id)
+                                    {
+                                        Logger.Info($"Setting PluginId for game {game.Name} to {Id} (was: {game.PluginId ?? "null"})");
+                                        game.PluginId = Id;
+                                        // Update the game in the database
+                                        PlayniteApi.Database.Games.Update(game);
+                                    }
                                     
-                                    Logger.Info($"Added game: {game.Name} (ID: {game.GameId})");
+                                    Logger.Info($"Added game: {game.Name} (ID: {game.GameId}, PluginId: {game.PluginId})");
                                 }
                                 catch (Exception ex)
                                 {
