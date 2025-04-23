@@ -5,9 +5,9 @@ ISO games were being detected by the ISOInstallerScanner (with log entries showi
 
 ## Root Causes Identified
 1. **Platform Assignment**: ISO games needed to consistently use the PC platform ("PC (Windows)" specifically)
-2. **Plugin ID Assignment**: The PluginId was not being explicitly set on GameMetadata objects, which prevented the games from appearing in Playnite UI
-3. **GameMetadata Properties**: Missing or incorrect properties in GameMetadata objects
-4. **Game Import Process**: Issues with how games were being created and added to Playnite
+2. **Plugin ID Assignment**: The PluginId was not being consistently set on Game objects after import (the GameMetadata class doesn't have this property)
+3. **Game Import Process**: Issues with how games were being imported into Playnite and database updates
+4. **Platform Metadata Properties**: Inconsistent platform references between settings and game metadata
 
 ## Changes Made
 
@@ -43,36 +43,26 @@ ISO games were being detected by the ISOInstallerScanner (with log entries showi
   ```
 
 ### 2. Fixed Plugin ID Assignment (Most Critical Fix)
-- **CRITICAL FIX:** Explicitly set PluginId on GameMetadata objects when creating them:
+- **IMPORTANT INSIGHT:** The GameMetadata class doesn't have a PluginId property - it must be set on the Game object after import.
+
+- **CRITICAL FIX:** Ensure PluginId is set on Game objects after import:
   ```csharp
-  var metadata = new GameMetadata
-  {
-      Source = EmuLibrary.SourceName,
-      Name = gameName,
-      IsInstalled = false,
-      GameId = info.AsGameId(),
-      // CRITICAL: Must set PluginId or games won't appear in Playnite UI
-      PluginId = EmuLibrary.PluginId,
-      Platforms = new HashSet<MetadataProperty>() { new MetadataNameProperty(platformName) },
-      // ...
-  };
+  var game = PlayniteApi.Database.ImportGame(gameMetadata);
+                                            
+  // CRITICAL: Explicitly set PluginId after import 
+  // This is required for games to appear in Playnite's UI
+  game.PluginId = Id;
+  
+  // Update the game in the database with the corrected PluginId
+  PlayniteApi.Database.Games.Update(game);
   ```
 
-- Added additional checks in EmuLibrary.cs to ensure PluginId is always correctly set:
+- Added detailed logging to verify and troubleshoot the import process:
   ```csharp
-  // CRITICAL: Ensure PluginId is set correctly - Playnite requires this for the game to appear 
-  // in the UI, but it's not always set automatically during the scanning process
-  if (g.PluginId != Id)
-  {
-      Logger.Info($"Setting PluginId for game {g.Name} to {Id} (was: {g.PluginId ?? "null"})");
-      g.PluginId = Id;
-  }
+  Logger.Info($"Added game: {game.Name} (ID: {game.GameId}) with explicit PluginId: {game.PluginId}");
   ```
 
-- Added additional logging to help with troubleshooting:
-  ```csharp
-  _emuLibrary.Logger.Info($"[ISO SCANNER] Game details: GameId={metadata.GameId}, PluginId={metadata.PluginId}, Platform={platformName}");
-  ```
+- This ensures that the game will be associated with our plugin in Playnite's database, which is required for the game to appear in the UI.
 
 ### 3. Added Comprehensive Diagnostics
 - Added TestDirectImportISOGames method to directly test game import:
