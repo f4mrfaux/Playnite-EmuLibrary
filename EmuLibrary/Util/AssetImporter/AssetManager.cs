@@ -74,7 +74,7 @@ namespace EmuLibrary.Util.AssetImporter
                 _logger.Info($"Starting asset import for {sourcePath}");
                 
                 // Check for cached asset if caching is enabled
-                if (Settings.Instance.EnableAssetCaching)
+                if (Settings.Settings.Instance.EnableAssetCaching)
                 {
                     string cachedPath = GetCachedAsset(sourceKey);
                     if (!string.IsNullOrEmpty(cachedPath) && 
@@ -108,7 +108,7 @@ namespace EmuLibrary.Util.AssetImporter
                     
                     // Check if this is a large file and should show a warning
                     if (source is FileInfo fileInfo && 
-                        fileInfo.Length > Settings.Instance.LargeFileSizeWarningThresholdMB * 1024 * 1024)
+                        fileInfo.Length > Settings.Settings.Instance.LargeFileSizeWarningThresholdMB * 1024 * 1024)
                     {
                         bool proceed = true;
                         
@@ -142,7 +142,7 @@ namespace EmuLibrary.Util.AssetImporter
                 // Create temp directory for this import
                 string importId = Guid.NewGuid().ToString();
                 string basePath;
-                if (Settings.Instance.EnableAssetCaching)
+                if (Settings.Settings.Instance.EnableAssetCaching)
                     basePath = _cachePath;
                 else
                     basePath = Path.GetTempPath();
@@ -161,7 +161,7 @@ namespace EmuLibrary.Util.AssetImporter
                     string resultPath = null;
                     
                     // Implement retry logic for network operations
-                    int maxRetries = Settings.Instance.NetworkRetryAttempts;
+                    int maxRetries = Settings.Settings.Instance.NetworkRetryAttempts;
                     int retryCount = 0;
                     bool success = false;
                     Exception lastException = null;
@@ -209,7 +209,7 @@ namespace EmuLibrary.Util.AssetImporter
                             }
                             
                             // Verify the imported asset if required
-                            if (Settings.Instance.VerifyImportedAssets && source is FileInfo)
+                            if (Settings.Settings.Instance.VerifyImportedAssets && source is FileInfo)
                             {
                                 _logger.Info($"Verifying imported asset: {resultPath}");
                                 
@@ -276,7 +276,7 @@ namespace EmuLibrary.Util.AssetImporter
                     }
                     
                     // If caching is enabled, add to cache registry
-                    if (Settings.Instance.EnableAssetCaching)
+                    if (Settings.Settings.Instance.EnableAssetCaching)
                     {
                         await UpdateCacheRegistryAsync(sourceKey, tempDirPath);
                     }
@@ -335,7 +335,7 @@ namespace EmuLibrary.Util.AssetImporter
             try
             {
                 // Don't delete cached assets
-                if (Settings.Instance.EnableAssetCaching && 
+                if (Settings.Settings.Instance.EnableAssetCaching && 
                     importPath.StartsWith(_cachePath, StringComparison.OrdinalIgnoreCase))
                 {
                     // This is a cached asset, don't delete it

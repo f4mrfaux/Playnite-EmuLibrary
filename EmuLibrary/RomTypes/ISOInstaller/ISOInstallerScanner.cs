@@ -55,8 +55,27 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                 yield break;
             }
 
-            // Only support ISO, BIN, IMG, and other disc image files
-            var discExtensions = new List<string> { "iso", "bin", "img", "cue", "nrg", "mds", "mdf" };
+            // Only support ISO, BIN, IMG, and other disc image files - include case variations for better detection
+            var discExtensions = new List<string> { "iso", "bin", "img", "cue", "nrg", "mds", "mdf", "ISO", "BIN", "IMG", "CUE", "NRG", "MDS", "MDF" };
+            
+            // Log the supported extensions
+            _emuLibrary.Logger.Info($"Looking for disc image files with extensions: {string.Join(", ", discExtensions)}");
+            
+            // Do a direct folder scan to see if any such files exist
+            try {
+                var directSearch = Directory.GetFiles(srcPath, "*.*", SearchOption.AllDirectories)
+                    .Where(f => discExtensions.Contains(Path.GetExtension(f).TrimStart('.').ToLowerInvariant()))
+                    .ToList();
+                
+                _emuLibrary.Logger.Info($"Direct search found {directSearch.Count} disc image files in {srcPath}");
+                
+                if (directSearch.Count > 0) {
+                    _emuLibrary.Logger.Info($"Examples: {string.Join(", ", directSearch.Take(5).Select(Path.GetFileName))}");
+                }
+            }
+            catch (Exception ex) {
+                _emuLibrary.Logger.Error($"Error in direct file search: {ex.Message}");
+            }
             
             SafeFileEnumerator fileEnumerator;
             var gameMetadataBatch = new List<GameMetadata>();
@@ -175,18 +194,20 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                         continue;
                     }
 
-                    foreach (var extension in discExtensions)
+                    // Check the file extension directly instead of iterating through each extension
+                    string fileExtension = file.Extension?.TrimStart('.')?.ToLowerInvariant();
+                    
+                    if (args.CancelToken.IsCancellationRequested)
+                        yield break;
+                    
+                    _emuLibrary.Logger.Debug($"Checking if file {file.Name} has extension '{fileExtension}'");
+                    
+                    // Check if this file has a supported extension
+                    if (!string.IsNullOrEmpty(fileExtension) && discExtensions.Contains(fileExtension.ToLowerInvariant()))
                     {
-                        if (args.CancelToken.IsCancellationRequested)
-                            yield break;
-                        
-                        _emuLibrary.Logger.Debug($"Checking if file {file.Name} has extension '{extension}'");
-                        
-                        if (HasMatchingExtension(file, extension))
+                        _emuLibrary.Logger.Info($"Found ISO file: {file.FullName} (matches extension '{fileExtension}')");
+                        try
                         {
-                            _emuLibrary.Logger.Info($"Found ISO file: {file.FullName} (matches extension '{extension}')");
-                            try
-                            {
                                 // For ISO installers, we use the parent folder name as the game name
                                 var parentFolderPath = Path.GetDirectoryName(file.FullName);
                                 if (parentFolderPath == null)
@@ -318,8 +339,16 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                                 {
                                     // Find all valid files in the root game folder to detect base game
                                     var rootGameFolderFiles = rootGameFolder.GetFiles("*.*", SearchOption.TopDirectoryOnly)
-                                        .Where(f => discExtensions.Contains(Path.GetExtension(f.Name).TrimStart('.').ToLowerInvariant()))
+                                        .Where(f => {
+                                            string ext = Path.GetExtension(f.Name)?.TrimStart('.')?.ToLowerInvariant();
+                                            return !string.IsNullOrEmpty(ext) && discExtensions.Contains(ext);
+                                        })
                                         .ToList();
+                                        
+                                    _emuLibrary.Logger.Debug($"Root folder check: Found {rootGameFolderFiles.Count} valid files in root folder {rootGameFolder.Name}");
+                                    if (rootGameFolderFiles.Count > 0) {
+                                        _emuLibrary.Logger.Debug($"Examples: {string.Join(", ", rootGameFolderFiles.Take(3).Select(f => f.Name))}");
+                                    }
                                         
                                     // Find any valid update files in subfolders (including .exe, etc)
                                     var updateFiles = new List<FileInfo>();
@@ -327,8 +356,18 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                                     {
                                         foreach (var subfolder in rootGameFolder.GetDirectories())
                                         {
-                                            updateFiles.AddRange(subfolder.GetFiles("*.*", SearchOption.AllDirectories)
-                                                .Where(f => updateFileExtensions.Contains(Path.GetExtension(f.Name).TrimStart('.').ToLowerInvariant())));
+                                            var files = subfolder.GetFiles("*.*", SearchOption.AllDirectories)
+                                                .Where(f => {
+                                                    string ext = Path.GetExtension(f.Name)?.TrimStart('.')?.ToLowerInvariant();
+                                                    return !string.IsNullOrEmpty(ext) && updateFileExtensions.Contains(ext);
+                                                }).ToList();
+                                                
+                                            _emuLibrary.Logger.Debug($"Update folder check: Found {files.Count} valid files in update folder {subfolder.Name}");
+                                            if (files.Count > 0) {
+                                                _emuLibrary.Logger.Debug($"Examples: {string.Join(", ", files.Take(3).Select(f => f.Name))}");
+                                            }
+                                            
+                                            updateFiles.AddRange(files);
                                         }
                                     }
                                     catch (Exception ex) 
@@ -469,7 +508,7 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                                 _emuLibrary.Logger.Error($"Error processing ISO file {file.FullName}: {ex.Message}");
                             }
                         }
-                    }
+                    
                 }
 
                 // Add remaining games to the collection
@@ -500,6 +539,40 @@ namespace EmuLibrary.RomTypes.ISOInstaller
             else
             {
                 _emuLibrary.Logger.Warn("No games found in the source directory. Check your folder structure and ensure ISO files are present.");
+                _emuLibrary.Logger.Info($"Supported disc image extensions: {string.Join(", ", discExtensions.Distinct())}");
+                
+                // Additional diagnostic info to help with troubleshooting
+                try {
+                    // Print all files in the directory (top level only) to see what's actually there
+                    var allFiles = Directory.GetFiles(srcPath, "*.*", SearchOption.TopDirectoryOnly);
+                    _emuLibrary.Logger.Info($"Found {allFiles.Length} files at top level in {srcPath}");
+                    
+                    if (allFiles.Length > 0) {
+                        _emuLibrary.Logger.Info($"Examples: {string.Join(", ", allFiles.Take(10).Select(Path.GetFileName))}");
+                    }
+                    
+                    // Check subdirectories too
+                    var allDirs = Directory.GetDirectories(srcPath, "*", SearchOption.TopDirectoryOnly);
+                    _emuLibrary.Logger.Info($"Found {allDirs.Length} subdirectories at top level in {srcPath}");
+                    
+                    if (allDirs.Length > 0) {
+                        _emuLibrary.Logger.Info($"Examples: {string.Join(", ", allDirs.Take(10).Select(Path.GetFileName))}");
+                        
+                        // Pick first directory and see what's inside
+                        if (allDirs.Length > 0) {
+                            var firstDir = allDirs[0];
+                            var filesInFirstDir = Directory.GetFiles(firstDir, "*.*", SearchOption.TopDirectoryOnly);
+                            _emuLibrary.Logger.Info($"First directory '{Path.GetFileName(firstDir)}' contains {filesInFirstDir.Length} files");
+                            
+                            if (filesInFirstDir.Length > 0) {
+                                _emuLibrary.Logger.Info($"Examples: {string.Join(", ", filesInFirstDir.Take(10).Select(Path.GetFileName))}");
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex) {
+                    _emuLibrary.Logger.Error($"Error in diagnostic check: {ex.Message}");
+                }
                 
                 // Return empty collection
                 foreach (var game in sourcedGames)

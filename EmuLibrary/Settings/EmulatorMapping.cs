@@ -69,24 +69,19 @@ namespace EmuLibrary.Settings
 
                 var playnite = Settings.Instance.PlayniteAPI;
                 
-                // Special case for PCInstaller and ISOInstaller: Show all PC platforms regardless of emulator profile
-                // These types don't require an emulator since they install and run natively
+                // Special case for PC-type installers (PCInstaller, ISOInstaller)
+                // They should show all available platforms, as they don't rely on emulator-specific platforms
                 if (RomType == RomType.PCInstaller || RomType == RomType.ISOInstaller)
                 {
-                    // Get all PC-related platforms (PC, Windows, DOS, etc.)
-                    var pcPlatformSpecs = new HashSet<string>
-                    {
-                        "pc_windows", "pc_dos", "pc_linux", "pc_macos", 
-                        "pc_windows_store", "pc_steam", "pc_gog", "pc_origin", "pc_epic"
-                    };
-                    
-                    // Return all PC platforms regardless of whether an emulator profile is set
-                    return playnite.Emulation.Platforms?
-                        .Where(p => p != null && !string.IsNullOrEmpty(p.Id) && 
-                               (pcPlatformSpecs.Contains(p.Id.ToLower()) || 
-                                (p.Name != null && (p.Name.ToLower().Contains("pc") || 
-                                                    p.Name.ToLower().Contains("windows")))))
-                        ?? Enumerable.Empty<EmulatedPlatform>();
+                    // Simply return ALL available platforms from Playnite
+                    // This makes all platforms selectable for these installer types
+                    return playnite.Database.Platforms
+                        .Where(p => p != null && !string.IsNullOrEmpty(p.Name))
+                        .Select(p => new EmulatedPlatform 
+                        { 
+                            Id = !string.IsNullOrEmpty(p.SpecificationId) ? p.SpecificationId : p.Id.ToString(),
+                            Name = p.Name 
+                        });
                 }
                 
                 // Original logic for other ROM types
@@ -177,6 +172,7 @@ namespace EmuLibrary.Settings
                     // For ISO installers, we support common disc image formats
                     imageExtensionsLower = new[] { "iso", "bin", "img", "cue", "nrg", "mds", "mdf" };
                 }
+                // Archive installer removed
                 else if (EmulatorProfile is CustomEmulatorProfile)
                 {
                     imageExtensionsLower = (EmulatorProfile as CustomEmulatorProfile).ImageExtensions?.Where(ext => !ext.IsNullOrEmpty()).Select(ext => ext.Trim().ToLower());

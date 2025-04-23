@@ -11,7 +11,13 @@ namespace EmuLibrary.RomTypes.Yuzu
         internal YuzuUninstallController(Game game, IEmuLibrary emuLibrary) : base(game, emuLibrary)
         {
             _gameInfo = game.GetYuzuGameInfo();
-            _cache = (_emuLibrary.GetScanner(RomType.Yuzu) as YuzuScanner).GetCacheForMapping(_gameInfo.MappingId);
+            var scanner = _emuLibrary.GetScanner(RomType.Yuzu) as YuzuScanner;
+            if (scanner == null)
+            {
+                _emuLibrary.Logger.Error("YuzuScanner not found. Cannot continue with uninstallation.");
+                throw new System.InvalidOperationException("Yuzu scanner not found");
+            }
+            _cache = scanner.GetCacheForMapping(_gameInfo.MappingId);
 
             Name = string.Format("Uninstall from {0}", _gameInfo.Mapping.Emulator?.Name ?? "Emulator");
         }

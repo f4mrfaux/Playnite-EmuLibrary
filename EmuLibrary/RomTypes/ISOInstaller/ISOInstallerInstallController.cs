@@ -1,4 +1,5 @@
-﻿using EmuLibrary.Util.AssetImporter;
+﻿using EmuLibrary.Util;
+using EmuLibrary.Util.AssetImporter;
 using Playnite.SDK;
 using Playnite.SDK.Models;
 using Playnite.SDK.Plugins;
@@ -124,8 +125,8 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                     );
                     
                     // Get or create the AssetImporter
-                    var assetImporter = EmuLibrary.Util.AssetImporter.AssetImporter.Instance ?? 
-                        new EmuLibrary.Util.AssetImporter.AssetImporter(_emuLibrary.Logger, _emuLibrary.Playnite);
+                    var assetImporter = Util.AssetImporter.AssetImporter.Instance ?? 
+                        new Util.AssetImporter.AssetImporter(_emuLibrary.Logger, _emuLibrary.Playnite);
                     
                     // Register for progress updates
                     assetImporter.ImportProgress += (sender, e) => {
@@ -157,7 +158,7 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                         }
                     }
                     
-                    string localISOPath = importResult.Path;
+                    localISOPath = importResult.Path;
                     
                     if (importResult.FromCache)
                     {
@@ -260,10 +261,7 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                                 );
                                 
                                 // Use Playnite's file selection dialog
-                                var selectFileDialog = _emuLibrary.Playnite.Dialogs.SelectFile(
-                                    "Executable files (*.exe)|*.exe", 
-                                    Path.GetDirectoryName(exeFiles[0])
-                                );
+                                var selectFileDialog = _emuLibrary.Playnite.Dialogs.SelectFile("Executable files (*.exe)|*.exe");
                                 
                                 if (!string.IsNullOrEmpty(selectFileDialog))
                                 {
@@ -280,10 +278,7 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                                     );
                                     
                                     // Try one more time with a more direct prompt
-                                    var secondAttempt = _emuLibrary.Playnite.Dialogs.SelectFile(
-                                        "Executable files (*.exe)|*.exe", 
-                                        Path.GetDirectoryName(exeFiles[0])
-                                    );
+                                    var secondAttempt = _emuLibrary.Playnite.Dialogs.SelectFile("Executable files (*.exe)|*.exe");
                                     
                                     if (!string.IsNullOrEmpty(secondAttempt))
                                     {
@@ -503,10 +498,10 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                         if (!Settings.Settings.Instance.EnableAssetCaching)
                         {
                             // Get or create the AssetImporter
-                            var assetImporter = EmuLibrary.Util.AssetImporter.AssetImporter.Instance ?? 
-                                new EmuLibrary.Util.AssetImporter.AssetImporter(_emuLibrary.Logger, _emuLibrary.Playnite);
+                            var assetImporterForCleanup = Util.AssetImporter.AssetImporter.Instance ?? 
+                                new Util.AssetImporter.AssetImporter(_emuLibrary.Logger, _emuLibrary.Playnite);
                                 
-                            assetImporter.CleanupTempDirectory(localISOPath);
+                            assetImporterForCleanup.CleanupTempDirectory(localISOPath);
                         }
                     }
                     catch (Exception ex)
@@ -598,10 +593,10 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                             _emuLibrary.Logger.Info($"Cleaning up imported ISO file {localISOPath} after cancellation");
                             
                             // Get or create the AssetImporter
-                            var assetImporter = EmuLibrary.Util.AssetImporter.AssetImporter.Instance ?? 
-                                new EmuLibrary.Util.AssetImporter.AssetImporter(_emuLibrary.Logger, _emuLibrary.Playnite);
+                            var assetImporterForCleanup = Util.AssetImporter.AssetImporter.Instance ?? 
+                                new Util.AssetImporter.AssetImporter(_emuLibrary.Logger, _emuLibrary.Playnite);
                                 
-                            assetImporter.CleanupTempDirectory(localISOPath);
+                            assetImporterForCleanup.CleanupTempDirectory(localISOPath);
                         }
                     }
                     catch (Exception ex)
@@ -642,10 +637,10 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                             _emuLibrary.Logger.Info($"Cleaning up imported ISO file {localISOPath} after failure");
                             
                             // Get or create the AssetImporter
-                            var assetImporter = EmuLibrary.Util.AssetImporter.AssetImporter.Instance ?? 
-                                new EmuLibrary.Util.AssetImporter.AssetImporter(_emuLibrary.Logger, _emuLibrary.Playnite);
+                            var assetImporterForCleanup = Util.AssetImporter.AssetImporter.Instance ?? 
+                                new Util.AssetImporter.AssetImporter(_emuLibrary.Logger, _emuLibrary.Playnite);
                                 
-                            assetImporter.CleanupTempDirectory(Path.GetDirectoryName(localISOPath));
+                            assetImporterForCleanup.CleanupTempDirectory(Path.GetDirectoryName(localISOPath));
                         }
                     }
                     catch (Exception cleanupEx)

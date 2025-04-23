@@ -1,4 +1,5 @@
-﻿using EmuLibrary.Util.AssetImporter;
+﻿using EmuLibrary.Util;
+using EmuLibrary.Util.AssetImporter;
 using Playnite.SDK;
 using Playnite.SDK.Models;
 using Playnite.SDK.Plugins;
@@ -74,8 +75,8 @@ namespace EmuLibrary.RomTypes.PCInstaller
                     );
                     
                     // Get or create the AssetImporter
-                    var assetImporter = EmuLibrary.Util.AssetImporter.AssetImporter.Instance ?? 
-                        new EmuLibrary.Util.AssetImporter.AssetImporter(_emuLibrary.Logger, _emuLibrary.Playnite);
+                    var assetImporter = Util.AssetImporter.AssetImporter.Instance ?? 
+                        new Util.AssetImporter.AssetImporter(_emuLibrary.Logger, _emuLibrary.Playnite);
                     
                     // Register for progress updates
                     assetImporter.ImportProgress += (sender, e) => {
@@ -293,10 +294,10 @@ namespace EmuLibrary.RomTypes.PCInstaller
                         if (!Settings.Settings.Instance.EnableAssetCaching)
                         {
                             // Get or create the AssetImporter
-                            var assetImporter = EmuLibrary.Util.AssetImporter.AssetImporter.Instance ?? 
-                                new EmuLibrary.Util.AssetImporter.AssetImporter(_emuLibrary.Logger, _emuLibrary.Playnite);
+                            var assetImporterForCleanup = Util.AssetImporter.AssetImporter.Instance ?? 
+                                new Util.AssetImporter.AssetImporter(_emuLibrary.Logger, _emuLibrary.Playnite);
                                 
-                            assetImporter.CleanupTempDirectory(tempInstallerPath);
+                            assetImporterForCleanup.CleanupTempDirectory(tempInstallerPath);
                         }
                     }
                     catch (Exception ex)

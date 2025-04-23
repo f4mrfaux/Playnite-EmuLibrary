@@ -84,8 +84,7 @@ namespace EmuLibrary.Settings
                         // Force the platform to null if not one of the PC installer types
                         // This ensures the dropdown is populated correctly
                         if (mapping.RomType != RomType.PCInstaller && 
-                            mapping.RomType != RomType.ISOInstaller && 
-                            mapping.RomType != RomType.ArchiveInstaller)
+                            mapping.RomType != RomType.ISOInstaller)
                         {
                             mapping.Platform = null;
                         }

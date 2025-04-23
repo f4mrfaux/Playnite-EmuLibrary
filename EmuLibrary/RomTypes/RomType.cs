@@ -20,8 +20,8 @@
         [RomTypeInfo(typeof(ISOInstaller.ISOInstallerGameInfo), typeof(ISOInstaller.ISOInstallerScanner))]
         ISOInstaller = 6,
         
-        // Archive installers handle archives (ZIP, RAR, 7z) containing ISOs with installers
-        [RomTypeInfo(typeof(ArchiveInstaller.ArchiveInstallerGameInfo), typeof(ArchiveInstaller.ArchiveInstallerScanner))]
+        // Archive installer functionality has been removed
+        // Keep this enum value for backward compatibility with saved settings
         ArchiveInstaller = 7,
     }
 }

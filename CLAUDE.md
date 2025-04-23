@@ -382,3 +382,101 @@ Example (Total Commander): `"c:\Programs\totalcmd\TOTALCMD64.EXE" /L="{Dir}" /O 
     // Execute copy operation with progress reporting
     await copier.CopyWithProgressAsync(cancellationToken, progress);
     ```
+
+## Recent Changes (ISO Scanner Fix)
+
+We've made several improvements to the ISOInstallerScanner to fix issues with detecting ISO files:
+
+1. Added case variations for supported disc image extensions:
+   ```csharp
+   var discExtensions = new List<string> { "iso", "bin", "img", "cue", "nrg", "mds", "mdf", "ISO", "BIN", "IMG", "CUE", "NRG", "MDS", "MDF" };
+   ```
+
+2. Added a direct file search diagnostic to verify file presence:
+   ```csharp
+   // Do a direct folder scan to see if any such files exist
+   try {
+       var directSearch = Directory.GetFiles(srcPath, "*.*", SearchOption.AllDirectories)
+           .Where(f => discExtensions.Contains(Path.GetExtension(f).TrimStart('.').ToLowerInvariant()))
+           .ToList();
+       
+       _emuLibrary.Logger.Info($"Direct search found {directSearch.Count} disc image files in {srcPath}");
+       
+       if (directSearch.Count > 0) {
+           _emuLibrary.Logger.Info($"Examples: {string.Join(", ", directSearch.Take(5).Select(Path.GetFileName))}");
+       }
+   }
+   catch (Exception ex) {
+       _emuLibrary.Logger.Error($"Error in direct file search: {ex.Message}");
+   }
+   ```
+
+3. Improved file extension checking to be more robust:
+   ```csharp
+   // Check the file extension directly instead of iterating through each extension
+   string fileExtension = file.Extension?.TrimStart('.')?.ToLowerInvariant();
+   
+   _emuLibrary.Logger.Debug($"Checking if file {file.Name} has extension '{fileExtension}'");
+   
+   // Check if this file has a supported extension
+   if (!string.IsNullOrEmpty(fileExtension) && discExtensions.Contains(fileExtension.ToLowerInvariant()))
+   ```
+
+4. Enhanced the HasMatchingExtension method in RomTypeScanner for better null handling:
+   ```csharp
+   protected static bool HasMatchingExtension(FileSystemInfoBase file, string extension)
+   {
+       // Handle null cases safely
+       if (file == null)
+           return false;
+           
+       if (file.Extension == null)
+           return extension == "<none>";
+           
+       // Normalize extensions for comparison
+       string fileExt = file.Extension.TrimStart('.').ToLowerInvariant();
+       string compareExt = extension.ToLowerInvariant();
+       
+       // Compare extensions case-insensitively
+       return fileExt == compareExt || (file.Extension == "" && extension == "<none>");
+   }
+   ```
+
+5. Added extensive diagnostic output when no files are found:
+   - Logs all top-level files and directories
+   - Checks what's inside the first directory 
+   - Shows examples of detected files
+
+6. Improved root folder checking to better handle update detection:
+   ```csharp
+   // Find all valid files in the root game folder to detect base game
+   var rootGameFolderFiles = rootGameFolder.GetFiles("*.*", SearchOption.TopDirectoryOnly)
+       .Where(f => {
+           string ext = Path.GetExtension(f.Name)?.TrimStart('.')?.ToLowerInvariant();
+           return !string.IsNullOrEmpty(ext) && discExtensions.Contains(ext);
+       })
+       .ToList();
+       
+   _emuLibrary.Logger.Debug($"Root folder check: Found {rootGameFolderFiles.Count} valid files in root folder {rootGameFolder.Name}");
+   if (rootGameFolderFiles.Count > 0) {
+       _emuLibrary.Logger.Debug($"Examples: {string.Join(", ", rootGameFolderFiles.Take(3).Select(f => f.Name))}");
+   }
+   ```
+
+7. Enhanced the update file detection to provide better diagnostics:
+   ```csharp
+   var files = subfolder.GetFiles("*.*", SearchOption.AllDirectories)
+       .Where(f => {
+           string ext = Path.GetExtension(f.Name)?.TrimStart('.')?.ToLowerInvariant();
+           return !string.IsNullOrEmpty(ext) && updateFileExtensions.Contains(ext);
+       }).ToList();
+       
+   _emuLibrary.Logger.Debug($"Update folder check: Found {files.Count} valid files in update folder {subfolder.Name}");
+   if (files.Count > 0) {
+       _emuLibrary.Logger.Debug($"Examples: {string.Join(", ", files.Take(3).Select(f => f.Name))}");
+   }
+   ```
+
+These changes should help identify and fix the issue with the ISOInstallerScanner not finding ISO files. The direct file search will show if any ISO files exist in the specified directories, and the enhanced debugging information will help track down where the process is failing.
+
+Note: Since the project must be built on Windows, these changes will need to be transferred to a Windows environment for proper testing and validation.

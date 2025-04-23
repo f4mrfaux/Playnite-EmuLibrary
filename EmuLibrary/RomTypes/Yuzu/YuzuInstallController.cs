@@ -21,7 +21,13 @@ namespace EmuLibrary.RomTypes.Yuzu
             _emuLibrary = emuLibrary;
 
             _gameInfo = game.GetYuzuGameInfo();
-            _cache = (_emuLibrary.GetScanner(RomType.Yuzu) as YuzuScanner).GetCacheForMapping(_gameInfo.MappingId);
+            var scanner = _emuLibrary.GetScanner(RomType.Yuzu) as YuzuScanner;
+            if (scanner == null)
+            {
+                _emuLibrary.Logger.Error("YuzuScanner not found. Cannot continue with installation.");
+                throw new System.InvalidOperationException("Yuzu scanner not found");
+            }
+            _cache = scanner.GetCacheForMapping(_gameInfo.MappingId);
 
             Name = string.Format("Install to {0}", _gameInfo.Mapping.Emulator?.Name ?? "Emulator");
         }
