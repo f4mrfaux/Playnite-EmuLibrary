@@ -129,6 +129,7 @@ private readonly Dictionary<RomType, RomTypeScanner> _scanners = new Dictionary<
             {
                 try
                 {
+                    // Create the service with the WebRequest-based implementation
                     var steamGridService = new Util.SteamGridDbService(Logger, Settings.SteamGridDbApiKey);
                     Logger.Info("SteamGridDB service initialized successfully.");
                 }
@@ -175,31 +176,28 @@ private readonly Dictionary<RomType, RomTypeScanner> _scanners = new Dictionary<
                 if (args.CancelToken.IsCancellationRequested)
                     yield break;
 
-                // PCInstaller, ISOInstaller, and ArchiveInstaller don't require an emulator
+                // PCInstaller and ISOInstaller don't require an emulator
                 if (mapping.Emulator == null && 
                     mapping.RomType != RomType.PCInstaller && 
-                    mapping.RomType != RomType.ISOInstaller &&
-                    mapping.RomType != RomType.ArchiveInstaller)
+                    mapping.RomType != RomType.ISOInstaller)
                 {
                     Logger.Warn($"Emulator {mapping.EmulatorId} not found, skipping.");
                     continue;
                 }
 
-                // PCInstaller, ISOInstaller, and ArchiveInstaller don't require an emulator profile
+                // PCInstaller and ISOInstaller don't require an emulator profile
                 if (mapping.EmulatorProfile == null && 
                     mapping.RomType != RomType.PCInstaller && 
-                    mapping.RomType != RomType.ISOInstaller &&
-                    mapping.RomType != RomType.ArchiveInstaller)
+                    mapping.RomType != RomType.ISOInstaller)
                 {
                     Logger.Warn($"Emulator profile {mapping.EmulatorProfileId} for emulator {mapping.EmulatorId} not found, skipping.");
                     continue;
                 }
                 
-                // Skip this check for PCInstaller, ISOInstaller, and ArchiveInstaller - they can work without platform
+                // Skip this check for PCInstaller and ISOInstaller - they can work without platform
                 if (mapping.Platform == null && 
                     mapping.RomType != RomType.PCInstaller && 
-                    mapping.RomType != RomType.ISOInstaller &&
-                    mapping.RomType != RomType.ArchiveInstaller)
+                    mapping.RomType != RomType.ISOInstaller)
                 {
                     Logger.Warn($"Platform {mapping.PlatformId} not found, skipping.");
                     continue;

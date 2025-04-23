@@ -1,7 +1,8 @@
 using System;
 using System.Collections.Generic;
-using System.Net.Http;
-using System.Net.Http.Headers;
+using System.IO;
+using System.Net;
+using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Playnite.SDK;
@@ -10,13 +11,12 @@ using System.Linq;
 namespace EmuLibrary.Util
 {
     /// <summary>
-    /// Service for interacting with the SteamGridDB API
+    /// Service for interacting with the SteamGridDB API using .NET Framework 4.6.2 compatible approaches
     /// </summary>
     public class SteamGridDbService
     {
         private readonly ILogger _logger;
         private readonly string _apiKey;
-        private readonly HttpClient _httpClient;
         private readonly bool _isEnabled;
         
         // Cache of game names to IDs to avoid repeated API calls
@@ -37,13 +37,8 @@ namespace EmuLibrary.Util
             _apiKey = apiKey;
             _isEnabled = !string.IsNullOrEmpty(_apiKey);
             
-            _httpClient = new HttpClient();
-            _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-            
-            if (_isEnabled)
-            {
-                _httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {_apiKey}");
-            }
+            // No HttpClient in .NET Framework 4.6.2 without additional packages
+            // We'll use WebRequest instead
             
             _instance = this;
         }
@@ -58,7 +53,7 @@ namespace EmuLibrary.Util
         /// </summary>
         /// <param name="gameName">Game name to search for</param>
         /// <returns>List of matching games</returns>
-        public async Task<List<SteamGridDbGame>> SearchGamesAsync(string gameName)
+        public List<SteamGridDbGame> SearchGames(string gameName)
         {
             if (!_isEnabled)
             {
@@ -84,31 +79,53 @@ namespace EmuLibrary.Util
                 var encodedName = Uri.EscapeDataString(gameName);
                 var url = $"https://www.steamgriddb.com/api/v2/search/autocomplete/{encodedName}";
                 
-                var response = await _httpClient.GetAsync(url);
-                if (!response.IsSuccessStatusCode)
+                // Create web request
+                var request = (HttpWebRequest)WebRequest.Create(url);
+                request.Method = "GET";
+                request.Accept = "application/json";
+                
+                if (_isEnabled)
                 {
-                    _logger.Error($"Failed to search SteamGridDB: {response.StatusCode} {response.ReasonPhrase}");
-                    return new List<SteamGridDbGame>();
+                    request.Headers.Add("Authorization", $"Bearer {_apiKey}");
                 }
                 
-                var content = await response.Content.ReadAsStringAsync();
-                var searchResult = JsonConvert.DeserializeObject<SteamGridDbSearchResponse>(content);
-                
-                if (searchResult?.Data == null || !searchResult.Success)
+                // Get response
+                using (var response = (HttpWebResponse)request.GetResponse())
                 {
-                    _logger.Warn($"No results found for {gameName} on SteamGridDB");
-                    return new List<SteamGridDbGame>();
+                    if (response.StatusCode != HttpStatusCode.OK)
+                    {
+                        _logger.Error($"Failed to search SteamGridDB: {response.StatusCode} {response.StatusDescription}");
+                        return new List<SteamGridDbGame>();
+                    }
+                    
+                    // Read the response
+                    using (var reader = new StreamReader(response.GetResponseStream()))
+                    {
+                        var content = reader.ReadToEnd();
+                        var searchResult = JsonConvert.DeserializeObject<SteamGridDbSearchResponse>(content);
+                        
+                        if (searchResult?.Data == null || !searchResult.Success)
+                        {
+                            _logger.Warn($"No results found for {gameName} on SteamGridDB");
+                            return new List<SteamGridDbGame>();
+                        }
+                        
+                        // Cache the first (best) result
+                        if (searchResult.Data.Any())
+                        {
+                            var bestMatch = searchResult.Data.First();
+                            _gameNameCache[gameName] = bestMatch.Id;
+                            _logger.Info($"Added {gameName} to SteamGridDB cache with ID {bestMatch.Id}");
+                        }
+                        
+                        return searchResult.Data;
+                    }
                 }
-                
-                // Cache the first (best) result
-                if (searchResult.Data.Any())
-                {
-                    var bestMatch = searchResult.Data.First();
-                    _gameNameCache[gameName] = bestMatch.Id;
-                    _logger.Info($"Added {gameName} to SteamGridDB cache with ID {bestMatch.Id}");
-                }
-                
-                return searchResult.Data;
+            }
+            catch (WebException ex)
+            {
+                _logger.Error(ex, $"Web error searching SteamGridDB: {ex.Message}");
+                return new List<SteamGridDbGame>();
             }
             catch (Exception ex)
             {
@@ -122,9 +139,9 @@ namespace EmuLibrary.Util
         /// </summary>
         /// <param name="gameName">Game name to search for</param>
         /// <returns>Best matching game or null if no match</returns>
-        public async Task<SteamGridDbGame> FindBestMatchAsync(string gameName)
+        public SteamGridDbGame FindBestMatch(string gameName)
         {
-            var results = await SearchGamesAsync(gameName);
+            var results = SearchGames(gameName);
             return results.FirstOrDefault();
         }
         
@@ -132,11 +149,11 @@ namespace EmuLibrary.Util
         /// Check if the given name matches a known game in SteamGridDB
         /// </summary>
         /// <param name="folderName">Original folder name</param>
-        /// <param name="normalizedName">Normalized name to use if match found</param>
+        /// <param name="matchedName">The matched name if found, otherwise the original name</param>
         /// <returns>True if a match was found</returns>
-        public async Task<bool> TryMatchGameNameAsync(string folderName, out string normalizedName)
+        public bool TryMatchGameName(string folderName, out string matchedName)
         {
-            normalizedName = folderName;
+            matchedName = folderName;
             
             if (!_isEnabled)
             {
@@ -145,10 +162,10 @@ namespace EmuLibrary.Util
             
             try
             {
-                var match = await FindBestMatchAsync(folderName);
+                var match = FindBestMatch(folderName);
                 if (match != null)
                 {
-                    normalizedName = match.Name;
+                    matchedName = match.Name;
                     _logger.Info($"Matched folder '{folderName}' to SteamGridDB game '{match.Name}'");
                     return true;
                 }

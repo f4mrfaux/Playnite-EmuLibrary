@@ -195,11 +195,9 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                                 {
                                     try
                                     {
-                                        // Try to match with SteamGridDB asynchronously
-                                        var matchTask = Util.SteamGridDbService.Instance.TryMatchGameNameAsync(parentFolder, out string matchedName);
-                                        matchTask.Wait(5000); // Wait max 5 seconds for response
-                                        
-                                        if (matchTask.IsCompleted && matchTask.Result)
+                                        // Try to match with SteamGridDB (synchronous version)
+                                        string matchedName;
+                                        if (Util.SteamGridDbService.Instance.TryMatchGameName(parentFolder, out matchedName))
                                         {
                                             gameName = matchedName;
                                             _emuLibrary.Logger.Info($"Using SteamGridDB matched name for {parentFolder}: {gameName}");
