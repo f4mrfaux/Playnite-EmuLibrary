@@ -369,28 +369,19 @@ private readonly Dictionary<RomType, RomTypeScanner> _scanners = new Dictionary<
                         Logger.Warn($"Game {g.Name} has no platforms");
                     }
                     
-                    // CRITICAL: Ensure PluginId is set correctly - Playnite requires this for the game to appear 
-                    // in the UI, but it's not always set automatically during the scanning process
-                    if (g.PluginId != Id)
-                    {
-                        Logger.Info($"Setting PluginId for game {g.Name} to {Id} (was: {g.PluginId ?? "null"})");
-                        g.PluginId = Id;
-                    }
-                    
                     // Log game details for ISO games
                     if (mapping.RomType == RomType.ISOInstaller)
                     {
                         Logger.Info($"ISO game details - Name: {g.Name}, Source: {g.Source}, Platform count: {g.Platforms?.Count ?? 0}");
-                        Logger.Info($"PluginId: {g.PluginId}");
                         
                         if (g.Platforms != null)
                         {
-                            Logger.Info($"Platforms: {string.Join(", ", g.Platforms)}");
+                            Logger.Info($"Platforms count: {g.Platforms.Count}");
                         }
                         
                         if (g.Tags != null && g.Tags.Any())
                         {
-                            Logger.Info($"Tags: {string.Join(", ", g.Tags)}");
+                            Logger.Info($"Tags count: {g.Tags.Count}");
                         }
                     }
                     
@@ -725,7 +716,7 @@ private readonly Dictionary<RomType, RomTypeScanner> _scanners = new Dictionary<
                                     // CRITICAL: PluginId must be set for the game to appear in Playnite's UI
                                     if (game.PluginId != Id)
                                     {
-                                        Logger.Info($"Setting PluginId for game {game.Name} to {Id} (was: {game.PluginId ?? "null"})");
+                                        Logger.Info($"Setting PluginId for game {game.Name} to {Id} (was: {game.PluginId})");
                                         game.PluginId = Id;
                                         // Update the game in the database
                                         PlayniteApi.Database.Games.Update(game);
@@ -1089,8 +1080,7 @@ private readonly Dictionary<RomType, RomTypeScanner> _scanners = new Dictionary<
                             // Method 1: Use ImportGame which converts GameMetadata to Game
                             Logger.Info("Importing as new game using ImportGame method");
                             
-                            // Diagnostic: Print all properties before import
-                            Logger.Info($"Before import - PluginId: {metadata.PluginId}");
+                            // Diagnostic: Print GameId before import
                             Logger.Info($"Before import - GameId: {metadata.GameId}");
                             
                             var game = PlayniteApi.Database.ImportGame(metadata);

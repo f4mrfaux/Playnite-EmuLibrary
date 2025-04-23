@@ -369,8 +369,7 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                         Name = gameName,
                         IsInstalled = false,
                         GameId = info.AsGameId(),
-                        // CRITICAL: Must set PluginId or games won't appear in Playnite UI
-                        PluginId = EmuLibrary.PluginId,
+                        // PluginId is set on Game objects after import, not on GameMetadata
                         Platforms = new HashSet<MetadataProperty>() { new MetadataNameProperty(platformName) },
                         InstallSize = (ulong)new FileInfo(isoFile).Length,
                         GameActions = new List<GameAction>() 
@@ -420,7 +419,7 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                     
                     // Log detailed information about the game being added
                     _emuLibrary.Logger.Info($"[ISO SCANNER] Adding game: {gameName} from {isoFile}");
-                    _emuLibrary.Logger.Info($"[ISO SCANNER] Game details: GameId={metadata.GameId}, PluginId={metadata.PluginId}, Platform={platformName}");
+                    _emuLibrary.Logger.Info($"[ISO SCANNER] Game details: GameId={metadata.GameId}, Platform={platformName}");
                     sourcedGames.Add(metadata);
                 }
                 catch (Exception ex)
@@ -487,8 +486,7 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                                         Name = game.Name,
                                         IsInstalled = true,
                                         GameId = gameInfo.AsGameId(),
-                                        // CRITICAL: Must set PluginId or games won't appear in Playnite UI
-                                        PluginId = EmuLibrary.PluginId,
+                                        // PluginId is set on Game objects after import, not on GameMetadata
                                         InstallDirectory = gameInfo.InstallDirectory,
                                         Platforms = new HashSet<MetadataProperty>() { new MetadataNameProperty(mapping.Platform?.Name ?? "PC") },
                                         GameActions = new List<GameAction>() 
