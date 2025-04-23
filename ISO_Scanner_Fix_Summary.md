@@ -5,7 +5,7 @@ ISO games were being detected by the ISOInstallerScanner (with log entries showi
 
 ## Root Causes Identified
 1. **Platform Assignment**: ISO games needed to consistently use the PC platform ("PC (Windows)" specifically)
-2. **Plugin ID Assignment**: The PluginId was not being consistently set during game import
+2. **Plugin ID Assignment**: The PluginId was not being explicitly set on GameMetadata objects, which prevented the games from appearing in Playnite UI
 3. **GameMetadata Properties**: Missing or incorrect properties in GameMetadata objects
 4. **Game Import Process**: Issues with how games were being created and added to Playnite
 
@@ -42,19 +42,8 @@ ISO games were being detected by the ISOInstallerScanner (with log entries showi
   }
   ```
 
-### 2. Fixed Plugin ID Assignment
-- Added explicit PluginId setting after game import:
-  ```csharp
-  // Critical - ensure PluginId is set to match our plugin
-  if (game.PluginId != Id)
-  {
-      Logger.Warn($"PluginId was not correctly set during import. Setting it manually. Original: {game.PluginId}, Expected: {Id}");
-      game.PluginId = Id;
-      // Update the game in the database
-      PlayniteApi.Database.Games.Update(game);
-  }
-  ```
-- Enhanced the GameMetadata object creation to ensure PluginId is set before import:
+### 2. Fixed Plugin ID Assignment (Most Critical Fix)
+- **CRITICAL FIX:** Explicitly set PluginId on GameMetadata objects when creating them:
   ```csharp
   var metadata = new GameMetadata
   {
@@ -62,11 +51,27 @@ ISO games were being detected by the ISOInstallerScanner (with log entries showi
       Name = gameName,
       IsInstalled = false,
       GameId = info.AsGameId(),
-      // Critical - must set plugin ID
-      PluginId = Id,
-      Platforms = new HashSet<MetadataProperty>() { new MetadataNameProperty(pcPlatform.Name) },
+      // CRITICAL: Must set PluginId or games won't appear in Playnite UI
+      PluginId = EmuLibrary.PluginId,
+      Platforms = new HashSet<MetadataProperty>() { new MetadataNameProperty(platformName) },
       // ...
   };
+  ```
+
+- Added additional checks in EmuLibrary.cs to ensure PluginId is always correctly set:
+  ```csharp
+  // CRITICAL: Ensure PluginId is set correctly - Playnite requires this for the game to appear 
+  // in the UI, but it's not always set automatically during the scanning process
+  if (g.PluginId != Id)
+  {
+      Logger.Info($"Setting PluginId for game {g.Name} to {Id} (was: {g.PluginId ?? "null"})");
+      g.PluginId = Id;
+  }
+  ```
+
+- Added additional logging to help with troubleshooting:
+  ```csharp
+  _emuLibrary.Logger.Info($"[ISO SCANNER] Game details: GameId={metadata.GameId}, PluginId={metadata.PluginId}, Platform={platformName}");
   ```
 
 ### 3. Added Comprehensive Diagnostics
