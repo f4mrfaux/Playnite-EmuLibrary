@@ -754,8 +754,8 @@ private readonly Dictionary<RomType, RomTypeScanner> _scanners = new Dictionary<
                     // We can directly use the scanner from our instance
                     var isoScanner = new RomTypes.ISOInstaller.ISOInstallerScanner(this);
                     
-                    // Create test helper defined in ISOInstallerScanner.cs
-                    var tester = new EmuLibrary.RomTypes.ISOInstaller.ISOScannerTest(PlayniteApi, Logger);
+                    // Create test helper defined in ISOInstallerScanner.cs - use the namespace directly
+                    var tester = new RomTypes.ISOInstaller.ISOScannerTest(PlayniteApi, Logger);
                     
                     if (selectedIndex == 0) // Direct file search
                     {

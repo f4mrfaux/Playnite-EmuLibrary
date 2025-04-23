@@ -785,14 +785,14 @@ public class ISOScannerTest
             
             // Create an instance of IEmuLibrary for the scanner to use
             EmuLibrary.IEmuLibrary emuLib = new TestEmuLibrary(_playniteAPI, _logger);
-            var scanner = new ISOInstallerScanner(emuLib);
+            var scanner = new EmuLibrary.RomTypes.ISOInstaller.ISOInstallerScanner(emuLib);
             
             // Get games using the scanner
             var games = scanner.GetGames(mapping, new LibraryGetGamesArgs()).ToList();
             
-            _logger.Info($"[TEST] Scanner GetGames returned {games.Count} games");
+            _logger.Info($"[TEST] Scanner GetGames returned {games.Count()} games");
             
-            if (games.Count > 0)
+            if (games.Count() > 0)
             {
                 _logger.Info("[TEST] Testing game creation and database import");
                 
