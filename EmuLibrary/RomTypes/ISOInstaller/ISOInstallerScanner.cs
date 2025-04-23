@@ -187,16 +187,44 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                                 // Use cached normalized name if available
                                 string gameName;
                                 
-                                // Check for fuzzy match first
-                                if (gameNameGroups.TryGetValue(parentFolder, out string matchedGameName))
+                                // First try SteamGridDB matching if enabled
+                                bool usedSteamGridDb = false;
+                                if (Settings.Settings.Instance.EnableSteamGridDbMatching && 
+                                    Util.SteamGridDbService.Instance != null &&
+                                    Util.SteamGridDbService.Instance.IsEnabled)
                                 {
-                                    gameName = matchedGameName;
-                                    _emuLibrary.Logger.Debug($"Using fuzzy matched game name for {parentFolder}: {gameName}");
+                                    try
+                                    {
+                                        // Try to match with SteamGridDB asynchronously
+                                        var matchTask = Util.SteamGridDbService.Instance.TryMatchGameNameAsync(parentFolder, out string matchedName);
+                                        matchTask.Wait(5000); // Wait max 5 seconds for response
+                                        
+                                        if (matchTask.IsCompleted && matchTask.Result)
+                                        {
+                                            gameName = matchedName;
+                                            _emuLibrary.Logger.Info($"Using SteamGridDB matched name for {parentFolder}: {gameName}");
+                                            usedSteamGridDb = true;
+                                        }
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        _emuLibrary.Logger.Error($"Error using SteamGridDB to match game name: {ex.Message}");
+                                    }
                                 }
-                                else if (!normalizedNameCache.TryGetValue(parentFolder, out gameName))
+                                
+                                // If SteamGridDB didn't work, try fuzzy match next
+                                if (!usedSteamGridDb)
                                 {
-                                    gameName = StringExtensions.NormalizeGameName(parentFolder);
-                                    normalizedNameCache[parentFolder] = gameName;
+                                    if (gameNameGroups.TryGetValue(parentFolder, out string matchedGameName))
+                                    {
+                                        gameName = matchedGameName;
+                                        _emuLibrary.Logger.Debug($"Using fuzzy matched game name for {parentFolder}: {gameName}");
+                                    }
+                                    else if (!normalizedNameCache.TryGetValue(parentFolder, out gameName))
+                                    {
+                                        gameName = StringExtensions.NormalizeGameName(parentFolder);
+                                        normalizedNameCache[parentFolder] = gameName;
+                                    }
                                 }
                                 
                                 if (string.IsNullOrEmpty(gameName))

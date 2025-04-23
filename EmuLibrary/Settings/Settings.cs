@@ -34,11 +34,20 @@ namespace EmuLibrary.Settings
         public long LargeFileSizeWarningThresholdMB { get; set; } = 1000; // 1GB threshold
         public int NetworkRetryAttempts { get; set; } = 3; 
         public bool VerifyImportedAssets { get; set; } = true;
+        
+        // API Integration Settings
+        public string SteamGridDbApiKey { get; set; } = "";
+        public bool EnableSteamGridDbMatching { get; set; } = false;
         public ObservableCollection<EmulatorMapping> Mappings { get; set; }
 
         // Hidden settings
         public int Version { get; set; }
         public Dictionary<RomType, bool> MigratedLegacySettings { get; set; } = new Dictionary<RomType, bool>();
+
+        public EmulatorMapping GetMapping(Guid mappingId)
+        {
+            return Mappings?.FirstOrDefault(m => m.MappingId == mappingId);
+        }
 
 
         // Parameterless constructor must exist if you want to use LoadPluginSettings method.
@@ -106,7 +115,14 @@ namespace EmuLibrary.Settings
                 if (!MigratedLegacySettings.TryGetValue(rt, out bool migrated))
                 {
                     EmulatorMapping newMapping = null;
-                    var res = emuLibrary.GetScanner(rt)?.MigrateLegacyPluginSettings(legacyPlugin, out newMapping);
+                    var currentScanner = emuLibrary.GetScanner(rt);
+                    if (currentScanner == null)
+                    {
+                        // Skip this RomType if scanner is not available
+                        return;
+                    }
+                    
+                    var res = currentScanner.MigrateLegacyPluginSettings(legacyPlugin, out newMapping);
 
                     switch (res)
                     {
@@ -165,9 +181,9 @@ namespace EmuLibrary.Settings
                     mappingErrors.Add($"{m.MappingId}: Source path doesn't exist ({m.SourcePath}).");
                 }
 
-                // For PCInstaller type, the destination path is optional initially 
+                // For PCInstaller, ISOInstaller, and ArchiveInstaller types, the destination path is optional initially 
                 // since it will be set during installation
-                if (m.RomType != RomType.PCInstaller)
+                if (m.RomType != RomType.PCInstaller && m.RomType != RomType.ISOInstaller && m.RomType != RomType.ArchiveInstaller)
                 {
                     if (string.IsNullOrEmpty(m.DestinationPathResolved))
                     {

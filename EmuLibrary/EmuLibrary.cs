@@ -26,7 +26,15 @@ namespace EmuLibrary
         public ILogger Logger => LogManager.GetLogger();
         public IPlayniteAPI Playnite { get; private set; }
         public Settings.Settings Settings { get; private set; }
-        RomTypeScanner IEmuLibrary.GetScanner(RomType romType) => _scanners[romType];
+        RomTypeScanner IEmuLibrary.GetScanner(RomType romType) 
+        {
+            if (_scanners.TryGetValue(romType, out var scanner))
+            {
+                return scanner;
+            }
+            Logger.Error($"Scanner for RomType {romType} not found. This may indicate a missing RomTypeInfo attribute or initialization failure.");
+            return null;
+        }
         
         public new string GetPluginUserDataPath()
         {
@@ -39,7 +47,8 @@ namespace EmuLibrary
         internal static readonly Guid PluginId = Guid.Parse("41e49490-0583-4148-94d2-940c7c74f1d9");
         internal static readonly MetadataNameProperty SourceName = new MetadataNameProperty(s_pluginName);
 
-        private readonly Dictionary<RomType, RomTypeScanner> _scanners = new Dictionary<RomType, RomTypeScanner>();
+        // Dictionary to store initialized scanners
+private readonly Dictionary<RomType, RomTypeScanner> _scanners = new Dictionary<RomType, RomTypeScanner>();
 
         public EmuLibrary(IPlayniteAPI api) : base(api)
         {
@@ -68,10 +77,42 @@ namespace EmuLibrary
                 // Starts at field number 10 to not conflict with ELGameInfo's fields
                 RuntimeTypeModel.Default[typeof(ELGameInfo)].AddSubType((int)rt + 10, romInfo.GameInfoType);
 
-                var scanner = romInfo.ScannerType.GetConstructor(new Type[] { typeof(IEmuLibrary) })?.Invoke(new object[] { this });
-                if (scanner == null)
+                try 
                 {
-                    Logger.Error($"Failed to instantiate scanner for RomType {rt} (using {romInfo.ScannerType}).");
+                    var constructor = romInfo.ScannerType.GetConstructor(new Type[] { typeof(IEmuLibrary) });
+                    if (constructor == null)
+                    {
+                        Logger.Error($"Failed to find constructor for RomType {rt} (using {romInfo.ScannerType}). Expected constructor with IEmuLibrary parameter.");
+                        continue;
+                    }
+
+                    var scanner = constructor.Invoke(new object[] { this });
+                    if (scanner == null)
+                    {
+                        Logger.Error($"Failed to instantiate scanner for RomType {rt} (using {romInfo.ScannerType}).");
+                        continue;
+                    }
+                    
+                    var typedScanner = scanner as RomTypeScanner;
+                    if (typedScanner != null) 
+                    {
+                        _scanners.Add(rt, typedScanner);
+                        Logger.Info($"Successfully registered scanner for RomType {rt}: {romInfo.ScannerType.Name}");
+                    }
+                    else
+                    {
+                        Logger.Error($"Scanner for RomType {rt} could not be cast to RomTypeScanner");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error(ex, $"Exception while instantiating scanner for RomType {rt} (using {romInfo.ScannerType}): {ex.Message}");
+                    
+                    if (ex.InnerException != null)
+                    {
+                        Logger.Error(ex.InnerException, $"Inner exception: {ex.InnerException.Message}");
+                    }
+                    
                     continue;
                 }
 
@@ -82,6 +123,20 @@ namespace EmuLibrary
         public override void OnApplicationStarted(OnApplicationStartedEventArgs args)
         {
             base.OnApplicationStarted(args);
+
+            // Initialize the SteamGridDB service if enabled
+            if (Settings.EnableSteamGridDbMatching && !string.IsNullOrEmpty(Settings.SteamGridDbApiKey))
+            {
+                try
+                {
+                    var steamGridService = new Util.SteamGridDbService(Logger, Settings.SteamGridDbApiKey);
+                    Logger.Info("SteamGridDB service initialized successfully.");
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error(ex, $"Failed to initialize SteamGridDB service: {ex.Message}");
+                }
+            }
 
             Settings.Mappings.ForEach(mapping =>
             {
@@ -120,28 +175,31 @@ namespace EmuLibrary
                 if (args.CancelToken.IsCancellationRequested)
                     yield break;
 
-                // PCInstaller and ISOInstaller don't require an emulator
+                // PCInstaller, ISOInstaller, and ArchiveInstaller don't require an emulator
                 if (mapping.Emulator == null && 
                     mapping.RomType != RomType.PCInstaller && 
-                    mapping.RomType != RomType.ISOInstaller)
+                    mapping.RomType != RomType.ISOInstaller &&
+                    mapping.RomType != RomType.ArchiveInstaller)
                 {
                     Logger.Warn($"Emulator {mapping.EmulatorId} not found, skipping.");
                     continue;
                 }
 
-                // PCInstaller and ISOInstaller don't require an emulator profile
+                // PCInstaller, ISOInstaller, and ArchiveInstaller don't require an emulator profile
                 if (mapping.EmulatorProfile == null && 
                     mapping.RomType != RomType.PCInstaller && 
-                    mapping.RomType != RomType.ISOInstaller)
+                    mapping.RomType != RomType.ISOInstaller &&
+                    mapping.RomType != RomType.ArchiveInstaller)
                 {
                     Logger.Warn($"Emulator profile {mapping.EmulatorProfileId} for emulator {mapping.EmulatorId} not found, skipping.");
                     continue;
                 }
                 
-                // Skip this check for PCInstaller and ISOInstaller - they can work without platform
+                // Skip this check for PCInstaller, ISOInstaller, and ArchiveInstaller - they can work without platform
                 if (mapping.Platform == null && 
                     mapping.RomType != RomType.PCInstaller && 
-                    mapping.RomType != RomType.ISOInstaller)
+                    mapping.RomType != RomType.ISOInstaller &&
+                    mapping.RomType != RomType.ArchiveInstaller)
                 {
                     Logger.Warn($"Platform {mapping.PlatformId} not found, skipping.");
                     continue;

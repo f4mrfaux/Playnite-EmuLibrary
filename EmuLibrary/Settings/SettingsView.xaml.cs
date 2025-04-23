@@ -1,4 +1,5 @@
 ﻿using EmuLibrary.Util.AssetImporter;
+using EmuLibrary.RomTypes;
 using System;
 using System.Diagnostics;
 using System.Linq;
@@ -65,12 +66,33 @@ namespace EmuLibrary.Settings
             {
                 InManualCellCommit = true;
 
-                // HACK!!!!
-                // Alternate approach 1: try to find new value here and store that somewhere as the currently selected emu
-                // Alternate approach 2: the "right" way(?) https://stackoverflow.com/a/34332709
-                if (e.Column.Header?.ToString() == "Emulator" || e.Column.Header?.ToString() == "Profile")
+                // When editing emulator, profile, or ROM type, we need to commit the edit
+                // to ensure the UI is updated correctly, especially for platform selection
+                if (e.Column.Header?.ToString() == "Emulator" || 
+                    e.Column.Header?.ToString() == "Profile" || 
+                    e.Column.Header?.ToString() == "Rom Type")
                 {
+                    // Commit the current edit
                     grid.CommitEdit(DataGridEditingUnit.Row, true);
+                    
+                    // When ROM type changes, we need to refresh the UI to show the correct platform options
+                    if (e.Column.Header?.ToString() == "Rom Type" && e.Row.Item is EmulatorMapping mapping)
+                    {
+                        var logger = Settings.Instance.EmuLibrary.Logger;
+                        logger.Info($"ROM type changed to {mapping.RomType}");
+                        
+                        // Force the platform to null if not one of the PC installer types
+                        // This ensures the dropdown is populated correctly
+                        if (mapping.RomType != RomType.PCInstaller && 
+                            mapping.RomType != RomType.ISOInstaller && 
+                            mapping.RomType != RomType.ArchiveInstaller)
+                        {
+                            mapping.Platform = null;
+                        }
+                        
+                        // Force refresh the DataGrid
+                        grid.Items.Refresh();
+                    }
                 }
 
                 InManualCellCommit = false;
@@ -139,6 +161,20 @@ namespace EmuLibrary.Settings
                 $"Items Cached: {cacheInfo.ItemCount}",
                 "Cache Information",
                 MessageBoxButton.OK);
+        }
+        
+        private void Click_GetSteamGridDbApiKey(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                Process.Start("https://www.steamgriddb.com/profile/preferences/api");
+            }
+            catch (Exception ex)
+            {
+                Settings.Instance.PlayniteAPI.Dialogs.ShowErrorMessage(
+                    $"Error opening URL: {ex.Message}",
+                    "URL Error");
+            }
         }
     }
 }
