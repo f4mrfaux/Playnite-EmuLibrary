@@ -603,6 +603,31 @@ namespace EmuLibrary.RomTypes.ISOInstaller
     }
 }
 
+// Helper class implementing IEmuLibrary for testing
+internal class TestEmuLibrary : IEmuLibrary
+{
+    public ILogger Logger { get; }
+    public IPlayniteAPI Playnite { get; }
+    public Settings.Settings Settings { get; }
+
+    public TestEmuLibrary(IPlayniteAPI playniteAPI, ILogger logger)
+    {
+        Playnite = playniteAPI;
+        Logger = logger;
+        Settings = new Settings.Settings(null, null);
+    }
+
+    public string GetPluginUserDataPath()
+    {
+        return Playnite.Paths.ExtensionsDataPath;
+    }
+
+    public RomTypeScanner GetScanner(RomType romType)
+    {
+        return null; // Not needed for testing
+    }
+}
+
 // Helper class for ISO scanner diagnostics and testing
 public class ISOScannerTest
 {
@@ -742,7 +767,7 @@ public class ISOScannerTest
             var mapping = new EmulatorMapping()
             {
                 MappingId = Guid.NewGuid(),
-                RomType = RomType.ISOInstaller,
+                RomType = EmuLibrary.RomTypes.RomType.ISOInstaller,
                 SourcePath = directoryPath,
                 Enabled = true
             };
@@ -758,9 +783,9 @@ public class ISOScannerTest
                 _logger.Info($"[TEST] Set platform to PC (ID: {mapping.PlatformId})");
             }
             
-            // Use reflection to create ISOInstallerScanner
-            var emuLibrary = new EmuLibrary(_playniteAPI);
-            var scanner = new EmuLibrary.RomTypes.ISOInstaller.ISOInstallerScanner(emuLibrary);
+            // Create an instance of IEmuLibrary for the scanner to use
+            IEmuLibrary emuLib = new TestEmuLibrary(_playniteAPI, _logger);
+            var scanner = new ISOInstallerScanner(emuLib);
             
             // Get games using the scanner
             var games = scanner.GetGames(mapping, new LibraryGetGamesArgs()).ToList();

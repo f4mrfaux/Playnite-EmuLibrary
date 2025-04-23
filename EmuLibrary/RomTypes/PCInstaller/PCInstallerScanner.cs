@@ -195,6 +195,7 @@ namespace EmuLibrary.RomTypes.PCInstaller
                                     Name = gameName,
                                     IsInstalled = false, // PC games start as uninstalled
                                     GameId = info.AsGameId(),
+                                    // PluginId will be set on Game object after import
                                     Platforms = new HashSet<MetadataProperty>() { new MetadataNameProperty(platformName) },
                                     InstallSize = (ulong)new FileInfo(file.FullName).Length,
                                     GameActions = new List<GameAction>() 
@@ -310,6 +311,7 @@ namespace EmuLibrary.RomTypes.PCInstaller
                                         Name = game.Name,
                                         IsInstalled = true,
                                         GameId = gameInfo.AsGameId(),
+                                        // PluginId will be set by Playnite on Game object
                                         InstallDirectory = gameInfo.InstallDirectory,
                                         Platforms = new HashSet<MetadataProperty>() { new MetadataNameProperty(mapping.Platform.Name) },
                                         GameActions = new List<GameAction>() 
