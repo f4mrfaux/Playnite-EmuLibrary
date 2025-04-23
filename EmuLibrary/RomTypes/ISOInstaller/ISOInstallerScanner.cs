@@ -237,15 +237,14 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                                 }
                                 
                                 // For updates, we need to be careful not to skip processing
-                                if (contentType == PCInstaller.ContentType.BaseGame && processedGameNames.Contains(gameName))
+                                if (processedGameNames.Contains(gameName))
                                 {
-                                    _emuLibrary.Logger.Debug($"Skipping duplicate base game: {gameName} from {file.FullName}");
-                                    continue;
+                                    _emuLibrary.Logger.Debug($"Potential duplicate: {gameName} from {file.FullName} - will check if it's an update");
+                                    // Continue processing since we'll determine if it's an update later
                                 }
-                                
-                                // For updates, we don't want to skip processing even if base game name matches
-                                if (contentType == PCInstaller.ContentType.BaseGame)
+                                else
                                 {
+                                    // Add to processed games set
                                     processedGameNames.Add(gameName);
                                 }
                                 
@@ -259,6 +258,11 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                                 
                                 string storeGameId = null;
                                 string installerType = null;
+                                // Define content type variables for detection
+                                var contentType = PCInstaller.ContentType.BaseGame;
+                                string version = null;
+                                string contentDescription = null;
+                                string parentGameId = null;
                                 
                                 if (isGogInstaller)
                                 {
@@ -281,18 +285,6 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                                         }
                                     }
                                 }
-                                
-                                // Detect content type
-                                var contentType = PCInstaller.ContentType.BaseGame;
-                                string version = null;
-                                string contentDescription = null;
-                                string parentGameId = null;
-                                
-                                // Define update detection variables first
-                                var contentType = PCInstaller.ContentType.BaseGame;
-                                string version = null;
-                                string contentDescription = null;
-                                string parentGameId = null;
                                 
                                 // First, check if this is an update/DLC folder inside a game folder
                                 // In this case, parentFolder is the update folder name and grandparentFolder is the game name
@@ -351,20 +343,20 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                                             // For this file to be an update, it should be either an ISO or an EXE
                                             if (updateFileExtensions.Contains(Path.GetExtension(file.Name).TrimStart('.').ToLowerInvariant()))
                                             {
-                                                _emuLibrary.Logger.Info($"Detected update folder: {dirInfo.Name} inside game folder {rootGameFolder.Name}");
+                                                _emuLibrary.Logger.Info($"Detected update folder: {folderDirInfo.Name} inside game folder {rootGameFolder.Name}");
                                                 contentType = PCInstaller.ContentType.Update;
-                                                contentDescription = dirInfo.Name;
+                                                contentDescription = folderDirInfo.Name;
                                                 parentGameId = StringExtensions.NormalizeGameName(rootGameFolder.Name);
                                                 
                                                 // Try to extract version number
                                                 var versionMatch = System.Text.RegularExpressions.Regex.Match(
-                                                    dirInfo.Name, @"v?(\d+(\.\d+)*)");
+                                                    folderDirInfo.Name, @"v?(\d+(\.\d+)*)");
                                                 if (versionMatch.Success)
                                                 {
                                                     version = versionMatch.Groups[1].Value;
                                                 }
                                                 
-                                                _emuLibrary.Logger.Info($"Detected update: {dirInfo.Name} for game {parentGameId}, version: {version ?? "unknown"}, file: {file.Name}");
+                                                _emuLibrary.Logger.Info($"Detected update: {folderDirInfo.Name} for game {parentGameId}, version: {version ?? "unknown"}, file: {file.Name}");
                                             }
                                         }
                                     }
