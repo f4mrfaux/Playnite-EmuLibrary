@@ -179,9 +179,12 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                     {
                         if (args.CancelToken.IsCancellationRequested)
                             yield break;
-
+                        
+                        _emuLibrary.Logger.Debug($"Checking if file {file.Name} has extension '{extension}'");
+                        
                         if (HasMatchingExtension(file, extension))
                         {
+                            _emuLibrary.Logger.Info($"Found ISO file: {file.FullName} (matches extension '{extension}')");
                             try
                             {
                                 // For ISO installers, we use the parent folder name as the game name
