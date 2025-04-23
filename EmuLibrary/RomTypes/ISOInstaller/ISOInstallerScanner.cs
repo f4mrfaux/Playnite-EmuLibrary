@@ -300,7 +300,7 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                                 // In this case, parentFolder is the update folder name and grandparentFolder is the game name
                                 var folderDirInfo = new DirectoryInfo(parentFolderPath);
                                 var fileDir = folderDirInfo.FullName;
-                                // var fileInRootFolder = false; // Variable not used
+                                var fileInRootFolder = false;
                                 
                                 // Define a list of valid update file extensions 
                                 // Include both ISO/image formats and executable formats for updates
