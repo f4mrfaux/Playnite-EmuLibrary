@@ -61,6 +61,36 @@ namespace EmuLibrary.RomTypes.ISOInstaller
             // Log the supported extensions
             _emuLibrary.Logger.Info($"Looking for disc image files with extensions: {string.Join(", ", discExtensions)}");
             
+            // Add special test for filenames ending with .iso regardless of extension parsing
+            try {
+                _emuLibrary.Logger.Info("Performing special filename search with endsWith pattern...");
+                
+                var simpleSearch = Directory.GetFiles(srcPath, "*.*", SearchOption.AllDirectories)
+                    .Where(f => f.EndsWith(".iso", StringComparison.OrdinalIgnoreCase) || 
+                               f.EndsWith(".bin", StringComparison.OrdinalIgnoreCase) || 
+                               f.EndsWith(".img", StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+                
+                _emuLibrary.Logger.Info($"Simple filename search found {simpleSearch.Count} disc image files in {srcPath}");
+                
+                if (simpleSearch.Count > 0) {
+                    _emuLibrary.Logger.Info($"Simple search examples: {string.Join(", ", simpleSearch.Take(5))}");
+                    
+                    // Test extension parsing for these files
+                    foreach (var file in simpleSearch.Take(3)) {
+                        _emuLibrary.Logger.Info($"Testing extension parsing for: {file}");
+                        _emuLibrary.Logger.Info($"  Path.GetExtension: '{Path.GetExtension(file)}'");
+                        _emuLibrary.Logger.Info($"  Path.GetFileName: '{Path.GetFileName(file)}'");
+                        _emuLibrary.Logger.Info($"  Trimmed extension: '{Path.GetExtension(file).TrimStart('.')}'");
+                        _emuLibrary.Logger.Info($"  Lowercase: '{Path.GetExtension(file).TrimStart('.').ToLowerInvariant()}'");
+                        _emuLibrary.Logger.Info($"  In list: {discExtensions.Contains(Path.GetExtension(file).TrimStart('.').ToLowerInvariant())}");
+                    }
+                }
+            }
+            catch (Exception ex) {
+                _emuLibrary.Logger.Error($"Error in special filename search: {ex.Message}");
+            }
+            
             // Do a direct folder scan to see if any such files exist
             try {
                 var directSearch = Directory.GetFiles(srcPath, "*.*", SearchOption.AllDirectories)
@@ -71,6 +101,18 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                 
                 if (directSearch.Count > 0) {
                     _emuLibrary.Logger.Info($"Examples: {string.Join(", ", directSearch.Take(5).Select(Path.GetFileName))}");
+                }
+                
+                // Try to find specific example file mentioned by user
+                string specificPath = Path.Combine(srcPath, "Octopath.Traveler", "cpy-ot.iso");
+                if (File.Exists(specificPath)) {
+                    _emuLibrary.Logger.Info($"FOUND SPECIFIC TEST FILE: {specificPath}");
+                    // Get file info
+                    var fileInfo = new FileInfo(specificPath);
+                    _emuLibrary.Logger.Info($"File exists: Size={fileInfo.Length}, LastWrite={fileInfo.LastWriteTime}, Attributes={fileInfo.Attributes}");
+                    _emuLibrary.Logger.Info($"File extension: '{Path.GetExtension(specificPath)}' - Length: {Path.GetExtension(specificPath)?.Length ?? 0}");
+                } else {
+                    _emuLibrary.Logger.Error($"SPECIFIC TEST FILE NOT FOUND: {specificPath}");
                 }
             }
             catch (Exception ex) {
@@ -200,10 +242,29 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                     if (args.CancelToken.IsCancellationRequested)
                         yield break;
                     
-                    _emuLibrary.Logger.Debug($"Checking if file {file.Name} has extension '{fileExtension}'");
+                    // Check special pattern for test file
+                    if (file.FullName.Contains("cpy-ot.iso")) {
+                        _emuLibrary.Logger.Info($"FOUND TEST FILE IN ENUMERATION: {file.FullName}");
+                        _emuLibrary.Logger.Info($"File.Extension={file.Extension}, FileExtension={fileExtension}");
+                        _emuLibrary.Logger.Info($"Path.GetExtension={Path.GetExtension(file.FullName)}");
+                    }
+                    
+                    // Enhanced logging for extension check
+                    _emuLibrary.Logger.Debug($"Checking if file {file.Name} has extension '{fileExtension}', raw extension: '{file.Extension}'");
                     
                     // Check if this file has a supported extension
-                    if (!string.IsNullOrEmpty(fileExtension) && discExtensions.Contains(fileExtension.ToLowerInvariant()))
+                    bool extensionMatch = !string.IsNullOrEmpty(fileExtension) && discExtensions.Contains(fileExtension.ToLowerInvariant());
+                    
+                    // Add extra check for known patterns
+                    bool specialCaseMatch = file.Name.EndsWith(".iso", StringComparison.OrdinalIgnoreCase) || 
+                                            file.Name.EndsWith(".bin", StringComparison.OrdinalIgnoreCase) ||
+                                            file.Name.EndsWith(".img", StringComparison.OrdinalIgnoreCase);
+                    
+                    if (specialCaseMatch && !extensionMatch) {
+                        _emuLibrary.Logger.Info($"Special case detection for file that has .iso in name but failed normal check: {file.FullName}");
+                    }
+                    
+                    if (extensionMatch || specialCaseMatch)
                     {
                         _emuLibrary.Logger.Info($"Found ISO file: {file.FullName} (matches extension '{fileExtension}')");
                         try
@@ -543,6 +604,26 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                 
                 // Additional diagnostic info to help with troubleshooting
                 try {
+                    // Direct path check for a specific .iso file that should exist
+                    string specificPath = Path.Combine(srcPath, "Octopath.Traveler", "cpy-ot.iso");
+                    if (File.Exists(specificPath)) {
+                        _emuLibrary.Logger.Info($"FOUND SPECIFIC TEST FILE: {specificPath}");
+                        // Get file info
+                        var fileInfo = new FileInfo(specificPath);
+                        _emuLibrary.Logger.Info($"File exists: Size={fileInfo.Length}, LastWrite={fileInfo.LastWriteTime}, Attributes={fileInfo.Attributes}");
+                        _emuLibrary.Logger.Info($"File extension: '{Path.GetExtension(specificPath)}' - Length: {Path.GetExtension(specificPath)?.Length ?? 0}");
+                        
+                        // Test direct extension check
+                        string ext = Path.GetExtension(specificPath)?.TrimStart('.')?.ToLowerInvariant();
+                        _emuLibrary.Logger.Info($"Extension after processing: '{ext}' - Is in list: {discExtensions.Contains(ext)}");
+                        
+                        // Test with System.IO.Path methods
+                        _emuLibrary.Logger.Info($"Path.GetExtension: '{Path.GetExtension(specificPath)}'");
+                        _emuLibrary.Logger.Info($"Path.GetFileName: '{Path.GetFileName(specificPath)}'");
+                    } else {
+                        _emuLibrary.Logger.Error($"SPECIFIC TEST FILE NOT FOUND: {specificPath}");
+                    }
+                    
                     // Print all files in the directory (top level only) to see what's actually there
                     var allFiles = Directory.GetFiles(srcPath, "*.*", SearchOption.TopDirectoryOnly);
                     _emuLibrary.Logger.Info($"Found {allFiles.Length} files at top level in {srcPath}");

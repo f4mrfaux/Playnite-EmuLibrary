@@ -40,7 +40,16 @@ namespace EmuLibrary.RomTypes
             string compareExt = extension.ToLowerInvariant();
             
             // Compare extensions case-insensitively
-            return fileExt == compareExt || (file.Extension == "" && extension == "<none>");
+            bool basicMatch = fileExt == compareExt || (file.Extension == "" && extension == "<none>");
+            
+            // If basic match fails, try backup method with string ending check
+            if (!basicMatch && file.Name != null) {
+                // Check if the file name ends with the extension pattern
+                bool fallbackMatch = file.Name.EndsWith("." + compareExt, StringComparison.OrdinalIgnoreCase);
+                return fallbackMatch;
+            }
+            
+            return basicMatch;
         }
     }
 }
