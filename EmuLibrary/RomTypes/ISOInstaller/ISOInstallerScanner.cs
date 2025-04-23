@@ -603,11 +603,11 @@ namespace EmuLibrary.RomTypes.ISOInstaller
     }
 
     // Helper class implementing IEmuLibrary for testing
-    internal class TestEmuLibrary : EmuLibrary.IEmuLibrary
+    internal class TestEmuLibrary : IEmuLibrary
     {
         public ILogger Logger { get; }
         public IPlayniteAPI Playnite { get; }
-        public EmuLibrary.Settings.Settings Settings { get; }
+        public Settings.Settings Settings { get; }
 
         public TestEmuLibrary(IPlayniteAPI playniteAPI, ILogger logger)
         {
@@ -621,7 +621,7 @@ namespace EmuLibrary.RomTypes.ISOInstaller
             return Playnite.Paths.ExtensionsDataPath;
         }
 
-        public EmuLibrary.RomTypes.RomTypeScanner GetScanner(EmuLibrary.RomTypes.RomType romType)
+        public RomTypeScanner GetScanner(RomType romType)
         {
             return null; // Not needed for testing
         }
@@ -763,10 +763,10 @@ namespace EmuLibrary.RomTypes.ISOInstaller
             try
             {
                 // Create a test mapping
-                var mapping = new EmuLibrary.Settings.EmulatorMapping()
+                var mapping = new Settings.EmulatorMapping()
                 {
                     MappingId = Guid.NewGuid(),
-                    RomType = EmuLibrary.RomTypes.RomType.ISOInstaller,
+                    RomType = RomType.ISOInstaller,
                     SourcePath = directoryPath,
                     Enabled = true
                 };
@@ -783,8 +783,8 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                 }
                 
                 // Create an instance of IEmuLibrary for the scanner to use
-                EmuLibrary.IEmuLibrary emuLib = new TestEmuLibrary(_playniteAPI, _logger);
-                var scanner = new EmuLibrary.RomTypes.ISOInstaller.ISOInstallerScanner(emuLib);
+                var emuLib = new TestEmuLibrary(_playniteAPI, _logger);
+                var scanner = new ISOInstallerScanner(emuLib);
                 
                 // Get games using the scanner
                 var games = scanner.GetGames(mapping, new LibraryGetGamesArgs()).ToList();
