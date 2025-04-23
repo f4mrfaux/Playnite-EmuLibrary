@@ -66,10 +66,96 @@ namespace EmuLibrary.RomTypes.ISOInstaller
             try
             {
                 fileEnumerator = new SafeFileEnumerator(srcPath, "*.*", SearchOption.AllDirectories);
-                _emuLibrary.Logger.Info($"Scanning for ISO disc images in {srcPath}");
+                _emuLibrary.Logger.Info($"Scanning for ISO disc images in {srcPath} with enhanced fuzzy matching");
 
                 // Create a dictionary to cache normalized folder names for performance
                 var normalizedNameCache = new Dictionary<string, string>();
+                // Track processed game names to avoid duplicates from similar folder names
+                var processedGameNames = new HashSet<string>();
+                // Dictionary to detect ISO files that belong to the same game via fuzzy matching
+                var gameNameGroups = new Dictionary<string, string>();
+                
+                // First scan - collect all potential game names from folder structure
+                var folderNames = new HashSet<string>();
+                try 
+                {
+                    var dirInfo = new DirectoryInfo(srcPath);
+                    foreach (var dir in dirInfo.GetDirectories("*", SearchOption.AllDirectories))
+                    {
+                        var folderName = dir.Name;
+                        if (!string.IsNullOrWhiteSpace(folderName))
+                        {
+                            folderNames.Add(folderName);
+                        }
+                    }
+                    _emuLibrary.Logger.Info($"Found {folderNames.Count} potential game folders");
+                }
+                catch (Exception ex)
+                {
+                    _emuLibrary.Logger.Error($"Error collecting folder names: {ex.Message}");
+                }
+
+                // Group folders by directory structure first (parent-child relationships)
+                var dirInfo = new DirectoryInfo(srcPath);
+                var rootFolders = dirInfo.GetDirectories("*", SearchOption.TopDirectoryOnly).ToList();
+                
+                // Process root folders first (game folders)
+                foreach (var gameFolder in rootFolders)
+                {
+                    var gameFolderName = gameFolder.Name;
+                    var normalizedName = StringExtensions.NormalizeGameName(gameFolderName);
+                    
+                    if (string.IsNullOrWhiteSpace(normalizedName))
+                        continue;
+                    
+                    // Add root game folder
+                    gameNameGroups[gameFolderName] = normalizedName;
+                    
+                    // Get all update/DLC subfolders for this game
+                    var updateFolders = gameFolder.GetDirectories("*", SearchOption.TopDirectoryOnly).ToList();
+                    _emuLibrary.Logger.Debug($"Found {updateFolders.Count} potential update folders for {gameFolderName}");
+                    
+                    foreach (var updateFolder in updateFolders)
+                    {
+                        // Mark this as an update folder by associating it with its parent
+                        var updateName = updateFolder.Name;
+                        gameNameGroups[updateName] = normalizedName + " [Update: " + updateName + "]";
+                        _emuLibrary.Logger.Debug($"Associated update folder '{updateName}' with game '{normalizedName}'");
+                    }
+                }
+                
+                // Now apply fuzzy matching only for folders without a parent-child relationship
+                var remainingFolders = folderNames.Where(f => !gameNameGroups.ContainsKey(f)).ToList();
+                _emuLibrary.Logger.Debug($"Processing {remainingFolders.Count} remaining folders with fuzzy matching");
+                
+                foreach (var folderName in remainingFolders)
+                {
+                    var normalizedName = StringExtensions.NormalizeGameName(folderName);
+                    if (string.IsNullOrWhiteSpace(normalizedName))
+                        continue;
+                        
+                    // Check if this folder name is similar to any existing known game
+                    bool matched = false;
+                    foreach (var knownGame in gameNameGroups.Keys.ToList())
+                    {
+                        if (normalizedName.IsSimilarTo(knownGame, 0.8)) // 80% similarity threshold
+                        {
+                            // Add this folder name as a variant of the known game
+                            gameNameGroups[folderName] = gameNameGroups[knownGame];
+                            matched = true;
+                            _emuLibrary.Logger.Debug($"Fuzzy match: '{folderName}' matches '{knownGame}'");
+                            break;
+                        }
+                    }
+                    
+                    if (!matched)
+                    {
+                        // This is a new game name
+                        gameNameGroups[folderName] = normalizedName;
+                    }
+                }
+                
+                _emuLibrary.Logger.Info($"Consolidated to {gameNameGroups.Values.Distinct().Count()} unique games via fuzzy matching");
 
                 foreach (var file in fileEnumerator)
                 {
@@ -100,7 +186,14 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                                 
                                 // Use cached normalized name if available
                                 string gameName;
-                                if (!normalizedNameCache.TryGetValue(parentFolder, out gameName))
+                                
+                                // Check for fuzzy match first
+                                if (gameNameGroups.TryGetValue(parentFolder, out string matchedGameName))
+                                {
+                                    gameName = matchedGameName;
+                                    _emuLibrary.Logger.Debug($"Using fuzzy matched game name for {parentFolder}: {gameName}");
+                                }
+                                else if (!normalizedNameCache.TryGetValue(parentFolder, out gameName))
                                 {
                                     gameName = StringExtensions.NormalizeGameName(parentFolder);
                                     normalizedNameCache[parentFolder] = gameName;
@@ -110,6 +203,19 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                                 {
                                     _emuLibrary.Logger.Warn($"Game name is empty for {file.FullName}, using file name instead");
                                     gameName = Path.GetFileNameWithoutExtension(file.Name);
+                                }
+                                
+                                // For updates, we need to be careful not to skip processing
+                                if (contentType == PCInstaller.ContentType.BaseGame && processedGameNames.Contains(gameName))
+                                {
+                                    _emuLibrary.Logger.Debug($"Skipping duplicate base game: {gameName} from {file.FullName}");
+                                    continue;
+                                }
+                                
+                                // For updates, we don't want to skip processing even if base game name matches
+                                if (contentType == PCInstaller.ContentType.BaseGame)
+                                {
+                                    processedGameNames.Add(gameName);
                                 }
                                 
                                 var relativePath = file.FullName.Substring(srcPath.Length).TrimStart(Path.DirectorySeparatorChar);
@@ -145,6 +251,88 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                                     }
                                 }
                                 
+                                // Detect content type
+                                var contentType = PCInstaller.ContentType.BaseGame;
+                                string version = null;
+                                string contentDescription = null;
+                                string parentGameId = null;
+                                
+                                // First, check if this is an update/DLC folder inside a game folder
+                                // In this case, parentFolder is the update folder name and grandparentFolder is the game name
+                                var dirInfo = new DirectoryInfo(parentFolderPath);
+                                var fileDir = dirInfo.FullName;
+                                var fileInRootFolder = false;
+                                
+                                // Define a list of valid update file extensions 
+                                // Include both ISO/image formats and executable formats for updates
+                                var updateFileExtensions = new List<string>();
+                                updateFileExtensions.AddRange(discExtensions); // All disc image formats
+                                updateFileExtensions.AddRange(new[] { "exe", "msi", "bin" }); // Common executable/installer formats
+                                
+                                // Check if this file is directly in the game's root folder or in a subfolder
+                                var rootGameFolder = dirInfo.Parent; // This would be the game folder
+                                
+                                if (rootGameFolder != null && rootGameFolder.FullName.StartsWith(srcPath))
+                                {
+                                    // Find all valid files in the root game folder to detect base game
+                                    var rootGameFolderFiles = rootGameFolder.GetFiles("*.*", SearchOption.TopDirectoryOnly)
+                                        .Where(f => discExtensions.Contains(Path.GetExtension(f.Name).TrimStart('.').ToLowerInvariant()))
+                                        .ToList();
+                                        
+                                    // Find any valid update files in subfolders (including .exe, etc)
+                                    var updateFiles = new List<FileInfo>();
+                                    try
+                                    {
+                                        foreach (var subfolder in rootGameFolder.GetDirectories())
+                                        {
+                                            updateFiles.AddRange(subfolder.GetFiles("*.*", SearchOption.AllDirectories)
+                                                .Where(f => updateFileExtensions.Contains(Path.GetExtension(f.Name).TrimStart('.').ToLowerInvariant())));
+                                        }
+                                    }
+                                    catch (Exception ex) 
+                                    {
+                                        _emuLibrary.Logger.Error($"Error checking for update files: {ex.Message}");
+                                    }
+                                        
+                                    // If the parent folder has ISO files directly, this might be a game folder with updates in subfolders
+                                    if (rootGameFolderFiles.Any())
+                                    {
+                                        fileInRootFolder = true;
+                                        _emuLibrary.Logger.Debug($"Found {rootGameFolderFiles.Count} ISO files in root game folder {rootGameFolder.Name}");
+                                        _emuLibrary.Logger.Debug($"Found {updateFiles.Count} potential update files in subfolders");
+                                        
+                                        // This directory has ISO files, so we're looking at the base game
+                                        if (dirInfo.FullName == rootGameFolder.FullName)
+                                        {
+                                            _emuLibrary.Logger.Debug($"File {file.Name} is in game root folder {rootGameFolder.Name}");
+                                            contentType = PCInstaller.ContentType.BaseGame;
+                                        }
+                                        // We're in a subfolder, so this is likely an update
+                                        else if (dirInfo.Parent != null && dirInfo.Parent.FullName == rootGameFolder.FullName)
+                                        {
+                                            // This is an update folder inside a game folder - your structure
+                                            // For this file to be an update, it should be either an ISO or an EXE
+                                            if (updateFileExtensions.Contains(Path.GetExtension(file.Name).TrimStart('.').ToLowerInvariant()))
+                                            {
+                                                _emuLibrary.Logger.Info($"Detected update folder: {dirInfo.Name} inside game folder {rootGameFolder.Name}");
+                                                contentType = PCInstaller.ContentType.Update;
+                                                contentDescription = dirInfo.Name;
+                                                parentGameId = StringExtensions.NormalizeGameName(rootGameFolder.Name);
+                                                
+                                                // Try to extract version number
+                                                var versionMatch = System.Text.RegularExpressions.Regex.Match(
+                                                    dirInfo.Name, @"v?(\d+(\.\d+)*)");
+                                                if (versionMatch.Success)
+                                                {
+                                                    version = versionMatch.Groups[1].Value;
+                                                }
+                                                
+                                                _emuLibrary.Logger.Info($"Detected update: {dirInfo.Name} for game {parentGameId}, version: {version ?? "unknown"}, file: {file.Name}");
+                                            }
+                                        }
+                                    }
+                                }
+                                
                                 var info = new ISOInstallerGameInfo()
                                 {
                                     MappingId = mapping.MappingId,
@@ -152,7 +340,11 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                                     InstallerFullPath = file.FullName,
                                     InstallDirectory = null, // Will be set during installation
                                     StoreGameId = storeGameId,
-                                    InstallerType = installerType
+                                    InstallerType = installerType,
+                                    ContentType = contentType,
+                                    Version = version,
+                                    ContentDescription = contentDescription,
+                                    ParentGameId = parentGameId
                                 };
 
                                 // Set proper platform based on installer type
@@ -224,6 +416,9 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                                 }
                                 
                                 gameMetadataBatch.Add(metadata);
+                                
+                                // Log successful game detection
+                                _emuLibrary.Logger.Info($"Found game: {gameName} from ISO file: {file.FullName}");
 
                                 // Batch processing handled outside the try block
                             }
@@ -248,10 +443,27 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                 _emuLibrary.Logger.Error($"Error scanning source directory {srcPath}: {ex.Message}");
             }
             
-            // Return all discovered games outside the try/catch
-            foreach (var game in sourcedGames)
+            // Log summary of found games
+            _emuLibrary.Logger.Info($"ISO Scanner found {sourcedGames.Count} games total");
+            
+            if (sourcedGames.Count > 0)
             {
-                yield return game;
+                _emuLibrary.Logger.Info("Found games:");
+                foreach (var game in sourcedGames)
+                {
+                    _emuLibrary.Logger.Info($"  - {game.Name}");
+                    yield return game;
+                }
+            }
+            else
+            {
+                _emuLibrary.Logger.Warn("No games found in the source directory. Check your folder structure and ensure ISO files are present.");
+                
+                // Return empty collection
+                foreach (var game in sourcedGames)
+                {
+                    yield return game;
+                }
             }
             #endregion
             
