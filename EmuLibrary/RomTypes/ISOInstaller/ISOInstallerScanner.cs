@@ -164,6 +164,16 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                         _emuLibrary.Logger.Info("Scanning cancelled during file enumeration");
                         yield break;
                     }
+                    
+                    // Skip Windows system directories and files
+                    if (file.FullName.Contains("$RECYCLE.BIN") || 
+                        file.FullName.Contains("System Volume Information") ||
+                        file.FullName.StartsWith("S-1-5-") ||
+                        file.Name.StartsWith("."))
+                    {
+                        _emuLibrary.Logger.Debug($"Skipping system file/directory: {file.FullName}");
+                        continue;
+                    }
 
                     foreach (var extension in discExtensions)
                     {
@@ -631,7 +641,31 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                                     return false;
 
                                 var isoInfo = info as ISOInstallerGameInfo;
-                                var sourceExists = File.Exists(isoInfo.SourceFullPath);
+                                
+                                // Skip user or system IDs that got into the database somehow
+                                if (g.Name.StartsWith("S-1-5-") || string.IsNullOrWhiteSpace(g.Name))
+                                {
+                                    _emuLibrary.Logger.Warn($"Invalid game name detected (system ID or empty): {g.Name}, skipping source check");
+                                    return false;
+                                }
+                                
+                                // Check if the source path is valid before checking existence
+                                if (string.IsNullOrEmpty(isoInfo.SourceFullPath))
+                                {
+                                    _emuLibrary.Logger.Warn($"Empty source path for game {g.Name}, skipping source check");
+                                    return false;
+                                }
+                                
+                                var sourceExists = false;
+                                try 
+                                {
+                                    sourceExists = File.Exists(isoInfo.SourceFullPath);
+                                }
+                                catch (Exception pathEx)
+                                {
+                                    _emuLibrary.Logger.Error($"Invalid source path for game {g.Name}: {pathEx.Message}");
+                                    return false;
+                                }
                                 
                                 if (!sourceExists)
                                 {
