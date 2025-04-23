@@ -13,6 +13,26 @@ using System.Threading;
 
 namespace EmuLibrary.RomTypes.ISOInstaller
 {
+    // Helper class to wrap System.IO.FileInfo into a FileSystemInfoBase for our custom enumeration
+    internal class FileInfoWrapper : FileSystemInfoBase
+    {
+        private readonly FileInfo _fileInfo;
+        
+        public FileInfoWrapper(FileInfo fileInfo)
+        {
+            _fileInfo = fileInfo;
+        }
+        
+        public override string Name => _fileInfo.Name;
+        public override string FullName => _fileInfo.FullName;
+        public override bool Exists => _fileInfo.Exists;
+        public override string Extension => _fileInfo.Extension;
+        public override DateTime CreationTime => _fileInfo.CreationTime;
+        public override DateTime LastAccessTime => _fileInfo.LastAccessTime;
+        public override DateTime LastWriteTime => _fileInfo.LastWriteTime;
+        public override System.IO.FileAttributes Attributes => _fileInfo.Attributes;
+    }
+    
     internal class ISOInstallerScanner : RomTypeScanner
     {
         private readonly IPlayniteAPI _playniteAPI;
@@ -65,11 +85,60 @@ namespace EmuLibrary.RomTypes.ISOInstaller
             try {
                 _emuLibrary.Logger.Info("Performing special filename search with endsWith pattern...");
                 
-                var simpleSearch = Directory.GetFiles(srcPath, "*.*", SearchOption.AllDirectories)
-                    .Where(f => f.EndsWith(".iso", StringComparison.OrdinalIgnoreCase) || 
-                               f.EndsWith(".bin", StringComparison.OrdinalIgnoreCase) || 
-                               f.EndsWith(".img", StringComparison.OrdinalIgnoreCase))
-                    .ToList();
+                // CRITICAL FIX: Check if we're scanning the drive root - if so, we need to do a more targeted approach
+                bool isScanningDriveRoot = srcPath.Length <= 3 && srcPath.EndsWith(":\\", StringComparison.OrdinalIgnoreCase);
+                List<string> simpleSearch;
+                
+                if (isScanningDriveRoot)
+                {
+                    _emuLibrary.Logger.Info($"Root drive scan detected ({srcPath}). Using targeted approach for better performance.");
+                    
+                    simpleSearch = new List<string>();
+                    var rootPathDirInfo = new DirectoryInfo(srcPath);
+                    var rootFolders = rootPathDirInfo.GetDirectories("*", SearchOption.TopDirectoryOnly)
+                        .Where(d => !d.Name.StartsWith("$") && // Skip system folders like $RECYCLE.BIN
+                                   !d.Name.Equals("System Volume Information", StringComparison.OrdinalIgnoreCase))
+                        .ToList();
+                    
+                    _emuLibrary.Logger.Info($"Found {rootFolders.Count} top-level directories to scan");
+                    
+                    // Search each first-level folder for ISO files directly - use searchPattern to be more efficient
+                    foreach (var folder in rootFolders)
+                    {
+                        try
+                        {
+                            // Use separate GetFiles calls with wildcards for better performance
+                            var isoFiles = Directory.GetFiles(folder.FullName, "*.iso", SearchOption.AllDirectories);
+                            var binFiles = Directory.GetFiles(folder.FullName, "*.bin", SearchOption.AllDirectories);
+                            var imgFiles = Directory.GetFiles(folder.FullName, "*.img", SearchOption.AllDirectories);
+                            var cueFiles = Directory.GetFiles(folder.FullName, "*.cue", SearchOption.AllDirectories);
+                            
+                            simpleSearch.AddRange(isoFiles);
+                            simpleSearch.AddRange(binFiles);
+                            simpleSearch.AddRange(imgFiles);
+                            simpleSearch.AddRange(cueFiles);
+                            
+                            var count = isoFiles.Length + binFiles.Length + imgFiles.Length + cueFiles.Length;
+                            if (count > 0)
+                            {
+                                _emuLibrary.Logger.Info($"Found {count} disc image files in {folder.Name}: ISO={isoFiles.Length}, BIN={binFiles.Length}, IMG={imgFiles.Length}, CUE={cueFiles.Length}");
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            _emuLibrary.Logger.Error($"Error scanning folder {folder.Name}: {ex.Message}");
+                        }
+                    }
+                }
+                else
+                {
+                    // Original approach for non-root paths
+                    simpleSearch = Directory.GetFiles(srcPath, "*.*", SearchOption.AllDirectories)
+                        .Where(f => f.EndsWith(".iso", StringComparison.OrdinalIgnoreCase) || 
+                                   f.EndsWith(".bin", StringComparison.OrdinalIgnoreCase) || 
+                                   f.EndsWith(".img", StringComparison.OrdinalIgnoreCase))
+                        .ToList();
+                }
                 
                 _emuLibrary.Logger.Info($"Simple filename search found {simpleSearch.Count} disc image files in {srcPath}");
                 
@@ -93,9 +162,49 @@ namespace EmuLibrary.RomTypes.ISOInstaller
             
             // Do a direct folder scan to see if any such files exist
             try {
-                var directSearch = Directory.GetFiles(srcPath, "*.*", SearchOption.AllDirectories)
-                    .Where(f => discExtensions.Contains(Path.GetExtension(f).TrimStart('.').ToLowerInvariant()))
-                    .ToList();
+                List<string> directSearch;
+                bool isScanningDriveRoot = srcPath.Length <= 3 && srcPath.EndsWith(":\\", StringComparison.OrdinalIgnoreCase);
+                
+                if (isScanningDriveRoot)
+                {
+                    // For drive roots, we need to search each top-level folder individually
+                    directSearch = new List<string>();
+                    var rootPathDirInfo = new DirectoryInfo(srcPath);
+                    var rootFolders = rootPathDirInfo.GetDirectories("*", SearchOption.TopDirectoryOnly)
+                        .Where(d => !d.Name.StartsWith("$") && // Skip system folders like $RECYCLE.BIN
+                                   !d.Name.Equals("System Volume Information", StringComparison.OrdinalIgnoreCase))
+                        .ToList();
+                    
+                    // Use direct pattern searches instead of full directory scans with filtering
+                    foreach (var folder in rootFolders)
+                    {
+                        try
+                        {
+                            foreach (var ext in discExtensions.Distinct())
+                            {
+                                string pattern = $"*.{ext}";
+                                var files = Directory.GetFiles(folder.FullName, pattern, SearchOption.AllDirectories);
+                                directSearch.AddRange(files);
+                                
+                                if (files.Length > 0)
+                                {
+                                    _emuLibrary.Logger.Info($"Found {files.Length} {ext} files in {folder.Name}");
+                                }
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            _emuLibrary.Logger.Error($"Error in direct search for folder {folder.Name}: {ex.Message}");
+                        }
+                    }
+                }
+                else
+                {
+                    // Original approach for non-root paths
+                    directSearch = Directory.GetFiles(srcPath, "*.*", SearchOption.AllDirectories)
+                        .Where(f => discExtensions.Contains(Path.GetExtension(f).TrimStart('.').ToLowerInvariant()))
+                        .ToList();
+                }
                 
                 _emuLibrary.Logger.Info($"Direct search found {directSearch.Count} disc image files in {srcPath}");
                 
@@ -126,7 +235,17 @@ namespace EmuLibrary.RomTypes.ISOInstaller
             var sourcedGames = new List<GameMetadata>();
             try
             {
-                fileEnumerator = new SafeFileEnumerator(srcPath, "*.*", SearchOption.AllDirectories);
+                // CRITICAL FIX: Check if we're scanning the drive root
+            bool isScanningDriveRoot = srcPath.Length <= 3 && srcPath.EndsWith(":\\", StringComparison.OrdinalIgnoreCase);
+            
+            // For drive roots, we'll use a different enumeration strategy
+            if (isScanningDriveRoot)
+            {
+                _emuLibrary.Logger.Info($"Root drive scan detected for {srcPath}. Using optimized enumeration strategy.");
+                // Still initialize the enumerator (we'll modify how it's used)
+            }
+            
+            fileEnumerator = new SafeFileEnumerator(srcPath, "*.*", SearchOption.AllDirectories);
                 _emuLibrary.Logger.Info($"Scanning for ISO disc images in {srcPath} with enhanced fuzzy matching");
 
                 // Create a dictionary to cache normalized folder names for performance
@@ -218,7 +337,67 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                 
                 _emuLibrary.Logger.Info($"Consolidated to {gameNameGroups.Values.Distinct().Count()} unique games via fuzzy matching");
 
-                foreach (var file in fileEnumerator)
+                // For drive root scans, we'll directly enumerate each game directory rather than
+                // using the general-purpose fileEnumerator, which can miss files in deep directories
+                IEnumerable<FileSystemInfoBase> filesToProcess;
+                
+                if (isScanningDriveRoot)
+                {
+                    // Build a custom enumeration to efficiently find ISO files in game folders
+                    var customFiles = new List<FileSystemInfoBase>();
+                    var rootPathDirInfo = new DirectoryInfo(srcPath);
+                    
+                    // Get all top-level directories (these are likely game folders)
+                    var rootFolders = rootPathDirInfo.GetDirectories("*", SearchOption.TopDirectoryOnly)
+                        .Where(d => !d.Name.StartsWith("$") && 
+                               !d.Name.Equals("System Volume Information", StringComparison.OrdinalIgnoreCase))
+                        .ToList();
+                    
+                    _emuLibrary.Logger.Info($"Root scan optimization: Processing {rootFolders.Count} potential game folders directly");
+                    
+                    // For each game folder, search specifically for disc image files
+                    foreach (var gameFolder in rootFolders)
+                    {
+                        if (args.CancelToken.IsCancellationRequested)
+                            break;
+                            
+                        try
+                        {
+                            // Look specifically for common disc image types
+                            foreach (var pattern in new[] { "*.iso", "*.ISO", "*.bin", "*.BIN", "*.img", "*.IMG", "*.cue", "*.CUE", "*.mdf", "*.MDF" })
+                            {
+                                // First look directly in the game folder
+                                foreach (var file in gameFolder.GetFiles(pattern, SearchOption.TopDirectoryOnly))
+                                {
+                                    customFiles.Add(new FileInfoWrapper(file));
+                                }
+                                
+                                // Then check 1 level deeper (common for multi-part games)
+                                foreach (var subFolder in gameFolder.GetDirectories())
+                                {
+                                    foreach (var file in subFolder.GetFiles(pattern, SearchOption.TopDirectoryOnly))
+                                    {
+                                        customFiles.Add(new FileInfoWrapper(file));
+                                    }
+                                }
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            _emuLibrary.Logger.Error($"Error scanning folder {gameFolder.Name}: {ex.Message}");
+                        }
+                    }
+                    
+                    _emuLibrary.Logger.Info($"Root scan optimization: Found {customFiles.Count} disc image files in game directories");
+                    filesToProcess = customFiles;
+                }
+                else
+                {
+                    // For normal non-drive-root scans, use the standard file enumerator
+                    filesToProcess = fileEnumerator;
+                }
+                
+                foreach (var file in filesToProcess)
                 {
                     if (args.CancelToken.IsCancellationRequested)
                     {
