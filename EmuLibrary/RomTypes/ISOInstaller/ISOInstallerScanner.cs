@@ -28,10 +28,58 @@ namespace EmuLibrary.RomTypes.ISOInstaller
         public override string FullName => _fileInfo.FullName;
         public override bool Exists => _fileInfo.Exists;
         public override string Extension => _fileInfo.Extension;
-        public override DateTime CreationTime => _fileInfo.CreationTime;
-        public override DateTime LastAccessTime => _fileInfo.LastAccessTime;
-        public override DateTime LastWriteTime => _fileInfo.LastWriteTime;
-        public override System.IO.FileAttributes Attributes => _fileInfo.Attributes;
+        
+        public override DateTime CreationTime 
+        {
+            get => _fileInfo.CreationTime;
+            set => _fileInfo.CreationTime = value;
+        }
+        
+        public override DateTime CreationTimeUtc 
+        {
+            get => _fileInfo.CreationTimeUtc;
+            set => _fileInfo.CreationTimeUtc = value;
+        }
+        
+        public override DateTime LastAccessTime 
+        {
+            get => _fileInfo.LastAccessTime;
+            set => _fileInfo.LastAccessTime = value;
+        }
+        
+        public override DateTime LastAccessTimeUtc 
+        {
+            get => _fileInfo.LastAccessTimeUtc;
+            set => _fileInfo.LastAccessTimeUtc = value;
+        }
+        
+        public override DateTime LastWriteTime 
+        {
+            get => _fileInfo.LastWriteTime;
+            set => _fileInfo.LastWriteTime = value;
+        }
+        
+        public override DateTime LastWriteTimeUtc 
+        {
+            get => _fileInfo.LastWriteTimeUtc;
+            set => _fileInfo.LastWriteTimeUtc = value;
+        }
+        
+        public override System.IO.FileAttributes Attributes 
+        {
+            get => _fileInfo.Attributes;
+            set => _fileInfo.Attributes = value;
+        }
+        
+        public override void Delete()
+        {
+            _fileInfo.Delete();
+        }
+        
+        public override void Refresh()
+        {
+            _fileInfo.Refresh();
+        }
     }
     
     internal class ISOInstallerScanner : RomTypeScanner
