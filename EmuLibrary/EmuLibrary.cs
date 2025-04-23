@@ -190,7 +190,56 @@ private readonly Dictionary<RomType, RomTypeScanner> _scanners = new Dictionary<
                 yield break;
             }
 
-            foreach (var mapping in Settings.Mappings?.Where(m => m.Enabled))
+            // Check for null mappings
+            if (Settings.Mappings == null)
+            {
+                Logger.Error("No mappings found in settings. Please create a mapping for ISO installer in the settings.");
+                yield break;
+            }
+            
+            // Log all mappings for diagnostic purposes
+            Logger.Info($"Found {Settings.Mappings.Count} total mappings in settings");
+            foreach (var m in Settings.Mappings)
+            {
+                Logger.Info($"Mapping: ID={m.MappingId}, Type={m.RomType}, Enabled={m.Enabled}, Path={m.SourcePath}");
+            }
+            
+            var enabledMappings = Settings.Mappings.Where(m => m.Enabled).ToList();
+            Logger.Info($"Found {enabledMappings.Count} enabled mappings");
+            
+            // Look specifically for ISOInstaller mappings
+            var isoMappings = enabledMappings.Where(m => m.RomType == RomType.ISOInstaller).ToList();
+            Logger.Info($"Found {isoMappings.Count} enabled ISO installer mappings");
+            
+            // Check if ISO mappings exist and are properly configured
+            if (isoMappings.Count == 0)
+            {
+                Logger.Warn("No enabled ISO installer mappings found. If you want to use ISO installers, please add an ISO mapping in settings.");
+                if (Settings.ShowIsoMappingHelp)
+                {
+                    Playnite.Notifications.Add(
+                        "EmuLibrary-ISOInstaller-NoMappings",
+                        "No ISO installer mappings found. To add one, go to Settings > EmuLibrary > \"Add ISO Mapping\" button.",
+                        NotificationType.Info);
+                }
+            }
+            else
+            {
+                foreach (var mapping in isoMappings)
+                {
+                    Logger.Info($"ISO mapping found: ID={mapping.MappingId}, Path={mapping.SourcePath}, Platform={mapping.Platform?.Name ?? "<none>"}");
+                    if (mapping.Platform == null)
+                    {
+                        Logger.Warn($"ISO mapping {mapping.MappingId} has no platform selected. It should be set to PC or another platform.");
+                        Playnite.Notifications.Add(
+                            $"EmuLibrary-ISOInstaller-NoPlatform-{mapping.MappingId}",
+                            $"ISO Installer mapping for {mapping.SourcePath} has no platform selected. Please set it to PC in the settings.",
+                            NotificationType.Error);
+                    }
+                }
+            }
+            
+            foreach (var mapping in enabledMappings)
             {
                 if (args.CancelToken.IsCancellationRequested)
                     yield break;
@@ -227,10 +276,37 @@ private readonly Dictionary<RomType, RomTypeScanner> _scanners = new Dictionary<
                     continue;
                 }
                 
-                // Skip this check for PCInstaller and ISOInstaller - they can work without platform
-                if (mapping.Platform == null && 
-                    mapping.RomType != RomType.PCInstaller && 
-                    mapping.RomType != RomType.ISOInstaller)
+                // Handle ISO and PC installer platform logic
+                if (mapping.RomType == RomType.PCInstaller || mapping.RomType == RomType.ISOInstaller)
+                {
+                    // Always try to find PC platform for ISO/PC installers - this is critical
+                    Logger.Info($"Ensuring PC platform for {mapping.RomType} mapping: {mapping.MappingId}");
+                    
+                    // Try to find PC platform
+                    var pcPlatform = Playnite.Database.Platforms
+                        .FirstOrDefault(p => p.Name == "PC" || p.Name == "Windows");
+                        
+                    if (pcPlatform != null)
+                    {
+                        // Always update to the latest platform ID
+                        mapping.PlatformId = pcPlatform.SpecificationId ?? pcPlatform.Id.ToString();
+                        // Don't set Platform property directly, PlatformId is used to resolve it
+                        Logger.Info($"Set platform to {pcPlatform.Name} (ID: {mapping.PlatformId})");
+                    }
+                    else
+                    {
+                        Logger.Warn($"Could not find PC platform in database. This may prevent games from appearing correctly.");
+                        
+                        // Create a fallback platform ID if needed
+                        if (string.IsNullOrEmpty(mapping.PlatformId))
+                        {
+                            mapping.PlatformId = "PC"; // Generic ID
+                            Logger.Info("Set generic PC platform ID as fallback");
+                        }
+                    }
+                }
+                // For all other rom types, platform is required
+                else if (mapping.Platform == null)
                 {
                     Logger.Warn($"Platform {mapping.PlatformId} not found, skipping.");
                     continue;
@@ -239,13 +315,61 @@ private readonly Dictionary<RomType, RomTypeScanner> _scanners = new Dictionary<
 
                 if (!_scanners.TryGetValue(mapping.RomType, out RomTypeScanner scanner))
                 {
-                    Logger.Warn($"Rom type {mapping.RomType} not supported, skipping.");
+                    Logger.Warn($"Rom type {mapping.RomType} not supported, skipping. Available scanner types: {string.Join(", ", _scanners.Keys)}");
                     continue;
                 }
 
+                Logger.Info($"Starting scan for mapping: ID={mapping.MappingId}, Type={mapping.RomType}, Path={mapping.SourcePath}");
+                int gameCount = 0;
+                
                 foreach (var g in scanner.GetGames(mapping, args))
                 {
+                    gameCount++;
+                    // Log more details about the game being returned to help with debugging
+                    Logger.Info($"Found game {gameCount}: {g.Name} (ID: {g.GameId}, Installed: {g.IsInstalled})");
+                    
+                    // Ensure the game has the critical GameId property
+                    if (string.IsNullOrEmpty(g.GameId))
+                    {
+                        Logger.Error($"Game {g.Name} has an empty GameId - this will prevent it from appearing in Playnite");
+                    }
+                    
+                    // Check for valid platforms
+                    if (g.Platforms == null || !g.Platforms.Any())
+                    {
+                        Logger.Warn($"Game {g.Name} has no platforms");
+                    }
+                    
+                    // Log game details for ISO games
+                    if (mapping.RomType == RomType.ISOInstaller)
+                    {
+                        Logger.Info($"ISO game details - Name: {g.Name}, Source: {g.Source}, Platform count: {g.Platforms?.Count ?? 0}");
+                        
+                        if (g.Platforms != null)
+                        {
+                            Logger.Info($"Platforms: {string.Join(", ", g.Platforms)}");
+                        }
+                        
+                        if (g.Tags != null && g.Tags.Any())
+                        {
+                            Logger.Info($"Tags: {string.Join(", ", g.Tags)}");
+                        }
+                    }
+                    
+                    // Return the game to Playnite
                     yield return g;
+                }
+                
+                Logger.Info($"Finished scan for mapping {mapping.MappingId}, found {gameCount} games");
+                
+                // Special check for ISO scanner with no results
+                if (mapping.RomType == RomType.ISOInstaller && gameCount == 0)
+                {
+                    Logger.Error($"ISO Scanner found 0 games for mapping {mapping.MappingId}. This might indicate a configuration problem.");
+                    Playnite.Notifications.Add(
+                        $"EmuLibrary-ISOInstaller-NoGames-{mapping.MappingId}", 
+                        $"ISO Scanner found 0 games for {mapping.SourcePath}. Please check your ISO Installer settings and ensure your ISO files are in the correct location.", 
+                        NotificationType.Error);
                 }
             }
 
@@ -257,6 +381,7 @@ private readonly Dictionary<RomType, RomTypeScanner> _scanners = new Dictionary<
 
         public override ISettings GetSettings(bool firstRunSettings) => Settings;
         public override UserControl GetSettingsView(bool firstRunSettings) => new SettingsView();
+        
 
         public override IEnumerable<InstallController> GetInstallActions(GetInstallActionsArgs args)
         {
@@ -290,6 +415,22 @@ private readonly Dictionary<RomType, RomTypeScanner> _scanners = new Dictionary<
             {
                 Action = (arags) => RemoveSuperUninstalledGames(true, default),
                 Description = "Remove uninstalled games with missing source file...",
+                MenuSection = "EmuLibrary"
+            };
+            
+            // Add a debug menu item for directly running the ISO Scanner
+            yield return new MainMenuItem()
+            {
+                Action = (arags) => RunDirectISOScan(),
+                Description = "Debug: Run ISO Scanner directly...",
+                MenuSection = "EmuLibrary"
+            };
+            
+            // Add a test menu item for ISO Scanner diagnostics
+            yield return new MainMenuItem()
+            {
+                Action = (arags) => RunISOScannerDiagnostics(),
+                Description = "Debug: Run ISO Scanner diagnostics...",
                 MenuSection = "EmuLibrary"
             };
         }
@@ -384,6 +525,341 @@ private readonly Dictionary<RomType, RomTypeScanner> _scanners = new Dictionary<
             }
         }
 
+        // Debug method to directly run the ISO scanner
+        private void RunDirectISOScan()
+        {
+            try
+            {
+                // Show dialog to select folder
+                var sourcePath = Playnite.Dialogs.SelectFolder();
+                    
+                if (string.IsNullOrEmpty(sourcePath))
+                {
+                    Logger.Info("ISO scan canceled - no folder selected");
+                    return;
+                }
+                
+                Logger.Info($"Creating ISO mapping for folder: {sourcePath}");
+                
+                // Ask user if they want to add a permanent mapping
+                var result = Playnite.Dialogs.ShowMessage(
+                    "Would you like to add a permanent ISO mapping in settings?\n\n" +
+                    "This will allow Playnite to automatically detect ISO games from your selected folder.",
+                    "Add ISO Mapping", System.Windows.MessageBoxButton.YesNo);
+                    
+                if (result == System.Windows.MessageBoxResult.Yes)
+                {
+                    // Find PC platform
+                    var pcPlatform = Playnite.Database.Platforms
+                        .FirstOrDefault(p => p.Name == "PC");
+                        
+                    // Create the mapping
+                    var mapping = new EmulatorMapping()
+                    {
+                        MappingId = Guid.NewGuid(),
+                        RomType = RomType.ISOInstaller,
+                        SourcePath = sourcePath,
+                        Enabled = true
+                    };
+                    
+                    // Set platform if found
+                    if (pcPlatform != null)
+                    {
+                        mapping.PlatformId = pcPlatform.SpecificationId ?? pcPlatform.Id.ToString();
+                        Logger.Info($"Set platform to PC (ID: {mapping.PlatformId})");
+                    }
+                    
+                    // Add the mapping to settings
+                    Settings.Mappings.Add(mapping);
+                    
+                        // Save settings manually - don't use Serialization class directly
+                    var settingsPath = Path.Combine(GetPluginUserDataPath(), "config.json");
+                    var serializedSettings = Newtonsoft.Json.JsonConvert.SerializeObject(Settings);
+                    File.WriteAllText(settingsPath, serializedSettings);
+                    
+                    // Notify user
+                    Playnite.Notifications.Add(
+                        "EmuLibrary-ISO-MappingCreated", 
+                        $"ISO mapping created for {sourcePath}. Playnite will scan this folder for ISO games on next library update.",
+                        NotificationType.Info);
+                        
+                    // Update library
+                    try 
+                    {
+                        // Just notify instead of trying to update the library
+                        Playnite.Notifications.Add(
+                            "EmuLibrary-ISO-RestartRequired", 
+                            "Please restart Playnite or use the Update All Libraries feature to scan for games.",
+                            NotificationType.Info);
+                    }
+                    catch 
+                    {
+                        Playnite.Notifications.Add(
+                            "EmuLibrary-ISO-RestartRequired", 
+                            "Please restart Playnite to scan the new ISO folder.",
+                            NotificationType.Info);
+                    }
+                }
+                else // Run direct scan
+                {
+                    Logger.Info("Running direct scan");
+                    
+                    Logger.Info($"Running direct ISO scan on folder: {sourcePath}");
+                    
+                    // Find PC platform
+                    var pcPlatform = Playnite.Database.Platforms
+                        .FirstOrDefault(p => p.Name == "PC");
+                    
+                    // Create temporary mapping for scan
+                    var mapping = new EmulatorMapping()
+                    {
+                        MappingId = Guid.NewGuid(),
+                        RomType = RomType.ISOInstaller,
+                        SourcePath = sourcePath,
+                        Enabled = true
+                    };
+                    
+                    // Set platform if found
+                    if (pcPlatform != null)
+                    {
+                        mapping.PlatformId = pcPlatform.SpecificationId ?? pcPlatform.Id.ToString();
+                        // Don't set Platform property directly
+                        Logger.Info($"Set platform to PC (ID: {mapping.PlatformId})");
+                    }
+                    
+                    // Create scanner and run it directly
+                    Logger.Info("Creating ISOInstallerScanner instance");
+                    var scanner = new RomTypes.ISOInstaller.ISOInstallerScanner(this);
+                    
+                    Logger.Info("Starting scanner.GetGames");
+                    var games = scanner.GetGames(mapping, new LibraryGetGamesArgs()).ToList();
+                    
+                    Logger.Info($"Scanner found {games.Count} games");
+                    
+                    if (games.Count == 0)
+                    {
+                        Playnite.Notifications.Add(
+                            "EmuLibrary-ISO-NoGamesFound", 
+                            $"No ISO games found in {sourcePath}. Make sure your ISO files have the correct extensions and are readable.",
+                            NotificationType.Error);
+                        return;
+                    }
+                    
+                    // Log all found games
+                    foreach (var game in games)
+                    {
+                        Logger.Info($"Found game: {game.Name} (ID: {game.GameId})");
+                        if (game.Platforms != null)
+                        {
+                            Logger.Info($"  Platforms: {string.Join(", ", game.Platforms)}");
+                        }
+                    }
+                    
+                    // Ask if user wants to add these games to Playnite
+                    var addResult = Playnite.Dialogs.ShowMessage(
+                        $"Found {games.Count} ISO games in {sourcePath}.\n\n" +
+                        "Would you like to add these games to Playnite?",
+                        "Add ISO Games", System.Windows.MessageBoxButton.YesNo);
+                        
+                    if (addResult == System.Windows.MessageBoxResult.Yes)
+                    {
+                        Logger.Info("Adding games to Playnite database");
+                        
+                        // Add games to Playnite
+                        using (Playnite.Database.BufferedUpdate())
+                        {
+                            foreach (var gameMetadata in games)
+                            {
+                                try
+                                {
+                                    // Convert GameMetadata to Game
+                                    var game = PlayniteApi.Database.ImportGame(gameMetadata);
+                                    
+                                    // Set the PluginId to match our plugin
+                                    game.PluginId = Id;
+                                    // Update the game in the database
+                                    PlayniteApi.Database.Games.Update(game);
+                                    
+                                    Logger.Info($"Added game: {game.Name} (ID: {game.GameId})");
+                                }
+                                catch (Exception ex)
+                                {
+                                    Logger.Error($"Error adding game {gameMetadata.Name}: {ex.Message}");
+                                }
+                            }
+                        }
+                        
+                        Playnite.Notifications.Add(
+                            "EmuLibrary-ISO-GamesAdded", 
+                            $"Added {games.Count} ISO games to Playnite.",
+                            NotificationType.Info);
+                    }
+                    else
+                    {
+                        Logger.Info("User chose not to add games to Playnite");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error in direct ISO scan: {ex.Message}");
+                Playnite.Dialogs.ShowErrorMessage($"Error in ISO scanner: {ex.Message}", "ISO Scanner Error");
+            }
+        }
+        
+        // Diagnostic function for ISO scanner
+        private void RunISOScannerDiagnostics()
+        {
+            try
+            {
+                // Show diagnostic options
+                var options = new List<string>
+                {
+                    "Test direct file search",
+                    "Test scanner game creation",
+                    "Check existing games in database"
+                };
+                
+                // Most basic approach - use a message box with buttons instead of a chooser
+                var dialogResult = Playnite.Dialogs.ShowMessage(
+                    "Select a diagnostic option:\n\n1. Test direct file search\n2. Test scanner game creation\n3. Check existing games in database", 
+                    "ISO Scanner Diagnostics",
+                    System.Windows.MessageBoxButton.YesNoCancel);
+                
+                // Convert dialog result to index
+                int selectedIndex = -1;
+                if (dialogResult == System.Windows.MessageBoxResult.Yes)
+                    selectedIndex = 0;
+                else if (dialogResult == System.Windows.MessageBoxResult.No)
+                    selectedIndex = 1;
+                else if (dialogResult == System.Windows.MessageBoxResult.Cancel)
+                    selectedIndex = 2;
+                    
+                if (selectedIndex < 0)
+                {
+                    Logger.Info("ISO diagnostics canceled - no option selected");
+                    return;
+                }
+                
+                if (selectedIndex == 0 || selectedIndex == 1) // File search or game creation
+                {
+                    // Select directory to test
+                    var sourcePath = Playnite.Dialogs.SelectFolder();
+                    if (string.IsNullOrEmpty(sourcePath))
+                    {
+                        Logger.Info("ISO diagnostics canceled - no folder selected");
+                        return;
+                    }
+                    
+                    // Create a scanner directly since we have access to the plugin
+                    var isoScanner = new RomTypes.ISOInstaller.ISOInstallerScanner(this);
+                    
+                    // Create test helper to run diagnostics
+                    var tester = new RomTypes.ISOInstaller.ISOScannerTest(PlayniteApi, Logger);
+                    
+                    if (selectedIndex == 0) // Direct file search
+                    {
+                        tester.TestDirectFileSearch(sourcePath);
+                    }
+                    else // Game creation
+                    {
+                        tester.TestScannerGameCreation(sourcePath);
+                    }
+                    
+                    // Notify completion
+                    Playnite.Notifications.Add(
+                        "EmuLibrary-ISO-DiagnosticsComplete", 
+                        "ISO Scanner diagnostics completed. Check the log file for results.",
+                        NotificationType.Info);
+                }
+                else if (selectedIndex == 2) // Check existing games
+                {
+                    // Find games from this plugin
+                    var ourGames = PlayniteApi.Database.Games
+                        .Where(g => g.PluginId == Id)
+                        .ToList();
+                        
+                    Logger.Info($"Found {ourGames.Count} games from EmuLibrary plugin");
+                    
+                    // Count by rom type
+                    var romTypeCounts = new Dictionary<string, int>();
+                    var loadErrors = 0;
+                    
+                    foreach (var game in ourGames)
+                    {
+                        try
+                        {
+                            var gameInfo = game.GetELGameInfo();
+                            var romType = gameInfo.RomType.ToString();
+                            
+                            if (!romTypeCounts.ContainsKey(romType))
+                                romTypeCounts[romType] = 0;
+                                
+                            romTypeCounts[romType]++;
+                        }
+                        catch
+                        {
+                            loadErrors++;
+                        }
+                    }
+                    
+                    // Build report
+                    var sb = new System.Text.StringBuilder();
+                    sb.AppendLine($"Games in database: {ourGames.Count}");
+                    sb.AppendLine();
+                    sb.AppendLine("Games by ROM type:");
+                    
+                    foreach (var kvp in romTypeCounts)
+                    {
+                        sb.AppendLine($"- {kvp.Key}: {kvp.Value}");
+                    }
+                    
+                    if (loadErrors > 0)
+                    {
+                        sb.AppendLine();
+                        sb.AppendLine($"Failed to load {loadErrors} games");
+                    }
+                    
+                    // Check specifically for ISO installer games
+                    var isoGames = ourGames.Where(g => 
+                        g.GameId != null && 
+                        g.GameId.Contains("ISOInstaller")).ToList();
+                        
+                    sb.AppendLine();
+                    sb.AppendLine($"ISO Installer games: {isoGames.Count}");
+                    
+                    if (isoGames.Count > 0)
+                    {
+                        sb.AppendLine();
+                        sb.AppendLine("Sample ISO games:");
+                        
+                        foreach (var game in isoGames.Take(5))
+                        {
+                            sb.AppendLine($"- {game.Name}");
+                            sb.AppendLine($"  ID: {game.Id}");
+                            sb.AppendLine($"  GameId: {game.GameId}");
+                            sb.AppendLine($"  Installed: {game.IsInstalled}");
+                            
+                            if (game.Platforms != null)
+                            {
+                                sb.AppendLine($"  Platforms: {string.Join(", ", game.Platforms.Select(p => p.Name))}");
+                            }
+                            
+                            sb.AppendLine();
+                        }
+                    }
+                    
+                    // Show report
+                    Playnite.Dialogs.ShowMessage(sb.ToString(), "EmuLibrary Game Report");
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error in ISO scanner diagnostics: {ex.Message}");
+                Playnite.Dialogs.ShowErrorMessage($"Error in ISO scanner diagnostics: {ex.Message}", "Diagnostic Error");
+            }
+        }
+        
         private void RemoveSuperUninstalledGames(bool promptUser, CancellationToken ct)
         {
             try
