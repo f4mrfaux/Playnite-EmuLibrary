@@ -23,6 +23,14 @@ EmuLibrary is a library extension for Playnite, an open source video game librar
   - System.IO.Abstractions 2.1.0.227
   - ZstdSharp.Port 0.6.5
 
+## CRITICAL DEPENDENCY MANAGEMENT
+- NEVER CHANGE OR UPDATE ANY DEPENDENCY VERSIONS - they must match exactly what's shown above
+- NEVER ADD NEW NUGET PACKAGES OR REFERENCES even if you encounter compilation errors
+- DO NOT USE SYSTEM.NET.HTTP or other modern .NET namespaces that aren't compatible with .NET Framework 4.6.2
+- AVOID USING ASYNC/AWAIT features or other C# language features not supported in .NET Framework 4.6.2
+- Work around missing features by implementing alternative solutions that work with the existing dependencies
+- If new functionality requires libraries not available, implement the functionality using basic .NET Framework classes
+
 ## Debugging
 - Log files for troubleshooting (relative to Playnite data directory):
   - playnite.log
