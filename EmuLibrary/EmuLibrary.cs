@@ -116,7 +116,8 @@ private readonly Dictionary<RomType, RomTypeScanner> _scanners = new Dictionary<
                     continue;
                 }
 
-                _scanners.Add(rt, scanner as RomTypeScanner);
+                // This line is redundant with the earlier _scanners.Add (around line 99)
+                // _scanners.Add(rt, scanner as RomTypeScanner);
             }
         }
 

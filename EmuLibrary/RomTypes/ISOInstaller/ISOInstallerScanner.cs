@@ -79,8 +79,8 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                 var folderNames = new HashSet<string>();
                 try 
                 {
-                    var dirInfo = new DirectoryInfo(srcPath);
-                    foreach (var dir in dirInfo.GetDirectories("*", SearchOption.AllDirectories))
+                    var sourceDirInfo = new DirectoryInfo(srcPath);
+                    foreach (var dir in sourceDirInfo.GetDirectories("*", SearchOption.AllDirectories))
                     {
                         var folderName = dir.Name;
                         if (!string.IsNullOrWhiteSpace(folderName))
@@ -96,8 +96,8 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                 }
 
                 // Group folders by directory structure first (parent-child relationships)
-                var dirInfo = new DirectoryInfo(srcPath);
-                var rootFolders = dirInfo.GetDirectories("*", SearchOption.TopDirectoryOnly).ToList();
+                var rootPathDirInfo = new DirectoryInfo(srcPath);
+                var rootFolders = rootPathDirInfo.GetDirectories("*", SearchOption.TopDirectoryOnly).ToList();
                 
                 // Process root folders first (game folders)
                 foreach (var gameFolder in rootFolders)
@@ -185,7 +185,8 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                                 var parentFolder = Path.GetFileName(parentFolderPath);
                                 
                                 // Use cached normalized name if available
-                                string gameName;
+                                // Initialize game name with parent folder default value
+                                string gameName = StringExtensions.NormalizeGameName(parentFolder);
                                 
                                 // First try SteamGridDB matching if enabled
                                 bool usedSteamGridDb = false;
@@ -218,10 +219,14 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                                         gameName = matchedGameName;
                                         _emuLibrary.Logger.Debug($"Using fuzzy matched game name for {parentFolder}: {gameName}");
                                     }
-                                    else if (!normalizedNameCache.TryGetValue(parentFolder, out gameName))
+                                    else if (!normalizedNameCache.TryGetValue(parentFolder, out string cachedName))
                                     {
-                                        gameName = StringExtensions.NormalizeGameName(parentFolder);
+                                        // We already initialized gameName above, just add to cache
                                         normalizedNameCache[parentFolder] = gameName;
+                                    }
+                                    else
+                                    {
+                                        gameName = cachedName; 
                                     }
                                 }
                                 
@@ -283,10 +288,16 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                                 string contentDescription = null;
                                 string parentGameId = null;
                                 
+                                // Define update detection variables first
+                                var contentType = PCInstaller.ContentType.BaseGame;
+                                string version = null;
+                                string contentDescription = null;
+                                string parentGameId = null;
+                                
                                 // First, check if this is an update/DLC folder inside a game folder
                                 // In this case, parentFolder is the update folder name and grandparentFolder is the game name
-                                var dirInfo = new DirectoryInfo(parentFolderPath);
-                                var fileDir = dirInfo.FullName;
+                                var folderDirInfo = new DirectoryInfo(parentFolderPath);
+                                var fileDir = folderDirInfo.FullName;
                                 var fileInRootFolder = false;
                                 
                                 // Define a list of valid update file extensions 
@@ -296,7 +307,7 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                                 updateFileExtensions.AddRange(new[] { "exe", "msi", "bin" }); // Common executable/installer formats
                                 
                                 // Check if this file is directly in the game's root folder or in a subfolder
-                                var rootGameFolder = dirInfo.Parent; // This would be the game folder
+                                var rootGameFolder = folderDirInfo.Parent; // This would be the game folder
                                 
                                 if (rootGameFolder != null && rootGameFolder.FullName.StartsWith(srcPath))
                                 {
@@ -328,13 +339,13 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                                         _emuLibrary.Logger.Debug($"Found {updateFiles.Count} potential update files in subfolders");
                                         
                                         // This directory has ISO files, so we're looking at the base game
-                                        if (dirInfo.FullName == rootGameFolder.FullName)
+                                        if (folderDirInfo.FullName == rootGameFolder.FullName)
                                         {
                                             _emuLibrary.Logger.Debug($"File {file.Name} is in game root folder {rootGameFolder.Name}");
                                             contentType = PCInstaller.ContentType.BaseGame;
                                         }
                                         // We're in a subfolder, so this is likely an update
-                                        else if (dirInfo.Parent != null && dirInfo.Parent.FullName == rootGameFolder.FullName)
+                                        else if (folderDirInfo.Parent != null && folderDirInfo.Parent.FullName == rootGameFolder.FullName)
                                         {
                                             // This is an update folder inside a game folder - your structure
                                             // For this file to be an update, it should be either an ISO or an EXE
