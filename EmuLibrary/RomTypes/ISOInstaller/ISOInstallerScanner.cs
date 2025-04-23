@@ -488,7 +488,7 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                                         Name = game.Name,
                                         IsInstalled = true,
                                         GameId = gameInfo.AsGameId(),
-                                        // PluginId will be set on Game object after import
+                                        // PluginId will be set by Playnite on Game object
                                         InstallDirectory = gameInfo.InstallDirectory,
                                         Platforms = new HashSet<MetadataProperty>() { new MetadataNameProperty(mapping.Platform?.Name ?? "PC") },
                                         GameActions = new List<GameAction>() 
@@ -601,235 +601,235 @@ namespace EmuLibrary.RomTypes.ISOInstaller
             }
         }
     }
-}
 
-// Helper class implementing IEmuLibrary for testing
-internal class TestEmuLibrary : EmuLibrary.IEmuLibrary
-{
-    public ILogger Logger { get; }
-    public IPlayniteAPI Playnite { get; }
-    public EmuLibrary.Settings.Settings Settings { get; }
-
-    public TestEmuLibrary(IPlayniteAPI playniteAPI, ILogger logger)
+    // Helper class implementing IEmuLibrary for testing
+    internal class TestEmuLibrary : EmuLibrary.IEmuLibrary
     {
-        Playnite = playniteAPI;
-        Logger = logger;
-        Settings = null; // Not needed for testing
-    }
+        public ILogger Logger { get; }
+        public IPlayniteAPI Playnite { get; }
+        public EmuLibrary.Settings.Settings Settings { get; }
 
-    public string GetPluginUserDataPath()
-    {
-        return Playnite.Paths.ExtensionsDataPath;
-    }
-
-    public EmuLibrary.RomTypes.RomTypeScanner GetScanner(EmuLibrary.RomTypes.RomType romType)
-    {
-        return null; // Not needed for testing
-    }
-}
-
-// Helper class for ISO scanner diagnostics and testing
-public class ISOScannerTest
-{
-    private readonly IPlayniteAPI _playniteAPI;
-    private readonly ILogger _logger;
-    private readonly List<string> discExtensions = new List<string> { 
-        "iso", "bin", "img", "cue", "nrg", "mds", "mdf",
-        "ISO", "BIN", "IMG", "CUE", "NRG", "MDS", "MDF" 
-    };
-
-    public ISOScannerTest(IPlayniteAPI playniteAPI, ILogger logger)
-    {
-        _playniteAPI = playniteAPI;
-        _logger = logger;
-    }
-
-    public void TestDirectFileSearch(string directoryPath)
-    {
-        _logger.Info($"[TEST] Starting direct file test in: {directoryPath}");
-        
-        // Test 1: Direct file search with GetFiles
-        try 
+        public TestEmuLibrary(IPlayniteAPI playniteAPI, ILogger logger)
         {
-            var allFiles = Directory.GetFiles(directoryPath, "*.*", SearchOption.AllDirectories);
-            _logger.Info($"[TEST] Found {allFiles.Length} total files using Directory.GetFiles");
+            Playnite = playniteAPI;
+            Logger = logger;
+            Settings = null; // Not needed for testing
+        }
+
+        public string GetPluginUserDataPath()
+        {
+            return Playnite.Paths.ExtensionsDataPath;
+        }
+
+        public EmuLibrary.RomTypes.RomTypeScanner GetScanner(EmuLibrary.RomTypes.RomType romType)
+        {
+            return null; // Not needed for testing
+        }
+    }
+
+    // Helper class for ISO scanner diagnostics and testing
+    public class ISOScannerTest
+    {
+        private readonly IPlayniteAPI _playniteAPI;
+        private readonly ILogger _logger;
+        private readonly List<string> discExtensions = new List<string> { 
+            "iso", "bin", "img", "cue", "nrg", "mds", "mdf",
+            "ISO", "BIN", "IMG", "CUE", "NRG", "MDS", "MDF" 
+        };
+
+        public ISOScannerTest(IPlayniteAPI playniteAPI, ILogger logger)
+        {
+            _playniteAPI = playniteAPI;
+            _logger = logger;
+        }
+
+        public void TestDirectFileSearch(string directoryPath)
+        {
+            _logger.Info($"[TEST] Starting direct file test in: {directoryPath}");
             
-            var discFiles = allFiles
-                .Where(f => discExtensions.Contains(Path.GetExtension(f).TrimStart('.').ToLowerInvariant()))
-                .ToList();
+            // Test 1: Direct file search with GetFiles
+            try 
+            {
+                var allFiles = Directory.GetFiles(directoryPath, "*.*", SearchOption.AllDirectories);
+                _logger.Info($"[TEST] Found {allFiles.Length} total files using Directory.GetFiles");
                 
-            _logger.Info($"[TEST] Found {discFiles.Count} disc image files using direct extension check");
-            
-            if (discFiles.Count > 0)
-            {
-                _logger.Info($"[TEST] First few disc files: {string.Join(", ", discFiles.Take(5).Select(Path.GetFileName))}");
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.Error($"[TEST] Error in direct file search: {ex.Message}");
-        }
-        
-        // Test 2: Pattern-based search
-        try
-        {
-            var isoFiles = new List<string>();
-            
-            // Try different patterns - more likely to succeed
-            foreach (var ext in new[] { "iso", "bin", "img", "cue" })
-            {
-                try
-                {
-                    var pattern = $"*.{ext}";
-                    var files = Directory.GetFiles(directoryPath, pattern, SearchOption.AllDirectories);
-                    _logger.Info($"[TEST] Found {files.Length} files with pattern: {pattern}");
-                    isoFiles.AddRange(files);
+                var discFiles = allFiles
+                    .Where(f => discExtensions.Contains(Path.GetExtension(f).TrimStart('.').ToLowerInvariant()))
+                    .ToList();
                     
-                    // Also try uppercase version
-                    pattern = $"*.{ext.ToUpper()}";
-                    files = Directory.GetFiles(directoryPath, pattern, SearchOption.AllDirectories);
-                    _logger.Info($"[TEST] Found {files.Length} files with pattern: {pattern}");
-                    isoFiles.AddRange(files);
-                }
-                catch (Exception ex)
+                _logger.Info($"[TEST] Found {discFiles.Count} disc image files using direct extension check");
+                
+                if (discFiles.Count > 0)
                 {
-                    _logger.Error($"[TEST] Error searching for pattern *.{ext}: {ex.Message}");
+                    _logger.Info($"[TEST] First few disc files: {string.Join(", ", discFiles.Take(5).Select(Path.GetFileName))}");
                 }
             }
-            
-            // Remove duplicates
-            isoFiles = isoFiles.Distinct().ToList();
-            _logger.Info($"[TEST] Total unique disc image files found: {isoFiles.Count}");
-            
-            if (isoFiles.Count > 0)
+            catch (Exception ex)
             {
-                _logger.Info($"[TEST] Examples: {string.Join(", ", isoFiles.Take(5).Select(Path.GetFileName))}");
-                
-                // Log the first few directories where files were found
-                var uniqueDirs = isoFiles.Select(Path.GetDirectoryName).Distinct().Take(3).ToList();
-                _logger.Info($"[TEST] Files found in directories: {string.Join(", ", uniqueDirs)}");
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.Error($"[TEST] Error in pattern-based search: {ex.Message}");
-        }
-        
-        // Test 3: Directory structure analysis
-        try
-        {
-            _logger.Info("[TEST] Analyzing directory structure:");
-            var rootDirs = Directory.GetDirectories(directoryPath, "*", SearchOption.TopDirectoryOnly);
-            _logger.Info($"[TEST] Root has {rootDirs.Length} subdirectories");
-            
-            foreach (var dir in rootDirs.Take(5))
-            {
-                var name = Path.GetFileName(dir);
-                var fileCount = 0;
-                try
-                {
-                    fileCount = Directory.GetFiles(dir, "*.*", SearchOption.AllDirectories).Length;
-                }
-                catch
-                {
-                    fileCount = -1; // Error counting
-                }
-                
-                _logger.Info($"[TEST] Directory '{name}' has approximately {fileCount} files");
-                
-                try
-                {
-                    // Check first level for ISO files directly
-                    var dirIsoFiles = Directory.GetFiles(dir, "*.iso", SearchOption.TopDirectoryOnly);
-                    _logger.Info($"[TEST] Directory '{name}' has {dirIsoFiles.Length} ISO files at top level");
-                }
-                catch
-                {
-                    // Ignore errors
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.Error($"[TEST] Error analyzing directory structure: {ex.Message}");
-        }
-        
-        _logger.Info("[TEST] Direct file search test completed");
-    }
-    
-    public void TestScannerGameCreation(string directoryPath)
-    {
-        _logger.Info($"[TEST] Starting scanner game creation test in: {directoryPath}");
-        
-        try
-        {
-            // Create a test mapping
-            var mapping = new EmuLibrary.Settings.EmulatorMapping()
-            {
-                MappingId = Guid.NewGuid(),
-                RomType = EmuLibrary.RomTypes.RomType.ISOInstaller,
-                SourcePath = directoryPath,
-                Enabled = true
-            };
-            
-            // Find PC platform
-            var pcPlatform = _playniteAPI.Database.Platforms
-                .FirstOrDefault(p => p.Name == "PC");
-                
-            // Set platform if found
-            if (pcPlatform != null)
-            {
-                mapping.PlatformId = pcPlatform.SpecificationId ?? pcPlatform.Id.ToString();
-                _logger.Info($"[TEST] Set platform to PC (ID: {mapping.PlatformId})");
+                _logger.Error($"[TEST] Error in direct file search: {ex.Message}");
             }
             
-            // Create an instance of IEmuLibrary for the scanner to use
-            EmuLibrary.IEmuLibrary emuLib = new TestEmuLibrary(_playniteAPI, _logger);
-            var scanner = new EmuLibrary.RomTypes.ISOInstaller.ISOInstallerScanner(emuLib);
-            
-            // Get games using the scanner
-            var games = scanner.GetGames(mapping, new LibraryGetGamesArgs()).ToList();
-            
-            _logger.Info($"[TEST] Scanner GetGames returned {games.Count()} games");
-            
-            if (games.Count() > 0)
+            // Test 2: Pattern-based search
+            try
             {
-                _logger.Info("[TEST] Testing game creation and database import");
+                var isoFiles = new List<string>();
                 
-                foreach (var gameMetadata in games.Take(5))
+                // Try different patterns - more likely to succeed
+                foreach (var ext in new[] { "iso", "bin", "img", "cue" })
                 {
-                    _logger.Info($"[TEST] Processing game '{gameMetadata.Name}'");
-                    _logger.Info($"[TEST] GameId: {gameMetadata.GameId}");
-                    _logger.Info($"[TEST] Platform count: {gameMetadata.Platforms?.Count ?? 0}");
-                    
-                    if (gameMetadata.Platforms != null)
-                    {
-                        _logger.Info($"[TEST] Platforms: {string.Join(", ", gameMetadata.Platforms)}");
-                    }
-                    
-                    if (gameMetadata.Tags != null)
-                    {
-                        _logger.Info($"[TEST] Tags: {string.Join(", ", gameMetadata.Tags)}");
-                    }
-                    
-                    // Don't actually import to database - just test conversion
                     try
                     {
-                        // Note: PluginId would be set by Playnite when actually importing
-                        _logger.Info("[TEST] Game metadata looks good, would be imported with proper PluginId");
+                        var pattern = $"*.{ext}";
+                        var files = Directory.GetFiles(directoryPath, pattern, SearchOption.AllDirectories);
+                        _logger.Info($"[TEST] Found {files.Length} files with pattern: {pattern}");
+                        isoFiles.AddRange(files);
+                        
+                        // Also try uppercase version
+                        pattern = $"*.{ext.ToUpper()}";
+                        files = Directory.GetFiles(directoryPath, pattern, SearchOption.AllDirectories);
+                        _logger.Info($"[TEST] Found {files.Length} files with pattern: {pattern}");
+                        isoFiles.AddRange(files);
                     }
                     catch (Exception ex)
                     {
-                        _logger.Error($"[TEST] Error importing game '{gameMetadata.Name}': {ex.Message}");
+                        _logger.Error($"[TEST] Error searching for pattern *.{ext}: {ex.Message}");
+                    }
+                }
+                
+                // Remove duplicates
+                isoFiles = isoFiles.Distinct().ToList();
+                _logger.Info($"[TEST] Total unique disc image files found: {isoFiles.Count}");
+                
+                if (isoFiles.Count > 0)
+                {
+                    _logger.Info($"[TEST] Examples: {string.Join(", ", isoFiles.Take(5).Select(Path.GetFileName))}");
+                    
+                    // Log the first few directories where files were found
+                    var uniqueDirs = isoFiles.Select(Path.GetDirectoryName).Distinct().Take(3).ToList();
+                    _logger.Info($"[TEST] Files found in directories: {string.Join(", ", uniqueDirs)}");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.Error($"[TEST] Error in pattern-based search: {ex.Message}");
+            }
+            
+            // Test 3: Directory structure analysis
+            try
+            {
+                _logger.Info("[TEST] Analyzing directory structure:");
+                var rootDirs = Directory.GetDirectories(directoryPath, "*", SearchOption.TopDirectoryOnly);
+                _logger.Info($"[TEST] Root has {rootDirs.Length} subdirectories");
+                
+                foreach (var dir in rootDirs.Take(5))
+                {
+                    var name = Path.GetFileName(dir);
+                    var fileCount = 0;
+                    try
+                    {
+                        fileCount = Directory.GetFiles(dir, "*.*", SearchOption.AllDirectories).Length;
+                    }
+                    catch
+                    {
+                        fileCount = -1; // Error counting
+                    }
+                    
+                    _logger.Info($"[TEST] Directory '{name}' has approximately {fileCount} files");
+                    
+                    try
+                    {
+                        // Check first level for ISO files directly
+                        var dirIsoFiles = Directory.GetFiles(dir, "*.iso", SearchOption.TopDirectoryOnly);
+                        _logger.Info($"[TEST] Directory '{name}' has {dirIsoFiles.Length} ISO files at top level");
+                    }
+                    catch
+                    {
+                        // Ignore errors
                     }
                 }
             }
-        }
-        catch (Exception ex)
-        {
-            _logger.Error($"[TEST] Error in scanner game creation test: {ex.Message}");
+            catch (Exception ex)
+            {
+                _logger.Error($"[TEST] Error analyzing directory structure: {ex.Message}");
+            }
+            
+            _logger.Info("[TEST] Direct file search test completed");
         }
         
-        _logger.Info("[TEST] Scanner game creation test completed");
+        public void TestScannerGameCreation(string directoryPath)
+        {
+            _logger.Info($"[TEST] Starting scanner game creation test in: {directoryPath}");
+            
+            try
+            {
+                // Create a test mapping
+                var mapping = new EmuLibrary.Settings.EmulatorMapping()
+                {
+                    MappingId = Guid.NewGuid(),
+                    RomType = EmuLibrary.RomTypes.RomType.ISOInstaller,
+                    SourcePath = directoryPath,
+                    Enabled = true
+                };
+                
+                // Find PC platform
+                var pcPlatform = _playniteAPI.Database.Platforms
+                    .FirstOrDefault(p => p.Name == "PC");
+                    
+                // Set platform if found
+                if (pcPlatform != null)
+                {
+                    mapping.PlatformId = pcPlatform.SpecificationId ?? pcPlatform.Id.ToString();
+                    _logger.Info($"[TEST] Set platform to PC (ID: {mapping.PlatformId})");
+                }
+                
+                // Create an instance of IEmuLibrary for the scanner to use
+                EmuLibrary.IEmuLibrary emuLib = new TestEmuLibrary(_playniteAPI, _logger);
+                var scanner = new EmuLibrary.RomTypes.ISOInstaller.ISOInstallerScanner(emuLib);
+                
+                // Get games using the scanner
+                var games = scanner.GetGames(mapping, new LibraryGetGamesArgs()).ToList();
+                
+                _logger.Info($"[TEST] Scanner GetGames returned {games.Count()} games");
+                
+                if (games.Count() > 0)
+                {
+                    _logger.Info("[TEST] Testing game creation and database import");
+                    
+                    foreach (var gameMetadata in games.Take(5))
+                    {
+                        _logger.Info($"[TEST] Processing game '{gameMetadata.Name}'");
+                        _logger.Info($"[TEST] GameId: {gameMetadata.GameId}");
+                        _logger.Info($"[TEST] Platform count: {gameMetadata.Platforms?.Count ?? 0}");
+                        
+                        if (gameMetadata.Platforms != null)
+                        {
+                            _logger.Info($"[TEST] Platforms: {string.Join(", ", gameMetadata.Platforms)}");
+                        }
+                        
+                        if (gameMetadata.Tags != null)
+                        {
+                            _logger.Info($"[TEST] Tags: {string.Join(", ", gameMetadata.Tags)}");
+                        }
+                        
+                        // Don't actually import to database - just test conversion
+                        try
+                        {
+                            // Note: PluginId would be set by Playnite when actually importing
+                            _logger.Info("[TEST] Game metadata looks good, would be imported with proper PluginId");
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.Error($"[TEST] Error importing game '{gameMetadata.Name}': {ex.Message}");
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.Error($"[TEST] Error in scanner game creation test: {ex.Message}");
+            }
+            
+            _logger.Info("[TEST] Scanner game creation test completed");
+        }
     }
 }
