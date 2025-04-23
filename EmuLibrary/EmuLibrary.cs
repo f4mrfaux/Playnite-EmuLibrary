@@ -177,6 +177,13 @@ private readonly Dictionary<RomType, RomTypeScanner> _scanners = new Dictionary<
                 if (args.CancelToken.IsCancellationRequested)
                     yield break;
 
+                // Skip ArchiveInstaller mappings - functionality has been removed
+                if (mapping.RomType == RomType.ArchiveInstaller)
+                {
+                    Logger.Warn($"ArchiveInstaller functionality has been removed. Skipping mapping for {mapping.SourcePath}.");
+                    continue;
+                }
+                
                 // PCInstaller and ISOInstaller don't require an emulator
                 if (mapping.Emulator == null && 
                     mapping.RomType != RomType.PCInstaller && 

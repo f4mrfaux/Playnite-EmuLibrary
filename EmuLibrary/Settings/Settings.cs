@@ -181,9 +181,16 @@ namespace EmuLibrary.Settings
                     mappingErrors.Add($"{m.MappingId}: Source path doesn't exist ({m.SourcePath}).");
                 }
 
-                // For PCInstaller, ISOInstaller, and ArchiveInstaller types, the destination path is optional initially 
+                // Skip validation for ArchiveInstaller since it's being deprecated
+                if (m.RomType == RomType.ArchiveInstaller)
+                {
+                    mappingErrors.Add($"{m.MappingId}: ArchiveInstaller functionality has been removed. Please use ISOInstaller with manually extracted ISOs instead.");
+                    continue;
+                }
+                
+                // For PCInstaller and ISOInstaller types, the destination path is optional initially 
                 // since it will be set during installation
-                if (m.RomType != RomType.PCInstaller && m.RomType != RomType.ISOInstaller && m.RomType != RomType.ArchiveInstaller)
+                if (m.RomType != RomType.PCInstaller && m.RomType != RomType.ISOInstaller)
                 {
                     if (string.IsNullOrEmpty(m.DestinationPathResolved))
                     {

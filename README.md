@@ -12,9 +12,9 @@ Disclaimer: This extension was originally created for personal usage, and that i
 
 To set it up, you create mappings to combine one of each of the following:
 
-* Emulator - either a built-in emulator or a custom emulator manually added (optional for PCInstaller, ISOInstaller, and ArchiveInstaller types)
-* Emulator Profile - either a built-in emulator profile or a custom one, out of those supported by the chosen emulator (optional for PCInstaller, ISOInstaller, and ArchiveInstaller types)
-* Platform - the ROM platform/console, out of those that the emulator profile supports (PCInstaller, ISOInstaller, and ArchiveInstaller types show PC platforms regardless of emulator selection, and can work without a platform selected)
+* Emulator - either a built-in emulator or a custom emulator manually added (optional for PCInstaller and ISOInstaller types)
+* Emulator Profile - either a built-in emulator profile or a custom one, out of those supported by the chosen emulator (optional for PCInstaller and ISOInstaller types)
+* Platform - the ROM platform/console, out of those that the emulator profile supports (PCInstaller and ISOInstaller types show PC platforms regardless of emulator selection, and can work without a platform selected)
 * RomType - See [Rom Types](#rom-types) below
 
 ## Paths
@@ -96,78 +96,6 @@ PCInstaller provides comprehensive support for additional content types:
   - Maintains consistent naming conventions across different content types
   - Makes related content easily identifiable in your library
 
-### ArchiveInstaller
-
-The ArchiveInstaller type extends the functionality of ISOInstaller by handling archives (ZIP, RAR, 7z) that contain disc images with installers. This type is designed for PC game installations from archived disc images, which is common for large collections. This type allows you to:
-
-* Scan folders containing archives (.zip, .rar, .7z) that have ISOs or other disc images inside
-* Handle multi-part archives (especially split RAR files)
-* Extract the archives to temporary storage
-* Mount the contained disc images
-* Install games to a specified location
-* Manage archived disc-based PC games alongside your other games
-* Handle DLC, updates, and expansions from archived disc images
-
-Just like PCInstaller and ISOInstaller, the ArchiveInstaller type fully supports content type detection and relationship management for DLC, updates, and expansions - all with the added benefit of archive handling.
-
-#### Requirements
-* 7-Zip executable must be installed and available in your PATH
-* For multi-part archives (like rar, r00, r01, etc.), all parts need to be in the same directory
-* Password-protected archives are supported (you'll need to provide the password in the game properties)
-
-#### Features
-* Smart multi-disc detection for game collections
-* Automatic handling of multi-part archives
-* Parallel extraction for large archives
-* Automatic retry mechanism for corrupted archives
-* Detailed progress reporting during extraction
-* Intelligent ISO selection for multi-disc games
-* Support for nested archive structures
-* Proper cleanup of temporary files
-
-#### Installation Workflow
-The ArchiveInstaller implements a multi-step installation workflow:
-1. Import archive to local temp storage
-2. Extract archive locally using 7-Zip
-3. Find and select ISO files from extracted content
-4. Mount ISO file
-5. Run installer from mounted ISO
-6. Clean up temp files after installation
-
-All operations are performed on locally imported copies of files to ensure reliability, especially over network connections.
-
-#### Troubleshooting ArchiveInstaller
-
-**Common Issues and Solutions:**
-
-1. **7-Zip Not Found Error**
-   - Ensure 7-Zip is installed on your system
-   - Make sure the 7-Zip executable (7z.exe) is in your system PATH
-   - The extension searches in common installation locations, but may not find custom installations
-
-2. **Archive Extraction Fails**
-   - Check if the archive is password-protected (provide password in game properties)
-   - Verify the archive isn't corrupted by testing with 7-Zip directly
-   - For multi-part archives, ensure all parts are available in the same directory
-   - The extension will automatically retry extraction up to 3 times for potentially recoverable errors
-
-3. **No ISO Found After Extraction**
-   - Make sure the archive actually contains a supported disc image (.iso, .bin/.cue, etc.)
-   - Some archives may have complex directory structures - the extension scans all subdirectories
-   - Check if the archive uses an unusual or unsupported disc image format
-
-4. **ISO Mounting Fails**
-   - Requires administrator rights to mount disc images
-   - Ensures the extracted ISO isn't corrupted
-   - Windows may prevent mounting certain disc images due to security restrictions
-
-5. **Performance Considerations**
-   - Large archives (>500MB) will use parallel extraction if available
-   - Network imports can be slow - consider using the asset caching feature
-   - Extraction can be CPU and disk intensive - ensure adequate system resources
-
-For persistent issues, check the extension log files located in the Playnite data directory.
-
 ### Yuzu (Beta)
 
 The Yuzu type currently has a beta level quality of support. Some of it is still being reworked. As named, it is very hardcoded to Yuzu specifically, although Ryujinx support reusing most of the same logic will likely come in the future.
@@ -182,7 +110,7 @@ When a game is installed, the latest update and any DLC from the source will als
 
 * If the connection to the source folder's storage is unstable, Playnite may crash when when updating the library. This is unlikely to be able to be completely fixed until Playnite uses a newer .NET version (currently being targeted for Playnite 11). Some some mitigations are planned in the meantime, but are not yet implemented.
 * If the mapping is disabled or if EmuLibrary update is cancelled before the scan for the mapping completes, game installation for the mapping's games may result in an error message. This will be fixed in a later version of this addon.
-* For PCInstaller, ISOInstaller and ArchiveInstaller mappings, you must select an emulator even though these types don't technically require one. If you leave the emulator field empty, you'll see warnings like "Emulator 00000000-0000-0000-0000-000000000000 not found, skipping" and games won't be imported. Create a dummy emulator in Playnite called "EmuLib-PC" and use it for these mappings.
+* For PCInstaller and ISOInstaller mappings, you must select an emulator even though these types don't technically require one. If you leave the emulator field empty, you'll see warnings like "Emulator 00000000-0000-0000-0000-000000000000 not found, skipping" and games won't be imported. Create a dummy emulator in Playnite called "EmuLib-PC" and use it for these mappings.
 
 ## Usage Workflow
 
@@ -201,7 +129,7 @@ Here's a step-by-step workflow for adding a repository of PC game installers usi
    - Set "Source Path" to your game repository (e.g., "N:\games\GOG\")
    - Set "Destination Path" to where you want to install the games
    - Select a PC platform (Windows, PC, etc.) which should now be available - Optional for PCInstaller (defaults to "PC")
-   - IMPORTANT: For PCInstaller, ISOInstaller, and ArchiveInstaller types, you MUST select an emulator even though one isn't technically needed. Create a dummy emulator called "EmuLib-PC" in Playnite's emulator configuration (Library → Configure Emulators) and select it here. Leaving the emulator field empty will cause scanning issues.
+   - IMPORTANT: For PCInstaller and ISOInstaller types, you MUST select an emulator even though one isn't technically needed. Create a dummy emulator called "EmuLib-PC" in Playnite's emulator configuration (Library → Configure Emulators) and select it here. Leaving the emulator field empty will cause scanning issues.
 
 5. Click "Save" to save your mapping configuration.
 
@@ -215,9 +143,9 @@ Here's a step-by-step workflow for adding a repository of PC game installers usi
 
 This workflow allows you to maintain a central repository of game installers while only keeping installed games on your local machine.
 
-### Example: Adding a Repository of Archived ISO Games
+### Example: Adding a Repository of ISO Games
 
-Here's how to set up a mapping for archived ISO games:
+Here's how to set up a mapping for ISO-based games:
 
 1. Launch Playnite and go to the main menu.
 
@@ -226,36 +154,32 @@ Here's how to set up a mapping for archived ISO games:
 3. In the settings window, click "Add Mapping" to create a new mapping.
 
 4. Configure your mapping:
-   - Set "Rom Type" to "ArchiveInstaller"
-   - Set "Source Path" to your archive repository (e.g., "N:\games\ArchivedISOs\")
+   - Set "Rom Type" to "ISOInstaller"
+   - Set "Source Path" to your ISO repository (e.g., "N:\games\ISOs\")
    - Set "Destination Path" to where you want to install the games
    - Select a PC platform (Windows, PC, etc.) or leave empty (defaults to "PC")
    - Select a dummy emulator as explained above
 
 5. Click "Save" to save your mapping configuration.
 
-6. Make sure 7-Zip is installed and available in your PATH.
+6. In Playnite, update your library (F5) to scan for games.
 
-7. In Playnite, update your library (F5) to scan for games.
+7. Your ISO games will appear in your library as "uninstalled" games.
 
-8. Your archived games will appear in your library as "uninstalled" games.
-
-9. To install a game, right-click on it and select "Install". The system will:
-   - Import the archive to local temp storage
-   - Extract the archive using 7-Zip
-   - Find and mount the ISO file
+8. To install a game, right-click on it and select "Install". The system will:
+   - Mount the ISO file
    - Run the installer
    - Clean up temp files after installation
 
-10. After installation, the game will be marked as "installed" and you can launch it directly from Playnite.
+9. After installation, the game will be marked as "installed" and you can launch it directly from Playnite.
 
-This workflow is particularly useful for large collections of archived disc images, especially when stored on network storage.
+This workflow is particularly useful for collections of disc images stored on network storage.
 
-### Advanced Usage: Multi-disc Archive Processing
+### Advanced Usage: Multi-disc Game Processing
 
-For multi-disc games stored in archives:
+For multi-disc games:
 
-1. Organize your archives using standard disc naming conventions:
+1. Organize your disc images using standard disc naming conventions:
    - Use patterns like "Game Name (Disc 1).iso", "Game Name (Disc 2).iso"
    - Alternative formats like "Game Name - Disc 1.iso" are also recognized
    - Consistent naming helps the system identify related discs
@@ -265,17 +189,6 @@ For multi-disc games stored in archives:
    - The first disc will be selected by default for installation
    - You can manually select a different disc if needed
    - After installation, all discs will be accessible from the installed game
-
-3. For multi-part RAR archives:
-   - Ensure all parts (.rar, .r00, .r01, etc.) are in the same directory
-   - The scanner will automatically group them together
-   - The entire set will be imported together to local storage before processing
-   - Processing is done as a single unit for reliable extraction
-
-4. For nested archives (archives inside archives):
-   - The system will extract the outer archive first
-   - Then scan for and extract any inner archives
-   - Finally, it will locate ISO files in the fully extracted content
 
 This functionality is particularly useful for complex game collections that use advanced archiving techniques.
 
