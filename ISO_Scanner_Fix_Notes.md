@@ -1,6 +1,9 @@
 # ISO Scanner Fix Notes
 
-This document explains the changes made to fix the ISO scanner not finding any files properly.
+This document explains the changes made to fix issues with the ISO scanner. There were two distinct issues:
+
+1. First issue (already fixed): The scanner was not finding ISO files properly due to extension handling problems
+2. Second issue (fixed now): ISO games were found correctly but not appearing in the Playnite UI due to platform assignment issues
 
 ## Key Changes
 
@@ -167,3 +170,75 @@ If ISO scanning still doesn't work after these changes, check these potential is
 ## Notes on Case Sensitivity
 
 The scanner now explicitly handles both lowercase and uppercase extensions. Extensions are normalized to lowercase for comparison, but both variations are included in the lists for clarity and compatibility with different file systems.
+
+## Platform Assignment Fix (New)
+
+We've identified and fixed an issue where ISO games were being detected but not appearing in the Playnite UI. The problem was related to platform assignment.
+
+### Key Changes for Platform Assignment
+
+1. **Consistent Platform Handling in ISOInstallerScanner.cs**
+
+```csharp
+// EXACTLY like PCInstallerScanner - use the platform from the mapping
+string platformName = mapping.Platform?.Name;
+
+if (string.IsNullOrEmpty(platformName))
+{
+    platformName = "PC"; // Default fallback
+    _emuLibrary.Logger.Info($"[ISO SCANNER] No platform in mapping, using default: {platformName}");
+}
+else
+{
+    _emuLibrary.Logger.Info($"[ISO SCANNER] Using platform from mapping: {platformName}");
+}
+```
+
+2. **Enhanced Platform Lookup in EmuLibrary.cs**
+
+```csharp
+// Try to find PC platform
+var pcPlatform = Playnite.Database.Platforms
+    .FirstOrDefault(p => p.Name == "PC" || p.Name == "Windows" || p.Name == "PC (Windows)");
+    
+if (pcPlatform != null)
+{
+    // Always update to the latest platform ID
+    mapping.PlatformId = pcPlatform.SpecificationId ?? pcPlatform.Id.ToString();
+    // Don't set Platform property directly, PlatformId is used to resolve it
+    Logger.Info($"Set platform to {pcPlatform.Name} (ID: {mapping.PlatformId})");
+}
+```
+
+3. **Fixed Plugin ID Assignment**
+
+```csharp
+// Critical - ensure PluginId is set to match our plugin
+if (game.PluginId != Id)
+{
+    Logger.Warn($"PluginId was not correctly set during import. Setting it manually. Original: {game.PluginId}, Expected: {Id}");
+    game.PluginId = Id;
+    // Update the game in the database
+    PlayniteApi.Database.Games.Update(game);
+}
+```
+
+4. **Added Diagnostic Test Methods**
+
+- New menu item "Debug: Test direct ISO import..." allows testing the entire process
+- Creates a GameMetadata object with the proper properties
+- Imports directly into Playnite's database
+- Shows detailed error messages if something fails
+
+### Testing the Platform Assignment Fix
+
+1. **Use the Debug Menu**:
+   - From Playnite, go to the main menu → EmuLibrary → "Debug: Test direct ISO import..."
+   - Select an ISO file
+   - The game should be imported correctly and appear in your library
+
+2. **Check Regular Scan**:
+   - Configure an ISO Installer mapping in EmuLibrary settings
+   - Set the platform to "PC (Windows)"
+   - Run a library scan
+   - Games should appear in the library with the correct platform

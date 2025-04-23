@@ -284,7 +284,7 @@ private readonly Dictionary<RomType, RomTypeScanner> _scanners = new Dictionary<
                     
                     // Try to find PC platform
                     var pcPlatform = Playnite.Database.Platforms
-                        .FirstOrDefault(p => p.Name == "PC" || p.Name == "Windows");
+                        .FirstOrDefault(p => p.Name == "PC" || p.Name == "Windows" || p.Name == "PC (Windows)");
                         
                     if (pcPlatform != null)
                     {
@@ -302,6 +302,35 @@ private readonly Dictionary<RomType, RomTypeScanner> _scanners = new Dictionary<
                         {
                             mapping.PlatformId = "PC"; // Generic ID
                             Logger.Info("Set generic PC platform ID as fallback");
+                        }
+                    }
+                        
+                    if (pcPlatform != null)
+                    {
+                        // Always update to the latest platform ID
+                        mapping.PlatformId = pcPlatform.SpecificationId ?? pcPlatform.Id.ToString();
+                        // Don't set Platform property directly, PlatformId is used to resolve it
+                        Logger.Info($"Set platform to {pcPlatform.Name} (ID: {mapping.PlatformId})");
+                    }
+                    else
+                    {
+                        // Try to use ANY platform as a fallback
+                        var anyPlatform = Playnite.Database.Platforms.FirstOrDefault(p => p != null);
+                        if (anyPlatform != null)
+                        {
+                            mapping.PlatformId = anyPlatform.SpecificationId ?? anyPlatform.Id.ToString();
+                            Logger.Info($"Using fallback platform: {anyPlatform.Name} (ID: {mapping.PlatformId})");
+                        }
+                        else
+                        {
+                            Logger.Warn($"Could not find ANY platform in database. This will prevent games from appearing correctly.");
+                            
+                            // Create a fallback platform ID if needed
+                            if (string.IsNullOrEmpty(mapping.PlatformId))
+                            {
+                                mapping.PlatformId = "pc_windows"; // Try a common specification ID
+                                Logger.Info("Set generic PC platform ID as fallback");
+                            }
                         }
                     }
                 }
@@ -431,6 +460,14 @@ private readonly Dictionary<RomType, RomTypeScanner> _scanners = new Dictionary<
             {
                 Action = (arags) => RunISOScannerDiagnostics(),
                 Description = "Debug: Run ISO Scanner diagnostics...",
+                MenuSection = "EmuLibrary"
+            };
+            
+            // Add a test menu item for directly importing ISO games
+            yield return new MainMenuItem()
+            {
+                Action = (arags) => TestDirectImportISOGames(),
+                Description = "Debug: Test direct ISO import...",
                 MenuSection = "EmuLibrary"
             };
         }
@@ -857,6 +894,264 @@ private readonly Dictionary<RomType, RomTypeScanner> _scanners = new Dictionary<
             {
                 Logger.Error($"Error in ISO scanner diagnostics: {ex.Message}");
                 Playnite.Dialogs.ShowErrorMessage($"Error in ISO scanner diagnostics: {ex.Message}", "Diagnostic Error");
+            }
+        }
+        
+        // Test method for directly importing ISO games to diagnose UI visibility issues
+        private void TestDirectImportISOGames()
+        {
+            try
+            {
+                // Show dialog to select an ISO file directly
+                var isoFilePath = Playnite.Dialogs.SelectFile("ISO Files|*.iso;*.ISO;*.bin;*.BIN;*.cue;*.CUE;*.img;*.IMG;*.mdf;*.MDF;*.mds;*.MDS|All Files|*.*");
+                
+                if (string.IsNullOrEmpty(isoFilePath))
+                {
+                    Logger.Info("ISO import test canceled - no file selected");
+                    return;
+                }
+                
+                Logger.Info($"Creating test game from ISO file: {isoFilePath}");
+                
+                // Extract game name from directory or file name
+                var parentDir = Path.GetDirectoryName(isoFilePath);
+                var parentFolderName = Path.GetFileName(parentDir);
+                var fileName = Path.GetFileNameWithoutExtension(isoFilePath);
+                
+                var gameName = !string.IsNullOrEmpty(parentFolderName) ? 
+                    parentFolderName.Replace("-", " ") : 
+                    fileName.Replace("-", " ");
+                
+                // Ensure game name is cleaned up
+                gameName = gameName.Trim();
+                Logger.Info($"Using game name: {gameName}");
+                
+                // Find PC platform
+                var pcPlatform = Playnite.Database.Platforms
+                    .FirstOrDefault(p => p.Name == "PC" || p.Name == "Windows" || p.Name == "PC (Windows)");
+                    
+                if (pcPlatform == null)
+                {
+                    Logger.Error("Could not find PC platform in database. This will prevent the game from appearing correctly.");
+                    Playnite.Dialogs.ShowErrorMessage("Could not find PC platform in database. This will prevent the game from appearing correctly.", "Platform Missing");
+                    
+                    // Attempt to create the platform if it doesn't exist
+                    var result = Playnite.Dialogs.ShowMessage(
+                        "Would you like to create a PC platform in your database?",
+                        "Create Platform",
+                        System.Windows.MessageBoxButton.YesNo);
+                        
+                    if (result == System.Windows.MessageBoxResult.Yes)
+                    {
+                        pcPlatform = new Platform("PC (Windows)");
+                        pcPlatform.SpecificationId = "pc_windows";
+                        Playnite.Database.Platforms.Add(pcPlatform);
+                        Logger.Info($"Created new PC platform with ID: {pcPlatform.Id}");
+                    }
+                    else
+                    {
+                        return;
+                    }
+                }
+                
+                // Create a test mapping for the ISO file
+                var mapping = new EmulatorMapping()
+                {
+                    MappingId = Guid.NewGuid(),
+                    RomType = RomType.ISOInstaller,
+                    SourcePath = Path.GetDirectoryName(isoFilePath),
+                    Enabled = true,
+                    PlatformId = pcPlatform.SpecificationId ?? pcPlatform.Id.ToString()
+                };
+                
+                Logger.Info($"Created test mapping with platform ID: {mapping.PlatformId}");
+                
+                // Create game info object
+                var info = new ISOInstaller.ISOInstallerGameInfo()
+                {
+                    MappingId = mapping.MappingId,
+                    SourcePath = Path.GetFileName(isoFilePath),
+                    InstallerFullPath = isoFilePath,
+                    InstallDirectory = null
+                };
+                
+                // Create game metadata
+                var metadata = new GameMetadata
+                {
+                    Source = EmuLibrary.SourceName,
+                    Name = gameName,
+                    IsInstalled = false,
+                    GameId = info.AsGameId(),
+                    // Critical - must set plugin ID
+                    PluginId = Id,
+                    Platforms = new HashSet<MetadataProperty>() { new MetadataNameProperty(pcPlatform.Name) },
+                    InstallSize = (ulong)new FileInfo(isoFilePath).Length,
+                    GameActions = new List<GameAction>() 
+                    { 
+                        new GameAction()
+                        {
+                            Name = "Install Game",
+                            Type = GameActionType.URL,
+                            Path = "",
+                            IsPlayAction = false
+                        }
+                    }
+                };
+                
+                // Add additional metadata
+                metadata.Description = $"TEST: ISO installer game from {Path.GetFileName(isoFilePath)}";
+                
+                // Add tags to identify the ISO type
+                metadata.Tags = new HashSet<MetadataProperty>() { 
+                    new MetadataNameProperty("ISO Installer"),
+                    new MetadataNameProperty("PC Game"),
+                    new MetadataNameProperty("TEST")
+                };
+                
+                // Store additional information in Properties
+                metadata.AddProperty("ISOFile", isoFilePath);
+                metadata.AddProperty("SourcePath", mapping.SourcePath);
+                
+                // Log details before import
+                Logger.Info($"TEST IMPORT - Game: {metadata.Name}");
+                Logger.Info($"TEST IMPORT - GameId: {metadata.GameId}");
+                Logger.Info($"TEST IMPORT - PluginId: {metadata.PluginId}");
+                Logger.Info($"TEST IMPORT - Platform: {string.Join(", ", metadata.Platforms)}");
+                
+                // Ask user to confirm import
+                var importResult = Playnite.Dialogs.ShowMessage(
+                    $"Ready to import test game:\n\n" +
+                    $"Name: {metadata.Name}\n" +
+                    $"Platform: {pcPlatform.Name}\n" +
+                    $"ISO File: {Path.GetFileName(isoFilePath)}\n\n" +
+                    "Do you want to proceed with the import?",
+                    "Import Test Game",
+                    System.Windows.MessageBoxButton.YesNo);
+                    
+                if (importResult == System.Windows.MessageBoxResult.Yes)
+                {
+                    try
+                    {
+                        // Import the game to the database
+                        Logger.Info("Importing game to database...");
+                        
+                        // First, check if this game already exists by GameId to avoid duplicates
+                        var existingGame = PlayniteApi.Database.Games
+                            .FirstOrDefault(g => g.GameId == metadata.GameId);
+                            
+                        if (existingGame != null)
+                        {
+                            Logger.Warn($"Game with GameId {metadata.GameId} already exists in the database. Updating instead of creating new.");
+                            
+                            // Update the existing game
+                            existingGame.Name = metadata.Name;
+                            existingGame.Description = metadata.Description;
+                            existingGame.Platforms = metadata.Platforms != null ? 
+                                new HashSet<Platform>(metadata.Platforms.Select(p => new Platform(p.Name))) :
+                                null;
+                            existingGame.Tags = metadata.Tags != null ?
+                                new HashSet<Tag>(metadata.Tags.Select(t => new Tag(t.Name))) :
+                                null;
+                                
+                            // Ensure PluginId is set correctly
+                            if (existingGame.PluginId != Id)
+                            {
+                                Logger.Warn($"Existing game had incorrect PluginId: {existingGame.PluginId}, updating to: {Id}");
+                                existingGame.PluginId = Id;
+                            }
+                            
+                            // Update in database
+                            PlayniteApi.Database.Games.Update(existingGame);
+                            Logger.Info($"Updated existing game with ID: {existingGame.Id}");
+                            
+                            // Use the existing game for the rest of the code
+                            var game = existingGame;
+                            
+                            // Show to user for debugging
+                            Playnite.Dialogs.ShowMessage($"Updated existing game with ID: {game.Id}\nName: {game.Name}\nPluginId: {game.PluginId}", "Game Updated");
+                        }
+                        else
+                        {
+                            // Method 1: Use ImportGame which converts GameMetadata to Game
+                            Logger.Info("Importing as new game using ImportGame method");
+                            
+                            // Diagnostic: Print all properties before import
+                            Logger.Info($"Before import - PluginId: {metadata.PluginId}");
+                            Logger.Info($"Before import - GameId: {metadata.GameId}");
+                            
+                            var game = PlayniteApi.Database.ImportGame(metadata);
+                            
+                            // Log the game after import
+                            Logger.Info($"After import - Game ID: {game.Id}");
+                            Logger.Info($"After import - PluginId: {game.PluginId}");
+                            Logger.Info($"After import - GameId: {game.GameId}");
+                            
+                            // Check if Platform was properly set
+                            if (game.Platforms == null || !game.Platforms.Any())
+                            {
+                                Logger.Error("Platform was not set on imported game!");
+                                
+                                // Try to fix it
+                                game.Platforms = new HashSet<Platform>() { new Platform(pcPlatform.Name) };
+                                Logger.Info($"Manually added platform: {pcPlatform.Name}");
+                            }
+                            else
+                            {
+                                Logger.Info($"Platforms after import: {string.Join(", ", game.Platforms.Select(p => p.Name))}");
+                            }
+                            
+                            // Critical - ensure PluginId is set to match our plugin
+                            if (game.PluginId != Id)
+                            {
+                                Logger.Warn($"PluginId was not correctly set during import. Setting it manually. Original: {game.PluginId}, Expected: {Id}");
+                                game.PluginId = Id;
+                                
+                                // Update the game in the database
+                                PlayniteApi.Database.Games.Update(game);
+                                Logger.Info("Updated game after fixing PluginId");
+                            }
+                            
+                            // Show to user for debugging
+                            Playnite.Dialogs.ShowMessage($"Created new game with ID: {game.Id}\nName: {game.Name}\nPluginId: {game.PluginId}", "Game Created");
+                        }
+                        
+                        Logger.Info($"Game imported with ID: {game.Id}");
+                        
+                        // Update the temporary mapping to persist it
+                        Settings.Mappings.Add(mapping);
+                        
+                        // Save settings
+                        var settingsPath = Path.Combine(GetPluginUserDataPath(), "config.json");
+                        var serializedSettings = Newtonsoft.Json.JsonConvert.SerializeObject(Settings);
+                        File.WriteAllText(settingsPath, serializedSettings);
+                        
+                        Playnite.Notifications.Add(
+                            "EmuLibrary-Test-GameImported", 
+                            $"Test game '{gameName}' was imported. It should now appear in your library.",
+                            NotificationType.Info);
+                            
+                        // Try to search for the game to verify it exists
+                        var importedGame = PlayniteApi.Database.Games.FirstOrDefault(g => g.Id == game.Id);
+                        if (importedGame != null)
+                        {
+                            Logger.Info($"Successfully verified game in database: {importedGame.Name}");
+                        }
+                        else
+                        {
+                            Logger.Error("Could not find the imported game in database! This suggests a synchronization issue.");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Error($"Error importing game: {ex.Message}");
+                        Playnite.Dialogs.ShowErrorMessage($"Error importing game: {ex.Message}", "Import Error");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error in test ISO import: {ex.Message}");
+                Playnite.Dialogs.ShowErrorMessage($"Error in test ISO import: {ex.Message}", "Import Error");
             }
         }
         
