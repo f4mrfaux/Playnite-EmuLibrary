@@ -140,7 +140,7 @@ private readonly Dictionary<RomType, RomTypeScanner> _scanners = new Dictionary<
                 Playnite.Notifications.Add(
                     "EmuLibrary-ArchiveInstaller-Removed",
                     message,
-                    NotificationType.Warning);
+                    NotificationType.Error);
             }
 
             // Initialize the SteamGridDB service if enabled
@@ -204,7 +204,7 @@ private readonly Dictionary<RomType, RomTypeScanner> _scanners = new Dictionary<
                     Playnite.Notifications.Add(
                         $"EmuLibrary-ArchiveInstaller-{mapping.MappingId}", 
                         $"ArchiveInstaller mapping for {mapping.SourcePath} was skipped because this functionality has been removed. Please extract your archives manually and use ISOInstaller with the extracted ISO files instead.", 
-                        NotificationType.Warning);
+                        NotificationType.Error);
                     
                     continue;
                 }
