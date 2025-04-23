@@ -394,18 +394,18 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                 {
                     // Build a custom enumeration to efficiently find ISO files in game folders
                     var customFiles = new List<FileSystemInfoBase>();
-                    var rootPathDirInfo = new DirectoryInfo(srcPath);
+                    var customDirInfo = new DirectoryInfo(srcPath);
                     
                     // Get all top-level directories (these are likely game folders)
-                    var rootFolders = rootPathDirInfo.GetDirectories("*", SearchOption.TopDirectoryOnly)
+                    var topLevelFolders = customDirInfo.GetDirectories("*", SearchOption.TopDirectoryOnly)
                         .Where(d => !d.Name.StartsWith("$") && 
                                !d.Name.Equals("System Volume Information", StringComparison.OrdinalIgnoreCase))
                         .ToList();
                     
-                    _emuLibrary.Logger.Info($"Root scan optimization: Processing {rootFolders.Count} potential game folders directly");
+                    _emuLibrary.Logger.Info($"Root scan optimization: Processing {topLevelFolders.Count} potential game folders directly");
                     
                     // For each game folder, search specifically for disc image files
-                    foreach (var gameFolder in rootFolders)
+                    foreach (var gameFolder in topLevelFolders)
                     {
                         if (args.CancelToken.IsCancellationRequested)
                             break;
@@ -613,7 +613,6 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                                 // In this case, parentFolder is the update folder name and grandparentFolder is the game name
                                 var folderDirInfo = new DirectoryInfo(parentFolderPath);
                                 var fileDir = folderDirInfo.FullName;
-                                var fileInRootFolder = false;
                                 
                                 // Define a list of valid update file extensions 
                                 // Include both ISO/image formats and executable formats for updates
@@ -667,7 +666,6 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                                     // If the parent folder has ISO files directly, this might be a game folder with updates in subfolders
                                     if (rootGameFolderFiles.Any())
                                     {
-                                        fileInRootFolder = true;
                                         _emuLibrary.Logger.Debug($"Found {rootGameFolderFiles.Count} ISO files in root game folder {rootGameFolder.Name}");
                                         _emuLibrary.Logger.Debug($"Found {updateFiles.Count} potential update files in subfolders");
                                         
