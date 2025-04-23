@@ -125,6 +125,24 @@ private readonly Dictionary<RomType, RomTypeScanner> _scanners = new Dictionary<
         {
             base.OnApplicationStarted(args);
 
+            // Check for ArchiveInstaller mappings and notify the user 
+            var archiveInstallerMappings = Settings.Mappings?.Where(m => m.RomType == RomType.ArchiveInstaller).ToList();
+            if (archiveInstallerMappings != null && archiveInstallerMappings.Any())
+            {
+                // Show a more prominent one-time notification about ArchiveInstaller removal
+                var message = "ArchiveInstaller functionality has been removed from EmuLibrary. "
+                    + $"Found {archiveInstallerMappings.Count} ArchiveInstaller mapping(s) which have been automatically disabled. "
+                    + "Please extract your archives manually and use ISOInstaller with the extracted ISO files instead.";
+                
+                Logger.Warn(message);
+                
+                // Add user notification
+                Playnite.Notifications.Add(
+                    "EmuLibrary-ArchiveInstaller-Removed",
+                    message,
+                    NotificationType.Warning);
+            }
+
             // Initialize the SteamGridDB service if enabled
             if (Settings.EnableSteamGridDbMatching && !string.IsNullOrEmpty(Settings.SteamGridDbApiKey))
             {
@@ -180,7 +198,14 @@ private readonly Dictionary<RomType, RomTypeScanner> _scanners = new Dictionary<
                 // Skip ArchiveInstaller mappings - functionality has been removed
                 if (mapping.RomType == RomType.ArchiveInstaller)
                 {
-                    Logger.Warn($"ArchiveInstaller functionality has been removed. Skipping mapping for {mapping.SourcePath}.");
+                    Logger.Warn($"ArchiveInstaller functionality has been removed. Skipping mapping for {mapping.SourcePath}. Please extract your archive files manually and use ISOInstaller with the extracted ISO files instead.");
+                    
+                    // Add user notification to ensure they see this message
+                    Playnite.Notifications.Add(
+                        $"EmuLibrary-ArchiveInstaller-{mapping.MappingId}", 
+                        $"ArchiveInstaller mapping for {mapping.SourcePath} was skipped because this functionality has been removed. Please extract your archives manually and use ISOInstaller with the extracted ISO files instead.", 
+                        NotificationType.Warning);
+                    
                     continue;
                 }
                 
@@ -361,27 +386,72 @@ private readonly Dictionary<RomType, RomTypeScanner> _scanners = new Dictionary<
 
         private void RemoveSuperUninstalledGames(bool promptUser, CancellationToken ct)
         {
-            var toRemove = _scanners.Values.SelectMany(s => s.GetUninstalledGamesMissingSourceFiles(ct));
-            if (toRemove.Any())
+            try
             {
-                System.Windows.MessageBoxResult res;
-                if (promptUser)
+                // Get games marked for removal from active scanners
+                var toRemove = _scanners.Values.SelectMany(s => s.GetUninstalledGamesMissingSourceFiles(ct)).ToList();
+                
+                // Special handling for ArchiveInstaller games - protect them from auto-removal
+                // since the scanner for ArchiveInstaller no longer exists
+                var archiveInstallerGames = PlayniteApi.Database.Games
+                    .Where(g => g.PluginId == PluginId && 
+                               !g.IsInstalled && 
+                               g.GameId.Contains("ArchiveInstaller"))
+                    .ToList();
+                
+                if (archiveInstallerGames.Any())
                 {
-                    res = PlayniteApi.Dialogs.ShowMessage($"Delete {toRemove.Count()} library entries?\n\n(This may take a while, during while Playnite will seem frozen.)", "Confirm deletion", System.Windows.MessageBoxButton.YesNo);
+                    // If we're showing a prompt, inform the user about ArchiveInstaller games
+                    if (promptUser && archiveInstallerGames.Count > 0)
+                    {
+                        Logger.Info($"Found {archiveInstallerGames.Count} uninstalled ArchiveInstaller games that will be preserved.");
+                        
+                        // Remove any ArchiveInstaller games from the toRemove list
+                        toRemove = toRemove.Except(archiveInstallerGames).ToList();
+                        
+                        // Add special notification about ArchiveInstaller games
+                        Playnite.Notifications.Add(
+                            "EmuLibrary-ArchiveInstaller-GamesPreserved",
+                            $"{archiveInstallerGames.Count} uninstalled ArchiveInstaller games have been preserved. Extract their archives manually and use ISOInstaller to continue using them.",
+                            NotificationType.Info);
+                    }
                 }
-                else
+                
+                if (toRemove.Any())
                 {
-                    res = System.Windows.MessageBoxResult.Yes;
-                }
+                    System.Windows.MessageBoxResult res;
+                    if (promptUser)
+                    {
+                        res = PlayniteApi.Dialogs.ShowMessage(
+                            $"Delete {toRemove.Count()} library entries?\n\n" +
+                            "(This may take a while, during which Playnite will seem frozen.)", 
+                            "Confirm deletion", 
+                            System.Windows.MessageBoxButton.YesNo);
+                    }
+                    else
+                    {
+                        res = System.Windows.MessageBoxResult.Yes;
+                    }
 
-                if (res == System.Windows.MessageBoxResult.Yes)
+                    if (res == System.Windows.MessageBoxResult.Yes)
+                    {
+                        PlayniteApi.Database.Games.Remove(toRemove);
+                    }
+                }
+                else if (promptUser)
                 {
-                    PlayniteApi.Database.Games.Remove(toRemove);
+                    PlayniteApi.Dialogs.ShowMessage("No games to remove.");
                 }
             }
-            else if (promptUser)
+            catch (Exception ex)
             {
-                PlayniteApi.Dialogs.ShowMessage("Nothing to do.");
+                Logger.Error(ex, "Error in RemoveSuperUninstalledGames");
+                if (promptUser)
+                {
+                    PlayniteApi.Dialogs.ShowErrorMessage(
+                        $"An error occurred while trying to remove uninstalled games: {ex.Message}", 
+                        "Error");
+                }
             }
         }
     }

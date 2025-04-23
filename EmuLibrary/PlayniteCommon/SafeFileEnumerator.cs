@@ -7,7 +7,7 @@ using System.Linq;
 namespace EmuLibrary.PlayniteCommon
 {
     // Originally from https://stackoverflow.com/questions/9746538/fastest-safest-file-finding-parsing
-    public class SafeFileEnumerator : IEnumerable<FileSystemInfoBase>
+    public class SafeFileEnumerator : IEnumerable<FileSystemInfoBase>, IDisposable
     {
 
         /// <summary>
@@ -218,6 +218,16 @@ namespace EmuLibrary.PlayniteCommon
         System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
         {
             return GetEnumerator();
+        }
+
+        /// <summary>
+        /// Disposes resources used by the enumerator
+        /// </summary>
+        public void Dispose()
+        {
+            // Nothing to dispose at this level since the enumerator instances 
+            // are created and disposed when GetEnumerator() is called
+            GC.SuppressFinalize(this);
         }
     }
 }

@@ -161,15 +161,46 @@ namespace EmuLibrary.Settings
             _plugin.SavePluginSettings(this);
         }
 
+        private bool forceSave = false;
+
         public bool VerifySettings(out List<string> errors)
         {
             var mappingErrors = new List<string>();
 
+            // First pass to find ArchiveInstaller mappings
+            var archiveInstallerMappings = Mappings.Where(m => m.RomType == RomType.ArchiveInstaller).ToList();
+            if (archiveInstallerMappings.Any())
+            {
+                // Automatically disable all ArchiveInstaller mappings
+                foreach (var mapping in archiveInstallerMappings)
+                {
+                    if (mapping.Enabled)
+                    {
+                        mapping.Enabled = false;
+                        forceSave = true;
+                        mappingErrors.Add($"{mapping.MappingId}: ArchiveInstaller functionality has been removed and this mapping has been automatically disabled. Please extract your archives manually and use ISOInstaller with the extracted ISO files instead.");
+                    }
+                }
+                
+                // If changes were made, save settings
+                if (forceSave)
+                {
+                    _plugin.SavePluginSettings(this);
+                }
+            }
+
+            // Second pass for normal validation of enabled mappings
             Mappings.Where(m => m.Enabled)?.ForEach(m =>
             {
+                // Skip ArchiveInstaller mappings as they should be disabled now
+                if (m.RomType == RomType.ArchiveInstaller)
+                {
+                    return;
+                }
+                
                 if (m.ImageExtensionsLower == null || !m.ImageExtensionsLower.Any())
                 {
-                    mappingErrors.Add($"{m.MappingId}: No image extensions specified for profile {m.EmulatorProfile.Name} with emulator {m.Emulator.Name}. There is nothing for EmuLibrary to scan.");
+                    mappingErrors.Add($"{m.MappingId}: No image extensions specified for profile {m.EmulatorProfile?.Name} with emulator {m.Emulator?.Name}. There is nothing for EmuLibrary to scan.");
                 }
 
                 if (string.IsNullOrEmpty(m.SourcePath))
@@ -179,13 +210,6 @@ namespace EmuLibrary.Settings
                 else if (!Directory.Exists(m.SourcePath))
                 {
                     mappingErrors.Add($"{m.MappingId}: Source path doesn't exist ({m.SourcePath}).");
-                }
-
-                // Skip validation for ArchiveInstaller since it's being deprecated
-                if (m.RomType == RomType.ArchiveInstaller)
-                {
-                    mappingErrors.Add($"{m.MappingId}: ArchiveInstaller functionality has been removed. Please use ISOInstaller with manually extracted ISOs instead.");
-                    continue;
                 }
                 
                 // For PCInstaller and ISOInstaller types, the destination path is optional initially 
