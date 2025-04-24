@@ -1,4 +1,5 @@
 ﻿using EmuLibrary.RomTypes;
+using EmuLibrary.RomTypes.ISOInstaller;
 using EmuLibrary.Settings;
 using Playnite.SDK;
 using Playnite.SDK.Events;
@@ -124,38 +125,17 @@ private readonly Dictionary<RomType, RomTypeScanner> _scanners = new Dictionary<
         public override void OnApplicationStarted(OnApplicationStartedEventArgs args)
         {
             base.OnApplicationStarted(args);
+            
+            // Fix ISO games with incorrect PluginId
+            FixISOGamesPluginId();
 
-            // Check for ArchiveInstaller mappings and notify the user 
-            var archiveInstallerMappings = Settings.Mappings?.Where(m => m.RomType == RomType.ArchiveInstaller).ToList();
-            if (archiveInstallerMappings != null && archiveInstallerMappings.Any())
+            // Log that we'll use Playnite's metadata system
+            Logger.Info("Using Playnite's built-in metadata system for game information and assets");
+            
+            // Check if auto metadata is enabled
+            if (Settings.AutoRequestMetadata)
             {
-                // Show a more prominent one-time notification about ArchiveInstaller removal
-                var message = "ArchiveInstaller functionality has been removed from EmuLibrary. "
-                    + $"Found {archiveInstallerMappings.Count} ArchiveInstaller mapping(s) which have been automatically disabled. "
-                    + "Please extract your archives manually and use ISOInstaller with the extracted ISO files instead.";
-                
-                Logger.Warn(message);
-                
-                // Add user notification
-                Playnite.Notifications.Add(
-                    "EmuLibrary-ArchiveInstaller-Removed",
-                    message,
-                    NotificationType.Error);
-            }
-
-            // Initialize the SteamGridDB service if enabled
-            if (Settings.EnableSteamGridDbMatching && !string.IsNullOrEmpty(Settings.SteamGridDbApiKey))
-            {
-                try
-                {
-                    // Create the service with the WebRequest-based implementation
-                    var steamGridService = new Util.SteamGridDbService(Logger, Settings.SteamGridDbApiKey);
-                    Logger.Info("SteamGridDB service initialized successfully.");
-                }
-                catch (Exception ex)
-                {
-                    Logger.Error(ex, $"Failed to initialize SteamGridDB service: {ex.Message}");
-                }
+                Logger.Info("Auto-download metadata for imported games is enabled");
             }
 
             Settings.Mappings.ForEach(mapping =>
@@ -244,17 +224,10 @@ private readonly Dictionary<RomType, RomTypeScanner> _scanners = new Dictionary<
                 if (args.CancelToken.IsCancellationRequested)
                     yield break;
 
-                // Skip ArchiveInstaller mappings - functionality has been removed
-                if (mapping.RomType == RomType.ArchiveInstaller)
+                // Check if this is a valid mapping with a supported RomType
+                if (!Enum.IsDefined(typeof(RomType), mapping.RomType))
                 {
-                    Logger.Warn($"ArchiveInstaller functionality has been removed. Skipping mapping for {mapping.SourcePath}. Please extract your archive files manually and use ISOInstaller with the extracted ISO files instead.");
-                    
-                    // Add user notification to ensure they see this message
-                    Playnite.Notifications.Add(
-                        $"EmuLibrary-ArchiveInstaller-{mapping.MappingId}", 
-                        $"ArchiveInstaller mapping for {mapping.SourcePath} was skipped because this functionality has been removed. Please extract your archives manually and use ISOInstaller with the extracted ISO files instead.", 
-                        NotificationType.Error);
-                    
+                    Logger.Warn($"Unsupported RomType {mapping.RomType} for mapping {mapping.MappingId}, skipping.");
                     continue;
                 }
                 
@@ -376,17 +349,95 @@ private readonly Dictionary<RomType, RomTypeScanner> _scanners = new Dictionary<
                         
                         if (g.Platforms != null)
                         {
-                            Logger.Info($"Platforms count: {g.Platforms.Count}");
+                            var platformNames = string.Join(", ", g.Platforms.OfType<MetadataNameProperty>().Select(p => p.Name));
+                            Logger.Info($"Platforms: {platformNames}");
                         }
                         
                         if (g.Tags != null && g.Tags.Any())
                         {
-                            Logger.Info($"Tags count: {g.Tags.Count}");
+                            var tagNames = string.Join(", ", g.Tags.OfType<MetadataNameProperty>().Select(t => t.Name));
+                            Logger.Info($"Tags: {tagNames}");
                         }
                     }
                     
-                    // Return the game to Playnite
-                    yield return g;
+                    // CRITICAL FIX: For ISO games only, ensure we import and set PluginId directly
+                    // For other game types, let Playnite handle the import process
+                    
+                    // For ISO games, process import directly for better control
+                    if (mapping.RomType == RomType.ISOInstaller)
+                    {
+                        // We can't yield inside a try/catch, so handle exceptions without breaking the yield
+                        bool importSuccess = false;
+                        
+                        // Try importing the game metadata and updating the plugin ID
+                        try
+                        {
+                            // Check if we already have a game with this name to avoid duplicates
+                            var existingGames = PlayniteApi.Database.Games
+                                .Where(existing => existing.Name == g.Name && existing.PluginId == Id)
+                                .ToList();
+                                
+                            if (existingGames.Any())
+                            {
+                                // Remove existing games with the same name to avoid duplicates
+                                Logger.Warn($"Removing {existingGames.Count} existing games with name '{g.Name}' to avoid duplicates");
+                                PlayniteApi.Database.Games.Remove(existingGames);
+                            }
+                            
+                            // Import the game metadata to get a Game object
+                            var game = PlayniteApi.Database.ImportGame(g);
+                            
+                            // Use utility method to ensure PluginId is set correctly
+                            EnsurePluginId(game);
+                            
+                            // Request metadata for the game if needed
+                            // This allows Playnite's metadata providers to fill in missing information
+                            // such as covers, backgrounds, descriptions from sources like SteamGridDB
+                            if (Settings.AutoRequestMetadata)
+                            {
+                                Logger.Info($"Auto-requesting metadata for ISO game: {game.Name}");
+                                try
+                                {
+                                    // Note: We can't directly trigger metadata download through the API
+                                    // User will need to manually request metadata through the UI
+                                    
+                                    // Log for troubleshooting purposes
+                                    Logger.Info($"Game '{game.Name}' added to library. User can download metadata from the context menu.");
+                                }
+                                catch (Exception mdEx)
+                                {
+                                    Logger.Error($"Error requesting metadata for game '{game.Name}': {mdEx.Message}");
+                                }
+                            }
+                            
+                            // Notify user of ISO game addition to verify visibility
+                            Playnite.Notifications.Add(
+                                $"EmuLibrary-ISO-GameAdded-{Guid.NewGuid()}",
+                                $"Added ISO game: {g.Name}",
+                                NotificationType.Info);
+                            
+                            // Log success for troubleshooting
+                            Logger.Info($"ISO game '{g.Name}' successfully imported with ID: {game.Id}, PluginId: {game.PluginId}");
+                            
+                            importSuccess = true;
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger.Error($"Error importing ISO game {g.Name}: {ex.Message}");
+                        }
+                        
+                        // For ISO games, only return if import failed
+                        // This prevents duplicate games from appearing
+                        if (!importSuccess)
+                        {
+                            yield return g;
+                        }
+                    }
+                    else
+                    {
+                        // For non-ISO games, return normally and let Playnite handle the import
+                        yield return g;
+                    }
                 }
                 
                 Logger.Info($"Finished scan for mapping {mapping.MappingId}, found {gameCount} games");
@@ -432,6 +483,12 @@ private readonly Dictionary<RomType, RomTypeScanner> _scanners = new Dictionary<
         {
             base.OnGameInstalled(args);
 
+            // Ensure the installed game has the correct PluginId
+            if (args.Game != null && args.Game.GameId != null && args.Game.GameId.StartsWith("!"))
+            {
+                EnsurePluginId(args.Game);
+            }
+
             if (args.Game.PluginId == PluginId && Settings.NotifyOnInstallComplete)
             {
                 Playnite.Notifications.Add(args.Game.GameId, $"Installation of \"{args.Game.Name}\" has completed", NotificationType.Info);
@@ -444,6 +501,14 @@ private readonly Dictionary<RomType, RomTypeScanner> _scanners = new Dictionary<
             {
                 Action = (arags) => RemoveSuperUninstalledGames(true, default),
                 Description = "Remove uninstalled games with missing source file...",
+                MenuSection = "EmuLibrary"
+            };
+            
+            // Add menu item to clear hardcoded descriptions from existing games
+            yield return new MainMenuItem()
+            {
+                Action = (arags) => ClearHardcodedDescriptions(),
+                Description = "Clear hardcoded descriptions...",
                 MenuSection = "EmuLibrary"
             };
             
@@ -712,15 +777,9 @@ private readonly Dictionary<RomType, RomTypeScanner> _scanners = new Dictionary<
                                     // Convert GameMetadata to Game
                                     var game = PlayniteApi.Database.ImportGame(gameMetadata);
                                     
-                                    // Set the PluginId to match our plugin
+                                    // Use the utility method to ensure PluginId is set correctly
                                     // CRITICAL: PluginId must be set for the game to appear in Playnite's UI
-                                    if (game.PluginId != Id)
-                                    {
-                                        Logger.Info($"Setting PluginId for game {game.Name} to {Id} (was: {game.PluginId})");
-                                        game.PluginId = Id;
-                                        // Update the game in the database
-                                        PlayniteApi.Database.Games.Update(game);
-                                    }
+                                    EnsurePluginId(game);
                                     
                                     Logger.Info($"Added game: {game.Name} (ID: {game.GameId}, PluginId: {game.PluginId})");
                                 }
@@ -972,7 +1031,7 @@ private readonly Dictionary<RomType, RomTypeScanner> _scanners = new Dictionary<
                 Logger.Info($"Created test mapping with platform ID: {mapping.PlatformId}");
                 
                 // Create game info object
-                var info = new ISOInstaller.ISOInstallerGameInfo()
+                var info = new RomTypes.ISOInstaller.ISOInstallerGameInfo()
                 {
                     MappingId = mapping.MappingId,
                     SourcePath = Path.GetFileName(isoFilePath),
@@ -987,8 +1046,7 @@ private readonly Dictionary<RomType, RomTypeScanner> _scanners = new Dictionary<
                     Name = gameName,
                     IsInstalled = false,
                     GameId = info.AsGameId(),
-                    // Critical - must set plugin ID
-                    PluginId = Id,
+                    // PluginId is set on Game objects after import, not on GameMetadata
                     Platforms = new HashSet<MetadataProperty>() { new MetadataNameProperty(pcPlatform.Name) },
                     InstallSize = (ulong)new FileInfo(isoFilePath).Length,
                     GameActions = new List<GameAction>() 
@@ -1003,8 +1061,8 @@ private readonly Dictionary<RomType, RomTypeScanner> _scanners = new Dictionary<
                     }
                 };
                 
-                // Add additional metadata
-                metadata.Description = $"TEST: ISO installer game from {Path.GetFileName(isoFilePath)}";
+                // Don't set description to allow metadata providers to fill it
+                // This is a test import, so we'll add a tag to identify it instead
                 
                 // Add tags to identify the ISO type
                 metadata.Tags = new HashSet<MetadataProperty>() { 
@@ -1020,8 +1078,9 @@ private readonly Dictionary<RomType, RomTypeScanner> _scanners = new Dictionary<
                 // Log details before import
                 Logger.Info($"TEST IMPORT - Game: {metadata.Name}");
                 Logger.Info($"TEST IMPORT - GameId: {metadata.GameId}");
-                Logger.Info($"TEST IMPORT - PluginId: {metadata.PluginId}");
-                Logger.Info($"TEST IMPORT - Platform: {string.Join(", ", metadata.Platforms)}");
+                Logger.Info($"TEST IMPORT - PluginId: {Id} (will be set after import)");
+                var platformNames = string.Join(", ", metadata.Platforms.OfType<MetadataNameProperty>().Select(p => p.Name));
+                Logger.Info($"TEST IMPORT - Platform: {platformNames}");
                 
                 // Ask user to confirm import
                 var importResult = Playnite.Dialogs.ShowMessage(
@@ -1040,6 +1099,9 @@ private readonly Dictionary<RomType, RomTypeScanner> _scanners = new Dictionary<
                         // Import the game to the database
                         Logger.Info("Importing game to database...");
                         
+                        // Declare game variable at this scope so it's available throughout the try block
+                        Game game = null;
+                        
                         // First, check if this game already exists by GameId to avoid duplicates
                         var existingGame = PlayniteApi.Database.Games
                             .FirstOrDefault(g => g.GameId == metadata.GameId);
@@ -1051,12 +1113,34 @@ private readonly Dictionary<RomType, RomTypeScanner> _scanners = new Dictionary<
                             // Update the existing game
                             existingGame.Name = metadata.Name;
                             existingGame.Description = metadata.Description;
-                            existingGame.Platforms = metadata.Platforms != null ? 
-                                new HashSet<Platform>(metadata.Platforms.Select(p => new Platform(p.Name))) :
-                                null;
-                            existingGame.Tags = metadata.Tags != null ?
-                                new HashSet<Tag>(metadata.Tags.Select(t => new Tag(t.Name))) :
-                                null;
+                            
+                            // Clear existing platforms and add new ones
+                            if (existingGame.Platforms != null)
+                            {
+                                existingGame.Platforms.Clear();
+                            }
+                            
+                            if (metadata.Platforms != null)
+                            {
+                                foreach (var platform in metadata.Platforms.OfType<MetadataNameProperty>())
+                                {
+                                    existingGame.Platforms.Add(new Platform(platform.Name));
+                                }
+                            }
+                            
+                            // Clear existing tags and add new ones
+                            if (existingGame.Tags != null)
+                            {
+                                existingGame.Tags.Clear();
+                            }
+                            
+                            if (metadata.Tags != null)
+                            {
+                                foreach (var tag in metadata.Tags.OfType<MetadataNameProperty>())
+                                {
+                                    existingGame.Tags.Add(new Tag(tag.Name));
+                                }
+                            }
                                 
                             // Ensure PluginId is set correctly
                             if (existingGame.PluginId != Id)
@@ -1070,7 +1154,7 @@ private readonly Dictionary<RomType, RomTypeScanner> _scanners = new Dictionary<
                             Logger.Info($"Updated existing game with ID: {existingGame.Id}");
                             
                             // Use the existing game for the rest of the code
-                            var game = existingGame;
+                            game = existingGame;
                             
                             // Show to user for debugging
                             Playnite.Dialogs.ShowMessage($"Updated existing game with ID: {game.Id}\nName: {game.Name}\nPluginId: {game.PluginId}", "Game Updated");
@@ -1083,7 +1167,7 @@ private readonly Dictionary<RomType, RomTypeScanner> _scanners = new Dictionary<
                             // Diagnostic: Print GameId before import
                             Logger.Info($"Before import - GameId: {metadata.GameId}");
                             
-                            var game = PlayniteApi.Database.ImportGame(metadata);
+                            game = PlayniteApi.Database.ImportGame(metadata);
                             
                             // Log the game after import
                             Logger.Info($"After import - Game ID: {game.Id}");
@@ -1095,8 +1179,8 @@ private readonly Dictionary<RomType, RomTypeScanner> _scanners = new Dictionary<
                             {
                                 Logger.Error("Platform was not set on imported game!");
                                 
-                                // Try to fix it
-                                game.Platforms = new HashSet<Platform>() { new Platform(pcPlatform.Name) };
+                                // Try to fix it - must use collection methods since Platforms is read-only
+                                game.Platforms.Add(new Platform(pcPlatform.Name));
                                 Logger.Info($"Manually added platform: {pcPlatform.Name}");
                             }
                             else
@@ -1105,21 +1189,11 @@ private readonly Dictionary<RomType, RomTypeScanner> _scanners = new Dictionary<
                             }
                             
                             // Critical - ensure PluginId is set to match our plugin
-                            if (game.PluginId != Id)
-                            {
-                                Logger.Warn($"PluginId was not correctly set during import. Setting it manually. Original: {game.PluginId}, Expected: {Id}");
-                                game.PluginId = Id;
-                                
-                                // Update the game in the database
-                                PlayniteApi.Database.Games.Update(game);
-                                Logger.Info("Updated game after fixing PluginId");
-                            }
+                            EnsurePluginId(game);
                             
                             // Show to user for debugging
                             Playnite.Dialogs.ShowMessage($"Created new game with ID: {game.Id}\nName: {game.Name}\nPluginId: {game.PluginId}", "Game Created");
                         }
-                        
-                        Logger.Info($"Game imported with ID: {game.Id}");
                         
                         // Update the temporary mapping to persist it
                         Settings.Mappings.Add(mapping);
@@ -1165,32 +1239,7 @@ private readonly Dictionary<RomType, RomTypeScanner> _scanners = new Dictionary<
             {
                 // Get games marked for removal from active scanners
                 var toRemove = _scanners.Values.SelectMany(s => s.GetUninstalledGamesMissingSourceFiles(ct)).ToList();
-                
-                // Special handling for ArchiveInstaller games - protect them from auto-removal
-                // since the scanner for ArchiveInstaller no longer exists
-                var archiveInstallerGames = PlayniteApi.Database.Games
-                    .Where(g => g.PluginId == PluginId && 
-                               !g.IsInstalled && 
-                               g.GameId.Contains("ArchiveInstaller"))
-                    .ToList();
-                
-                if (archiveInstallerGames.Any())
-                {
-                    // If we're showing a prompt, inform the user about ArchiveInstaller games
-                    if (promptUser && archiveInstallerGames.Count > 0)
-                    {
-                        Logger.Info($"Found {archiveInstallerGames.Count} uninstalled ArchiveInstaller games that will be preserved.");
-                        
-                        // Remove any ArchiveInstaller games from the toRemove list
-                        toRemove = toRemove.Except(archiveInstallerGames).ToList();
-                        
-                        // Add special notification about ArchiveInstaller games
-                        Playnite.Notifications.Add(
-                            "EmuLibrary-ArchiveInstaller-GamesPreserved",
-                            $"{archiveInstallerGames.Count} uninstalled ArchiveInstaller games have been preserved. Extract their archives manually and use ISOInstaller to continue using them.",
-                            NotificationType.Info);
-                    }
-                }
+                // No special cases for game removal
                 
                 if (toRemove.Any())
                 {
@@ -1227,6 +1276,172 @@ private readonly Dictionary<RomType, RomTypeScanner> _scanners = new Dictionary<
                         $"An error occurred while trying to remove uninstalled games: {ex.Message}", 
                         "Error");
                 }
+            }
+        }
+        
+        /// <summary>
+        /// Utility method to ensure PluginId is set correctly on a Game object after import
+        /// This is critical for games to appear in the Playnite UI
+        /// </summary>
+        private void EnsurePluginId(Game game)
+        {
+            if (game == null)
+            {
+                Logger.Error("Cannot set PluginId on null game object");
+                return;
+            }
+            
+            if (game.PluginId != Id)
+            {
+                Logger.Info($"Setting PluginId for game '{game.Name}' to {Id} (was: {game.PluginId})");
+                game.PluginId = Id;
+                
+                // Update the game in the database to save the PluginId
+                try
+                {
+                    PlayniteApi.Database.Games.Update(game);
+                    Logger.Info($"Successfully updated PluginId for game '{game.Name}' in database");
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error($"Failed to update PluginId for game '{game.Name}': {ex.Message}");
+                }
+            }
+        }
+        
+        /// <summary>
+        /// Utility method to scan the database for ISO games with incorrect PluginId
+        /// and fix them. This ensures games are visible in the UI.
+        /// </summary>
+        private void ClearHardcodedDescriptions()
+        {
+            try
+            {
+                Logger.Info("Scanning for games with hardcoded descriptions...");
+                
+                // Get all games belonging to this plugin
+                var ourGames = PlayniteApi.Database.Games
+                    .Where(g => g.PluginId == Id)
+                    .ToList();
+                    
+                Logger.Info($"Found {ourGames.Count} games from this plugin");
+                
+                int fixedGames = 0;
+                
+                // Start a confirmation dialog
+                var result = PlayniteApi.Dialogs.ShowMessage(
+                    $"This will clear descriptions for games that have hardcoded texts like 'ISO installer game from...' so that Playnite metadata providers can fill them with proper descriptions.\n\n" +
+                    $"Found {ourGames.Count} games to check. Continue?",
+                    "Clear Hardcoded Descriptions",
+                    System.Windows.MessageBoxButton.YesNo);
+                    
+                if (result != System.Windows.MessageBoxResult.Yes)
+                {
+                    Logger.Info("Operation cancelled by user");
+                    return;
+                }
+                
+                using (PlayniteApi.Database.BufferedUpdate())
+                {
+                    foreach (var game in ourGames)
+                    {
+                        // Check if the game has a hardcoded description
+                        if (!string.IsNullOrEmpty(game.Description) && 
+                            (game.Description.Contains("ISO installer game from") || 
+                             game.Description.Contains("TEST: ISO installer game from")))
+                        {
+                            // Clear the hardcoded description
+                            Logger.Info($"Clearing hardcoded description for game '{game.Name}'");
+                            game.Description = null;
+                            PlayniteApi.Database.Games.Update(game);
+                            fixedGames++;
+                        }
+                    }
+                }
+                
+                if (fixedGames > 0)
+                {
+                    Logger.Info($"Cleared descriptions for {fixedGames} games");
+                    
+                    // Show completion message
+                    PlayniteApi.Dialogs.ShowMessage(
+                        $"Successfully cleared descriptions for {fixedGames} games.\n\n" +
+                        "To get proper descriptions, select these games in your library, right-click and select 'Download metadata' from the context menu.",
+                        "Descriptions Cleared");
+                        
+                    // Add notification to inform user
+                    Playnite.Notifications.Add(
+                        "EmuLibrary-Descriptions-Cleared",
+                        $"Cleared hardcoded descriptions for {fixedGames} games. Use 'Download metadata' to get proper descriptions.",
+                        NotificationType.Info);
+                }
+                else
+                {
+                    Logger.Info("No games with hardcoded descriptions found");
+                    
+                    // Show completion message
+                    PlayniteApi.Dialogs.ShowMessage(
+                        "No games with hardcoded descriptions were found in your library.",
+                        "No Changes Needed");
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error clearing hardcoded descriptions: {ex.Message}");
+                PlayniteApi.Dialogs.ShowErrorMessage(
+                    $"Error clearing descriptions: {ex.Message}",
+                    "Error");
+            }
+        }
+        
+        private void FixISOGamesPluginId()
+        {
+            try
+            {
+                Logger.Info("Scanning for ISO games with incorrect PluginId...");
+                
+                // Get all games that might be ISO installer games based on their GameId
+                var potentialISOGames = PlayniteApi.Database.Games
+                    .Where(g => g.GameId != null && g.GameId.Contains("ISOInstaller"))
+                    .ToList();
+                    
+                Logger.Info($"Found {potentialISOGames.Count} potential ISO games based on GameId");
+                
+                int fixedGames = 0;
+                
+                using (PlayniteApi.Database.BufferedUpdate())
+                {
+                    foreach (var game in potentialISOGames)
+                    {
+                        if (game.PluginId != Id)
+                        {
+                            // Game has the wrong PluginId, fix it
+                            Logger.Warn($"Fixing PluginId for ISO game '{game.Name}' from {game.PluginId} to {Id}");
+                            game.PluginId = Id;
+                            PlayniteApi.Database.Games.Update(game);
+                            fixedGames++;
+                        }
+                    }
+                }
+                
+                if (fixedGames > 0)
+                {
+                    Logger.Info($"Fixed PluginId for {fixedGames} ISO games");
+                    
+                    // Add notification to inform user
+                    Playnite.Notifications.Add(
+                        "EmuLibrary-ISO-FixedPluginIds",
+                        $"Fixed {fixedGames} ISO games that had incorrect plugin IDs. They should now appear in your library.",
+                        NotificationType.Info);
+                }
+                else
+                {
+                    Logger.Info("No ISO games with incorrect PluginId found");
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error fixing ISO games PluginId: {ex.Message}");
             }
         }
     }

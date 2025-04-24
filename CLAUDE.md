@@ -2,6 +2,10 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Attribution
+
+This project is a fork of [psychonic's EmuLibrary](https://github.com/psychonic/Playnite-EmuLibrary), extended by f4mrfaux to add PC game installer support, ISOInstaller, and other improvements. The original codebase was created by psychonic and all enhancements build upon that foundation.
+
 > **IMPORTANT NOTE**: This project is developed on Arch Linux but built and deployed on Windows. Do not attempt to build the project on Linux as it will fail due to Windows-specific dependencies.
 
 ## Project Overview
@@ -198,6 +202,17 @@ EmuLibrary is a library extension for Playnite, an open source video game librar
 - Create specialized GameInfo classes for different game types
 - Implement proper serialization/deserialization of game information
 - Use extension methods on Game objects for type-specific operations
+
+### Metadata Handling
+- Playnite has a built-in metadata system for game information, covers, backgrounds, etc.
+- When `AutoRequestMetadata` setting is enabled, Playnite automatically requests metadata for imported games
+- Metadata is provided by metadata extensions (plugins) installed in Playnite
+- Common metadata providers include SteamGridDB, IGDB, GOG, etc.
+- Metadata can be obtained in different ways:
+  - Automatically on game import with `AutoRequestMetadata` enabled
+  - Bulk download via Main menu > Library > Download metadata
+  - Single game download via Game Edit Window > Download Metadata
+- Do not implement custom API integrations for metadata sources that already have Playnite extensions
 
 ## Extension Configuration
 

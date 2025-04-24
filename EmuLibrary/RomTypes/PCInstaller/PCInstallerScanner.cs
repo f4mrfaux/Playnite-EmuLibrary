@@ -294,7 +294,7 @@ namespace EmuLibrary.RomTypes.PCInstaller
                         if (args.CancelToken.IsCancellationRequested)
                         {
                             _emuLibrary.Logger.Info("Updating installed games cancelled");
-                            yield break; // Will continue after the catch block
+                            break; // Break out of the loop, don't use yield break here
                         }
                         
                         GameMetadata gameMetadata = null;

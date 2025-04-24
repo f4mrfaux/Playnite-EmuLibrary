@@ -2,6 +2,8 @@
 
 EmuLibrary is a library extension for [Playnite](https://www.playnite.link), an open source video game library manager, originally focused on emulator ROM management and now extended to support PC game installers as well.
 
+> **Attribution**: This is a fork of [psychonic's EmuLibrary](https://github.com/psychonic/Playnite-EmuLibrary), extended by f4mrfaux to add PC game installer support and other improvements.
+
 While Playnite has had built-in support for scanning paths for installed ROMs and adding them to the library since version 9, EmuLibrary provides alternate functionality.
 
 EmuLibrary treats one or more folders of ROMs/Disc images or PC game installers as a library from which you can "install" games. It can be useful if you have a large collection of emulated games and PC installers with limited storage where you play them versus where you store them (HTPC vs. NAS, for example). It also is useful for keeping the list of games up to date, and for being able to filter via installed/uninstalled.
@@ -223,6 +225,42 @@ EmuLibrary provides comprehensive support for managing game content relationship
    - Related content is grouped logically in the UI via dependencies
 
 This system provides a comprehensive way to manage complex game libraries with multiple content types across all PC installation methods.
+
+## Metadata and Game Information
+
+EmuLibrary leverages Playnite's built-in metadata system to provide comprehensive game information. The extension has the following metadata features:
+
+### Automatic Metadata
+
+- When the "Auto-download metadata for imported games" setting is enabled (default), EmuLibrary automatically requests metadata for imported games
+- This metadata is provided by metadata extensions (plugins) installed in Playnite
+- Common metadata providers include SteamGridDB, IGDB, GOG, etc.
+- No custom API keys needed - all metadata handling is done through Playnite's metadata system
+
+### Manual Metadata Download
+
+You can also manually download metadata for your imported games:
+
+1. **Bulk download**: Select multiple games, go to Main menu > Library > Download metadata
+2. **Single game**: Right-click a game, select Edit, and click the "Download Metadata" button
+
+### Available Metadata
+
+Playnite's metadata system provides rich information including:
+- Game covers and backgrounds
+- Game descriptions
+- Release dates
+- Genre and tags
+- Developer and publisher information
+- Platform details
+- Community ratings
+
+### Recommended Metadata Extensions
+
+For best results, install these metadata extensions from Playnite's Add-on browser:
+- SteamGridDB for game images and covers
+- IGDB for comprehensive game data
+- Store-specific extensions (GOG, Steam, etc.) if you use those platforms
 
 ## Support
 

@@ -138,16 +138,27 @@ namespace EmuLibrary.RomTypes.ISOInstaller
             {
                 // Search for all ISO files using multiple patterns
                 // Prioritize .iso files which are most likely to be games
-                foreach (var ext in new[] { "iso", "img", "cue" })
+                foreach (var ext in new[] { "iso", "img", "cue", "nrg", "mdf", "mds" })
                 {
-                    var pattern = $"*.{ext}";
-                    var files = Directory.GetFiles(srcPath, pattern, SearchOption.AllDirectories);
-                    isoFiles.AddRange(files);
-                    
-                    // Also try uppercase version
-                    pattern = $"*.{ext.ToUpper()}";
-                    files = Directory.GetFiles(srcPath, pattern, SearchOption.AllDirectories);
-                    isoFiles.AddRange(files);
+                    try 
+                    {
+                        var pattern = $"*.{ext}";
+                        _emuLibrary.Logger.Info($"[ISO SCANNER] Searching with pattern: {pattern}");
+                        var files = Directory.GetFiles(srcPath, pattern, SearchOption.AllDirectories);
+                        _emuLibrary.Logger.Info($"[ISO SCANNER] Found {files.Length} files with pattern {pattern}");
+                        isoFiles.AddRange(files);
+                        
+                        // Also try uppercase version
+                        pattern = $"*.{ext.ToUpper()}";
+                        _emuLibrary.Logger.Info($"[ISO SCANNER] Searching with pattern: {pattern}");
+                        files = Directory.GetFiles(srcPath, pattern, SearchOption.AllDirectories);
+                        _emuLibrary.Logger.Info($"[ISO SCANNER] Found {files.Length} files with pattern {pattern}");
+                        isoFiles.AddRange(files);
+                    }
+                    catch (Exception searchEx)
+                    {
+                        _emuLibrary.Logger.Error($"[ISO SCANNER] Error searching for {ext} files: {searchEx.Message}");
+                    }
                 }
                 
                 // Add .bin files but with more selective patterns to avoid non-game files
@@ -201,11 +212,16 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                 
                 if (isoFiles.Count > 0)
                 {
-                    _emuLibrary.Logger.Info($"[ISO SCANNER] Examples: {string.Join(", ", isoFiles.Take(5).Select(Path.GetFileName))}");
+                    // Log more details for diagnostic purposes
+                    _emuLibrary.Logger.Info($"[ISO SCANNER] All ISO files found:");
+                    foreach (var file in isoFiles)
+                    {
+                        _emuLibrary.Logger.Info($"[ISO SCANNER] - {file}");
+                    }
                     
                     // Log the first few directories where files were found
-                    var uniqueDirs = isoFiles.Select(Path.GetDirectoryName).Distinct().Take(3).ToList();
-                    _emuLibrary.Logger.Info($"[ISO SCANNER] Files found in directories: {string.Join(", ", uniqueDirs)}");
+                    var uniqueDirs = isoFiles.Select(Path.GetDirectoryName).Distinct().ToList();
+                    _emuLibrary.Logger.Info($"[ISO SCANNER] Files found in {uniqueDirs.Count} directories: {string.Join(", ", uniqueDirs.Take(3))}");
                 }
                 else
                 {
@@ -248,7 +264,7 @@ namespace EmuLibrary.RomTypes.ISOInstaller
             }
             
             // Process each ISO file
-            var processedGameNames = new HashSet<string>();
+            var processedPaths = new HashSet<string>(); // Track by full path instead of name
             var sourcedGames = new List<GameMetadata>();
             
             foreach (var isoFile in isoFiles)
@@ -269,24 +285,62 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                         continue;
                     }
                     
-                    // Get parent folder for game name
+                    // Get parent folder for game name - more intelligent handling
                     var parentFolderPath = Path.GetDirectoryName(isoFile);
+                    var originalParentPath = parentFolderPath; // Save for logs
                     var parentFolder = Path.GetFileName(parentFolderPath);
-                    var gameName = StringExtensions.NormalizeGameName(parentFolder);
                     
-                    // Skip certain problematic folders
-                    if (parentFolder == "Update" || 
-                        parentFolder.StartsWith("setup.part") || 
-                        parentFolder == "Renderer")
+                    // Check if parent folder is the source folder - if so, use the filename
+                    bool isDirectlyInRoot = string.Compare(parentFolderPath, srcPath, StringComparison.OrdinalIgnoreCase) == 0;
+                    if (isDirectlyInRoot)
                     {
-                        // Go up one more level for parent folder
-                        parentFolderPath = Directory.GetParent(parentFolderPath)?.FullName;
-                        if (parentFolderPath != null)
+                        _emuLibrary.Logger.Info($"[ISO SCANNER] File {Path.GetFileName(isoFile)} is directly in root folder, using filename for game name");
+                        var fileName = Path.GetFileNameWithoutExtension(isoFile);
+                        parentFolder = fileName;
+                    }
+                    
+                    // List of problematic folder names to skip
+                    var problematicFolders = new HashSet<string>(StringComparer.OrdinalIgnoreCase) {
+                        "Update", "Renderer", "ISO", "disc", "disk", "Image", "DVD", "CD", "Root", 
+                        "Game", "Install", "Data", "Install Files", "Setup"
+                    };
+                    
+                    // Get relative path segments from srcPath to file
+                    var relPath = isoFile.Substring(srcPath.Length).TrimStart(Path.DirectorySeparatorChar);
+                    var pathSegments = relPath.Split(Path.DirectorySeparatorChar).ToList();
+                    
+                    // Log the path segments for debugging
+                    _emuLibrary.Logger.Info($"[ISO SCANNER] Path segments: {string.Join(" > ", pathSegments)}");
+                    
+                    // Try to find the best folder name to use
+                    string selectedFolderName = parentFolder;
+                    
+                    // If parent folder is problematic, try to find a better folder name by going up levels
+                    if (problematicFolders.Contains(parentFolder) || parentFolder.StartsWith("setup.part"))
+                    {
+                        _emuLibrary.Logger.Info($"[ISO SCANNER] Parent folder '{parentFolder}' is problematic, looking for better name");
+                        
+                        // Try to find first non-problematic folder going up the tree
+                        var currentPath = parentFolderPath;
+                        while (currentPath != null && currentPath.Length > srcPath.Length)
                         {
-                            parentFolder = Path.GetFileName(parentFolderPath);
-                            gameName = StringExtensions.NormalizeGameName(parentFolder);
+                            var currentDir = Path.GetFileName(currentPath);
+                            _emuLibrary.Logger.Info($"[ISO SCANNER] Checking folder: {currentDir}");
+                            
+                            if (!problematicFolders.Contains(currentDir) && !currentDir.StartsWith("setup.part"))
+                            {
+                                selectedFolderName = currentDir;
+                                _emuLibrary.Logger.Info($"[ISO SCANNER] Found suitable folder name: {selectedFolderName}");
+                                break;
+                            }
+                            
+                            currentPath = Path.GetDirectoryName(currentPath);
                         }
                     }
+                    
+                    // Clean up the selected name
+                    var gameName = CleanGameNameRemoveVersions(StringExtensions.NormalizeGameName(selectedFolderName));
+                    _emuLibrary.Logger.Info($"[ISO SCANNER] Final game name: {gameName} (from folder: {selectedFolderName})");
                     
                     if (string.IsNullOrEmpty(gameName))
                     {
@@ -299,11 +353,11 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                             var parts = fileName.Split(new[] { '-' }, 2);
                             if (parts.Length > 1 && !string.IsNullOrEmpty(parts[1]))
                             {
-                                gameName = StringExtensions.NormalizeGameName(parts[1]);
+                                gameName = CleanGameNameRemoveVersions(StringExtensions.NormalizeGameName(parts[1]));
                             }
                             else
                             {
-                                gameName = StringExtensions.NormalizeGameName(fileName);
+                                gameName = CleanGameNameRemoveVersions(StringExtensions.NormalizeGameName(fileName));
                             }
                         }
                         else if (fileName.Contains("setup_"))
@@ -313,11 +367,11 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                             var parts = withoutSetup.Split(new[] { '_' }, 2);
                             if (parts.Length > 1)
                             {
-                                gameName = StringExtensions.NormalizeGameName(parts[0]);
+                                gameName = CleanGameNameRemoveVersions(StringExtensions.NormalizeGameName(parts[0]));
                             }
                             else
                             {
-                                gameName = StringExtensions.NormalizeGameName(fileName);
+                                gameName = CleanGameNameRemoveVersions(StringExtensions.NormalizeGameName(fileName));
                             }
                         }
                         else
@@ -326,26 +380,40 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                         }
                     }
                     
-                    // Skip duplicate game names
-                    if (processedGameNames.Contains(gameName))
+                    // Skip duplicate file paths
+                    if (processedPaths.Contains(isoFile.ToLowerInvariant()))
                     {
-                        _emuLibrary.Logger.Debug($"[ISO SCANNER] Skipping duplicate game name: {gameName} from {isoFile}");
+                        _emuLibrary.Logger.Debug($"[ISO SCANNER] Skipping duplicate file: {isoFile}");
                         continue;
                     }
                     
-                    processedGameNames.Add(gameName);
+                    processedPaths.Add(isoFile.ToLowerInvariant());
+                    
+                    // Log processing of this game
+                    _emuLibrary.Logger.Info($"[ISO SCANNER] Processing game: {gameName} from {isoFile}");
                     
                     // Get relative path from source folder
                     var relativePath = isoFile.Substring(srcPath.Length).TrimStart(Path.DirectorySeparatorChar);
                     
-                    // Create game info
+                    // Create game info with unique properties to ensure unique GameId
                     var info = new ISOInstallerGameInfo()
                     {
                         MappingId = mapping.MappingId,
                         SourcePath = relativePath,
-                        InstallerFullPath = isoFile,
+                        InstallerFullPath = isoFile, // Full path to the ISO file
                         InstallDirectory = null, // Will be set during installation
+                        // Add unique timestamp/hash to ensure unique GameId
+                        StoreGameId = $"{gameName}_{Path.GetFileName(isoFile)}_{DateTime.Now.Ticks}"
                     };
+                    
+                    // Log the installer path for debugging
+                    _emuLibrary.Logger.Info($"[ISO SCANNER] Setting InstallerFullPath: {isoFile}");
+                    
+                    // Double-check that the ISO file exists
+                    if (!File.Exists(isoFile))
+                    {
+                        _emuLibrary.Logger.Error($"[ISO SCANNER] WARNING: ISO file does not exist: {isoFile}");
+                    }
                     
                     // EXACTLY like PCInstallerScanner - use the platform from the mapping
                     string platformName = mapping.Platform?.Name;
@@ -384,8 +452,35 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                         }
                     };
                     
-                    // Add additional metadata to make the game more identifiable
-                    metadata.Description = $"ISO installer game from {Path.GetFileName(isoFile)}";
+                    // Don't set description to allow Playnite's metadata providers to fill it with proper game description
+                    
+                    // Prepare game for metadata matching with Playnite's providers
+                    try
+                    {
+                        // If the game is from a known scene group, extract the actual name
+                        var cleanName = CleanGameNameForMetadataSearch(gameName);
+                        _emuLibrary.Logger.Info($"[ISO SCANNER] Searching for metadata using name: {cleanName}");
+                        
+                        // Use clean name for better metadata matching
+                        metadata.Name = cleanName;
+                        
+                        // Don't set other metadata fields to let Playnite search for them
+                        // This is important for SteamGridDB and other metadata providers to work
+                        
+                        // Set proper Source field for metadata providers
+                        metadata.Source = EmuLibrary.SourceName;
+                        
+                        // Name will be used for Playnite's built-in metadata system
+                        _emuLibrary.Logger.Info($"[ISO SCANNER] Using cleaned name for better metadata matching: {cleanName}");
+                        metadata.Name = cleanName;
+                        
+                        // Leave other metadata fields unset to let Playnite's metadata providers fill them
+                        // This is handled through Playnite's metadata system when AutoRequestMetadata is enabled
+                    }
+                    catch (Exception ex)
+                    {
+                        _emuLibrary.Logger.Error($"[ISO SCANNER] Error preparing metadata for {gameName}: {ex.Message}");
+                    }
                     
                     // Add tags to identify the ISO type
                     metadata.Tags = new HashSet<MetadataProperty>() { 
@@ -395,6 +490,7 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                     
                     // Store additional information in Properties
                     metadata.AddProperty("ISOFile", isoFile);
+                    metadata.AddProperty("InstallerFullPath", isoFile); // Duplicate in properties for redundancy
                     metadata.AddProperty("SourcePath", mapping.SourcePath);
                     
                     // Set release year if we can parse it from the file or folder name
@@ -428,9 +524,18 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                 }
             }
             
-            // Return all discovered games outside the try/catch
+            // Return all discovered games outside the try/catch but with proper PluginId handling
             foreach (var game in sourcedGames)
             {
+                // Add notification for ISO games to verify visibility in UI
+                _emuLibrary.Playnite.Notifications.Add(
+                    $"EmuLibrary-ISOScanner-GameFound-{Guid.NewGuid()}",
+                    $"Found ISO game: {game.Name}",
+                    NotificationType.Info);
+                    
+                // Log that we're returning this game
+                _emuLibrary.Logger.Info($"[ISO SCANNER] Returning game: {game.Name} with GameId: {game.GameId}");
+                
                 yield return game;
             }
             
@@ -466,7 +571,7 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                         if (args.CancelToken.IsCancellationRequested)
                         {
                             _emuLibrary.Logger.Info("[ISO SCANNER] Updating installed games cancelled");
-                            yield break; // Will continue after the catch block
+                            break; // Break out of the loop, don't use yield break here
                         }
                         
                         var game = pair.Item1;
@@ -539,6 +644,90 @@ namespace EmuLibrary.RomTypes.ISOInstaller
             {
                 yield return game;
             }
+        }
+
+        /// <summary>
+        /// Cleans game name specifically for metadata search, removing scene tags and other elements
+        /// that would interfere with metadata lookup
+        /// </summary>
+        private string CleanGameNameForMetadataSearch(string gameName)
+        {
+            if (string.IsNullOrEmpty(gameName))
+                return gameName;
+                
+            // Common scene groups to remove from filenames
+            var sceneGroups = new[] {
+                "CODEX", "PLAZA", "FLT", "SKIDROW", "HOODLUM", "RELOADED", 
+                "PROPHET", "DODI", "CPY", "EMPRESS", "TENOKE", "VREX", "RZR", 
+                "WOW", "HI", "TVM", "RLD", "DEV", "GOG", "SR", "FitGirl"
+            };
+            
+            // Remove scene group identifiers
+            foreach (var group in sceneGroups)
+            {
+                // Remove patterns like "CODEX-", "-CODEX", "[CODEX]", etc.
+                gameName = System.Text.RegularExpressions.Regex.Replace(
+                    gameName, 
+                    $@"[\[\-\.\s_]*{group}[\]\-\.\s_]*", 
+                    " ", 
+                    System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            }
+            
+            // Remove patterns like "FitGirl Repack"
+            gameName = System.Text.RegularExpressions.Regex.Replace(
+                gameName,
+                @"\b(repack|proper|multi\d+|cracked)\b",
+                "",
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                
+            // Clean up multiple spaces
+            gameName = System.Text.RegularExpressions.Regex.Replace(gameName, @"\s+", " ");
+            
+            // Run through version number cleaner too
+            gameName = CleanGameNameRemoveVersions(gameName);
+            
+            return gameName.Trim();
+        }
+        
+        /// <summary>
+        /// Cleans game name by removing version numbers, revision numbers, and other common suffixes
+        /// </summary>
+        private string CleanGameNameRemoveVersions(string gameName)
+        {
+            if (string.IsNullOrEmpty(gameName))
+                return gameName;
+            
+            // Remove version numbers with v prefix (v1.0, v1.2.3, etc.)
+            gameName = System.Text.RegularExpressions.Regex.Replace(gameName, @"v\d+(\.\d+)*", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            
+            // Remove version numbers in parentheses ((1.0), (1.2.3), etc.)
+            gameName = System.Text.RegularExpressions.Regex.Replace(gameName, @"\(\d+(\.\d+)*\)", "");
+            
+            // Remove version numbers with dots (1.0, 1.2.3, etc.)
+            gameName = System.Text.RegularExpressions.Regex.Replace(gameName, @"\s+\d+\.\d+(\.\d+)*", "");
+            
+            // Remove "Ultimate Edition", "Definitive Edition", etc.
+            string[] editionSuffixes = new[] { 
+                "Ultimate Edition", "Definitive Edition", "Game of the Year Edition", 
+                "Complete Edition", "Deluxe Edition", "Digital Edition",
+                "Remastered", "Special Edition"
+            };
+            
+            foreach (var suffix in editionSuffixes)
+            {
+                if (gameName.EndsWith(suffix, StringComparison.OrdinalIgnoreCase))
+                {
+                    gameName = gameName.Substring(0, gameName.Length - suffix.Length).Trim();
+                }
+            }
+            
+            // Clean up spaces and other special characters
+            gameName = gameName.Trim();
+            
+            // Remove trailing dots, dashes, and underscores
+            gameName = gameName.TrimEnd('.', '-', '_', ' ');
+            
+            return gameName;
         }
 
         public override bool TryGetGameInfoBaseFromLegacyGameId(Game game, EmulatorMapping mapping, out ELGameInfo gameInfo)
@@ -801,12 +990,14 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                         
                         if (gameMetadata.Platforms != null)
                         {
-                            _logger.Info($"[TEST] Platforms: {string.Join(", ", gameMetadata.Platforms)}");
+                            var platformNames = string.Join(", ", gameMetadata.Platforms.OfType<MetadataNameProperty>().Select(p => p.Name));
+                            _logger.Info($"[TEST] Platforms: {platformNames}");
                         }
                         
                         if (gameMetadata.Tags != null)
                         {
-                            _logger.Info($"[TEST] Tags: {string.Join(", ", gameMetadata.Tags)}");
+                            var tagNames = string.Join(", ", gameMetadata.Tags.OfType<MetadataNameProperty>().Select(t => t.Name));
+                            _logger.Info($"[TEST] Tags: {tagNames}");
                         }
                         
                         // Don't actually import to database - just test conversion

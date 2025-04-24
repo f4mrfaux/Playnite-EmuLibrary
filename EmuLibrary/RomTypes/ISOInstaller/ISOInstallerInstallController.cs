@@ -110,9 +110,41 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                     }
                     
                     // Verify source file exists
-                    if (!File.Exists(info.SourceFullPath))
+                    if (string.IsNullOrEmpty(info.SourceFullPath))
                     {
-                        throw new FileNotFoundException($"ISO file not found: {info.SourceFullPath}");
+                        // If SourceFullPath is null, check the InstallerFullPath directly
+                        if (string.IsNullOrEmpty(info.InstallerFullPath))
+                        {
+                            throw new FileNotFoundException($"ISO file path is not set. Both SourceFullPath and InstallerFullPath are empty.");
+                        }
+                        else if (!File.Exists(info.InstallerFullPath))
+                        {
+                            throw new FileNotFoundException($"ISO file not found at InstallerFullPath: {info.InstallerFullPath}");
+                        }
+                        else
+                        {
+                            // Use InstallerFullPath directly
+                            _emuLibrary.Logger.Info($"Using InstallerFullPath directly: {info.InstallerFullPath}");
+                            // Fix the issue by setting the local variable to use later
+                            info.SourceFullPath = info.InstallerFullPath;
+                        }
+                    }
+                    else if (!File.Exists(info.SourceFullPath))
+                    {
+                        // Log both possible paths for debugging
+                        _emuLibrary.Logger.Error($"ISO file not found at SourceFullPath: {info.SourceFullPath}");
+                        _emuLibrary.Logger.Error($"InstallerFullPath: {info.InstallerFullPath}");
+                        
+                        // Try the alternative path if available
+                        if (!string.IsNullOrEmpty(info.InstallerFullPath) && File.Exists(info.InstallerFullPath))
+                        {
+                            _emuLibrary.Logger.Info($"ISO file found at InstallerFullPath. Using that instead: {info.InstallerFullPath}");
+                            info.SourceFullPath = info.InstallerFullPath;
+                        }
+                        else
+                        {
+                            throw new FileNotFoundException($"ISO file not found: {info.SourceFullPath}");
+                        }
                     }
                     
                     // Import the ISO file to local temp storage first

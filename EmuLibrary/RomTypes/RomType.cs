@@ -19,9 +19,5 @@
         // ISO installers don't require an emulator profile since they're mounted and installed natively
         [RomTypeInfo(typeof(ISOInstaller.ISOInstallerGameInfo), typeof(ISOInstaller.ISOInstallerScanner))]
         ISOInstaller = 6,
-        
-        // Archive installer functionality has been removed
-        // Keep this enum value for backward compatibility with saved settings
-        ArchiveInstaller = 7,
     }
 }

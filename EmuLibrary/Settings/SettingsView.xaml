@@ -19,6 +19,9 @@
                     </Hyperlink>
                 </TextBlock>
                 <Separator Margin="0,5,0,10" />
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,0,10">
+                    <Button Content="Add ISO Mapping" Click="Click_AddIsoMapping" Padding="10,5" FontWeight="SemiBold"/>
+                </StackPanel>
                 <Grid Height="Auto" Margin="0,0,0,10">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
@@ -206,26 +209,15 @@
                             Padding="10,5"/>
                 </DockPanel>
                 
-                <Label Content="API Integration" FontWeight="Bold" Margin="0,10,0,0" />
+                <Label Content="Metadata &amp; Integration" FontWeight="Bold" Margin="0,10,0,0" />
                 <Separator Margin="0,5,0,10" />
-                <CheckBox IsChecked="{Binding EnableSteamGridDbMatching, Mode=TwoWay}" Margin="0,0,0,10" 
-                          ToolTip="Use SteamGridDB for improved game title matching when scanning folders">
-                    <TextBlock Text="Enable SteamGridDB title matching" TextWrapping="Wrap"/>
+                <CheckBox IsChecked="{Binding AutoRequestMetadata, Mode=TwoWay}" Margin="0,0,0,10" 
+                          ToolTip="Automatically download metadata for imported games, including game covers and backgrounds">
+                    <TextBlock Text="Auto-download metadata for imported games" TextWrapping="Wrap"/>
                 </CheckBox>
-                
-                <Grid Margin="0,0,0,10">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-                    <TextBlock Grid.Column="0" Text="SteamGridDB API Key:" VerticalAlignment="Center" Margin="0,0,10,0"
-                               ToolTip="API key for SteamGridDB services. Get yours at https://www.steamgriddb.com/profile/preferences/api"/>
-                    <TextBox Grid.Column="1" Text="{Binding SteamGridDbApiKey, Mode=TwoWay}" 
-                             VerticalAlignment="Center"/>
-                    <Button Grid.Column="2" Content="Get API Key" Margin="10,0,0,0" Padding="5,3"
-                            Click="Click_GetSteamGridDbApiKey" />
-                </Grid>
+                <TextBlock Margin="0,5,0,10" TextWrapping="Wrap">
+                    <Run>Playnite includes built-in metadata providers for game information, covers, and backgrounds. Install metadata extensions like SteamGridDB through the Playnite Extensions menu for better results.</Run>
+                </TextBlock>
             </StackPanel>
         </ScrollViewer>
     </DockPanel>

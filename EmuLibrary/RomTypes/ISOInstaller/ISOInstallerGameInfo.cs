@@ -65,14 +65,72 @@ namespace EmuLibrary.RomTypes.ISOInstaller
         {
             get
             {
-                var settings = Settings.Settings.Instance;
-                var mapping = settings.GetMapping(MappingId);
-                if (mapping == null)
+                try 
                 {
-                    return null;
+                    var logger = Playnite.SDK.LogManager.GetLogger();
+                    
+                    // If InstallerFullPath is provided and exists, use it directly
+                    if (!string.IsNullOrEmpty(InstallerFullPath) && File.Exists(InstallerFullPath))
+                    {
+                        logger.Info($"Using InstallerFullPath directly (exists): {InstallerFullPath}");
+                        return InstallerFullPath;
+                    }
+                    
+                    // If SourcePath is empty, return the InstallerFullPath directly
+                    if (string.IsNullOrEmpty(SourcePath))
+                    {
+                        logger.Info($"SourcePath is empty, using InstallerFullPath: {InstallerFullPath}");
+                        return InstallerFullPath;
+                    }
+                    
+                    var settings = Settings.Settings.Instance;
+                    var mapping = settings.GetMapping(MappingId);
+                    if (mapping == null)
+                    {
+                        // Fallback to direct path if mapping is missing
+                        logger.Warn($"Mapping not found for ID {MappingId}, using InstallerFullPath: {InstallerFullPath}");
+                        return InstallerFullPath;
+                    }
+                    
+                    if (string.IsNullOrEmpty(mapping.SourcePath))
+                    {
+                        // If mapping source path is empty, return direct path
+                        logger.Warn($"Mapping source path is empty, using InstallerFullPath: {InstallerFullPath}");
+                        return InstallerFullPath;
+                    }
+                    
+                    // Combine paths and verify the file exists
+                    string combinedPath = Path.Combine(mapping.SourcePath, SourcePath);
+                    
+                    if (File.Exists(combinedPath))
+                    {
+                        logger.Info($"Combined path exists: {combinedPath}");
+                        return combinedPath;
+                    }
+                    else
+                    {
+                        // If combined path doesn't exist but InstallerFullPath does, use it
+                        if (!string.IsNullOrEmpty(InstallerFullPath) && File.Exists(InstallerFullPath))
+                        {
+                            logger.Warn($"Combined path doesn't exist, using InstallerFullPath: {InstallerFullPath}");
+                            return InstallerFullPath;
+                        }
+                        
+                        // Log the error but still return the combined path for diagnostic purposes
+                        logger.Error($"ISO file not found at combined path: {combinedPath}");
+                        return combinedPath;
+                    }
                 }
-
-                return Path.Combine(mapping.SourcePath, SourcePath);
+                catch (System.Exception ex)
+                {
+                    Playnite.SDK.LogManager.GetLogger().Error(ex, "Error getting ISO source full path");
+                    return InstallerFullPath;
+                }
+            }
+            set
+            {
+                // Add a setter to allow fixing the path when needed
+                InstallerFullPath = value;
             }
         }
         

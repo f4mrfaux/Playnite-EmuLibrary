@@ -73,15 +73,26 @@ namespace EmuLibrary.Settings
                 // They should show all available platforms, as they don't rely on emulator-specific platforms
                 if (RomType == RomType.PCInstaller || RomType == RomType.ISOInstaller)
                 {
-                    // Simply return ALL available platforms from Playnite
-                    // This makes all platforms selectable for these installer types
-                    return playnite.Database.Platforms
+                    // Get ALL available platforms from Playnite
+                    var platforms = playnite.Database.Platforms
                         .Where(p => p != null && !string.IsNullOrEmpty(p.Name))
                         .Select(p => new EmulatedPlatform 
                         { 
                             Id = !string.IsNullOrEmpty(p.SpecificationId) ? p.SpecificationId : p.Id.ToString(),
                             Name = p.Name 
-                        });
+                        })
+                        .ToList();
+                        
+                    // Make sure PC platform is at the top of the list
+                    var pcPlatform = platforms.FirstOrDefault(p => p.Name == "PC" || p.Name == "Windows");
+                    if (pcPlatform != null)
+                    {
+                        // Move PC platform to the beginning of the list
+                        platforms.Remove(pcPlatform);
+                        platforms.Insert(0, pcPlatform);
+                    }
+                    
+                    return platforms;
                 }
                 
                 // Original logic for other ROM types

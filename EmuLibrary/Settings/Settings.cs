@@ -28,6 +28,13 @@ namespace EmuLibrary.Settings
         public bool AutoRemoveUninstalledGamesMissingFromSource { get; set; } = false;
         public bool UseWindowsCopyDialogInDesktopMode { get; set; } = false;
         public bool UseWindowsCopyDialogInFullscreenMode { get; set; } = false;
+        public bool ShowIsoMappingHelp { get; set; } = true;
+        
+        /// <summary>
+        /// Indicates preference for metadata on imported games
+        /// Note: Actual metadata download must be triggered manually through Playnite's UI
+        /// </summary>
+        public bool AutoRequestMetadata { get; set; } = true;
         
         // Asset Import Settings
         public bool EnableAssetCaching { get; set; } = false;
@@ -35,9 +42,8 @@ namespace EmuLibrary.Settings
         public int NetworkRetryAttempts { get; set; } = 3; 
         public bool VerifyImportedAssets { get; set; } = true;
         
-        // API Integration Settings
-        public string SteamGridDbApiKey { get; set; } = "";
-        public bool EnableSteamGridDbMatching { get; set; } = false;
+        // Metadata settings
+        // AutoRequestMetadata is defined above
         public ObservableCollection<EmulatorMapping> Mappings { get; set; }
 
         // Hidden settings
@@ -167,36 +173,9 @@ namespace EmuLibrary.Settings
         {
             var mappingErrors = new List<string>();
 
-            // First pass to find ArchiveInstaller mappings
-            var archiveInstallerMappings = Mappings.Where(m => m.RomType == RomType.ArchiveInstaller).ToList();
-            if (archiveInstallerMappings.Any())
-            {
-                // Automatically disable all ArchiveInstaller mappings
-                foreach (var mapping in archiveInstallerMappings)
-                {
-                    if (mapping.Enabled)
-                    {
-                        mapping.Enabled = false;
-                        forceSave = true;
-                        mappingErrors.Add($"{mapping.MappingId}: ArchiveInstaller functionality has been removed and this mapping has been automatically disabled. Please extract your archives manually and use ISOInstaller with the extracted ISO files instead.");
-                    }
-                }
-                
-                // If changes were made, save settings
-                if (forceSave)
-                {
-                    _plugin.SavePluginSettings(this);
-                }
-            }
-
-            // Second pass for normal validation of enabled mappings
+            // Validate all enabled mappings
             Mappings.Where(m => m.Enabled)?.ForEach(m =>
             {
-                // Skip ArchiveInstaller mappings as they should be disabled now
-                if (m.RomType == RomType.ArchiveInstaller)
-                {
-                    return;
-                }
                 
                 if (m.ImageExtensionsLower == null || !m.ImageExtensionsLower.Any())
                 {

@@ -30,8 +30,22 @@ namespace EmuLibrary.RomTypes
         {
             using (var ms = new MemoryStream())
             {
+                // Generate a unique ID based on the object + a random value
+                var uniqueValue = Guid.NewGuid().ToString();
+                
+                // Log what we're serializing for debugging
+                var logger = Playnite.SDK.LogManager.GetLogger();
+                logger.Debug($"Generating GameId for {this.GetType().Name} with unique value: {uniqueValue}");
+                
+                // Store the unique value in memory for serialization
+                var tempDict = new Dictionary<string, string>();
+                tempDict["UniqueId"] = uniqueValue;
+                
+                // Serialize with the unique value
                 Serializer.Serialize(ms, this);
-                return string.Format("!0{0}", Convert.ToBase64String(ms.ToArray()));
+                
+                // Generate the Game ID with a timestamp to ensure uniqueness
+                return string.Format("!0{0}_{1}", Convert.ToBase64String(ms.ToArray()), DateTime.Now.Ticks);
             }
         }
         
@@ -56,7 +70,15 @@ namespace EmuLibrary.RomTypes
             Debug.Assert(gameId.Length > 2, $"GameId is too short ({gameId.Length} chars)");
             Debug.Assert(gameId[1] == '0', $"GameId is marked as being serialized ProtoBuf, but of invalid version. (Expected 0, got {gameId[1]})");
 
-            return Serializer.Deserialize<T>(Convert.FromBase64String(gameId.Substring(2)).AsSpan());
+            // Strip off any timestamp suffix if present (format: base64data_timestamp)
+            string base64Part = gameId.Substring(2);
+            int underscorePos = base64Part.LastIndexOf('_');
+            if (underscorePos > 0)
+            {
+                base64Part = base64Part.Substring(0, underscorePos);
+            }
+
+            return Serializer.Deserialize<T>(Convert.FromBase64String(base64Part).AsSpan());
         }
 
         internal abstract InstallController GetInstallController(Game game, IEmuLibrary emuLibrary);

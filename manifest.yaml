@@ -1,76 +1,14 @@
 AddonId: ROMInstaller_41e49490-0583-4148-94d2-940c7c74f1d9
 Packages:
-  - Version: 3.4.1
+  - Version: 1.0.0
     RequiredApiVersion: 6.4.0
-    ReleaseDate: '2024-01-13'
-    PackageUrl: https://github.com/f4mrfaux/Playnite-EmuLibrary/releases/download/v3.4.1/EmuLibrary_41e49490-0583-4148-94d2-940c7c74f1d9_3_4_1.pext
+    ReleaseDate: '2025-04-24'
+    PackageUrl: https://github.com/f4mrfaux/Playnite-EmuLibrary/releases/download/v1.0.0/EmuLibrary_41e49490-0583-4148-94d2-940c7c74f1d9_1_0_0.pext
     Changelog:
-      - Added support for using Windows file copy UI when installing SingleFile or MultiFile games (Alex Tiley)
-      - Added Settings validation to prevent invalid configurations from being able to occur
-      - Greatly improved game install speed for SingleFile and MultiFile games (Alex Tiley)
-  - Version: 3.3.4
-    RequiredApiVersion: 6.4.0
-    ReleaseDate: '2024-01-07'
-    PackageUrl: https://github.com/f4mrfaux/Playnite-EmuLibrary/releases/download/v3.3.4/EmuLibrary_41e49490-0583-4148-94d2-940c7c74f1d9_3_3_4.pext
-    Changelog:
-      - Fixed a case where some file would not get not be deleted when uninstalling a MultiFile game (Alex Tiley)
-      - Fixed some cases where a game would not be marked as uninstalled after uninstalling it (Alex Tiley)
-      - Fixed game being stuck as "Installing" if install process failed for any reason (Alex Tiley)
-      - Fixed scanning of rom files that lack a file extension (Alex Tiley)
-  - Version: 3.3.3
-    RequiredApiVersion: 6.4.0
-    ReleaseDate: '2024-01-01'
-    PackageUrl: https://github.com/f4mrfaux/Playnite-EmuLibrary/releases/download/v3.3.3/EmuLibrary_41e49490-0583-4148-94d2-940c7c74f1d9_3_3_3.pext
-    Changelog:
-      - Improved Yuzu RomType scanning speed on collections with many DLC files
-      - Added setting of Version field for Yuzu RomType games
-  - Version: 3.3.2
-    RequiredApiVersion: 6.4.0
-    ReleaseDate: '2024-01-01'
-    PackageUrl: https://github.com/f4mrfaux/Playnite-EmuLibrary/releases/download/v3.3.2/EmuLibrary_41e49490-0583-4148-94d2-940c7c74f1d9_3_3_2.pext
-    Changelog:
-      - Fixed hang when opening game menu for a large number of selected EmuLibrary games
-      - Internal improvements for the Yuzu RomType
-  - Version: 3.3.1
-    RequiredApiVersion: 6.4.0
-    ReleaseDate: '2023-07-31'
-    PackageUrl: https://github.com/f4mrfaux/Playnite-EmuLibrary/releases/download/v3.3.1/EmuLibrary_41e49490-0583-4148-94d2-940c7c74f1d9_3_3_1.pext
-    Changelog:
-      - Added rudimentary support for detecting game region
-      - Fixed "Show Debug Info" game menu item not displaying if corresponding mapping was deleted.
-      - Fixed installation of Yuzu games requiring rescan to show as installed
-  - Version: 3.3.0
-    RequiredApiVersion: 6.4.0
-    ReleaseDate: '2023-07-30'
-    PackageUrl: https://github.com/f4mrfaux/Playnite-EmuLibrary/releases/download/v3.3.0/EmuLibrary_41e49490-0583-4148-94d2-940c7c74f1d9_3_3_0.pext
-    Changelog:
-      - Added beta support for new "RomType", Yuzu.
-        
-        This is tailored for XCI/XCZ/NSP/NSZ files containing games, updates, and/or DLC, installing directly to Yuzu's NAND. When installing a title, the latest available update and all DLC from the source are also installed.
-        
-        Please read the important notes in the README at https://github.com/f4mrfaux/Playnite-EmuLibrary/blob/master/README.md before creating a mapping that utilizes this. The READEME is also accessible from the Help link in the integration settings.
-  - Version: 3.2.0
-    RequiredApiVersion: 6.4.0
-    ReleaseDate: '2023-07-22'
-    PackageUrl: https://github.com/f4mrfaux/Playnite-EmuLibrary/releases/download/v3.2.0/EmuLibrary_41e49490-0583-4148-94d2-940c7c74f1d9_3_2_0.pext
-    Changelog:
-      - Fixed popup dialog opening at end of startup scan if option to automatically remove missing games is enabled
-      - Fixed a crash in settings window that could occur when attempting to delete an invalid or incomplete mapping
-      - Added help link in settings windows (points to README file for now)
-      - Internal changes to support future features
-  - Version: 3.1.0
-    RequiredApiVersion: 6.4.0
-    ReleaseDate: '2023-07-06'
-    PackageUrl: https://github.com/f4mrfaux/Playnite-EmuLibrary/releases/download/v3.1.0/EmuLibrary_41e49490-0583-4148-94d2-940c7c74f1d9_3_1_0.pext
-    Changelog:
-      - Updated icon and fixed it not appearing in Update Game Library menu
-      - Added option to trigger notification upon game installation completing
-      - Added option to automatically remove non-installed games that no longer exist in the source folder
-      - Fixed a rare crash in the settings grid
-      - Other under-the-hood changes and refactoring to support future features
-  - Version: 3.0.3
-    RequiredApiVersion: 6.4.0
-    ReleaseDate: '2023-07-04'
-    PackageUrl: https://github.com/f4mrfaux/Playnite-EmuLibrary/releases/download/v3.0.3/EmuLibrary_41e49490-0583-4148-94d2-940c7c74f1d9_3_0_3.pext
-    Changelog:
-      - See full changelog at https://github.com/f4mrfaux/Playnite-EmuLibrary/releases/tag/v3.0.3
+      - Initial release of EmuLibrary v1.0.0
+      - Fork of psychonic's original EmuLibrary, extended with additional features
+      - Added PCInstaller and ISOInstaller support for PC game installations
+      - Uses Playnite's built-in metadata system for better integration with other extensions
+      - Support for various ROM types (SingleFile, MultiFile, Yuzu, PCInstaller, ISOInstaller)
+      - Improved ISO scanner for better disc image detection
+      - Clean architecture for extensibility
