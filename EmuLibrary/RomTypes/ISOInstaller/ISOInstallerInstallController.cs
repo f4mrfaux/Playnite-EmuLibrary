@@ -240,222 +240,123 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                         throw new FileNotFoundException("No executable files found in the mounted ISO.");
                     }
                     
-                    // Ask user to select installer from the ISO
-                    UpdateProgress("Selecting installer from ISO...", 30);
+                    // Ask user to select an executable from the ISO to run
+                    UpdateProgress("Select an executable from the ISO...", 30);
                     
-                    string selectedInstaller = null;
+                    string selectedExecutable = null;
                     _emuLibrary.Playnite.MainView.UIDispatcher.Invoke(() =>
                     {
-                        string gameName = Game.Name?.ToLowerInvariant() ?? "";
-                        string gameBaseName = null;
-                        
-                        // Extract base game name (without numbers, special chars)
-                        if (!string.IsNullOrEmpty(gameName))
-                        {
-                            gameBaseName = Regex.Replace(gameName, @"[^a-z]", "");
-                            _emuLibrary.Logger.Info($"Derived base game name for installer matching: {gameBaseName}");
-                        }
-                        
-                        // Common installer file patterns to look for
+                        // Simple list of common installer executables to suggest
                         var commonInstallerNames = new[] { 
-                            "setup.exe", "install.exe", "autorun.exe", "start.exe", "launch.exe", 
-                            "launcher.exe", "game.exe", "installer.exe", "quicksetup.exe",
-                            "steamsetup.exe", "origin.exe", "epicinstaller.exe",
-                            Path.GetFileNameWithoutExtension(info.SourceFullPath) + ".exe" 
+                            "setup.exe", "install.exe", "autorun.exe", "start.exe"
                         };
                         
-                        // Score-based installer detection
-                        var scoredInstallers = new Dictionary<string, int>();
+                        // Find any of these common installers in the root directory
+                        var suggestedInstallers = exeFiles
+                            .Where(exe => {
+                                string fileName = Path.GetFileName(exe).ToLowerInvariant();
+                                string dirName = Path.GetDirectoryName(exe);
+                                // Prefer installers in the root directory
+                                return commonInstallerNames.Contains(fileName) && 
+                                      (dirName == mountPoint || dirName.StartsWith(Path.Combine(mountPoint, "setup")));
+                            })
+                            .ToList();
                         
-                        // First pass: exact name match with common installer names
-                        foreach (var exePath in exeFiles)
+                        // Create a message to show suggested and other executables
+                        string exeOptionsMessage = $"The ISO for \"{Game.Name}\" has been mounted.\n\n";
+                        
+                        if (suggestedInstallers.Any())
                         {
-                            string fileName = Path.GetFileName(exePath).ToLowerInvariant();
-                            int score = 0;
-                            
-                            // Exact match with common installer patterns
-                            foreach (var commonName in commonInstallerNames)
+                            exeOptionsMessage += "SUGGESTED INSTALLERS:\n";
+                            foreach (var exe in suggestedInstallers.Take(3))
                             {
-                                if (fileName.Equals(commonName, StringComparison.OrdinalIgnoreCase))
-                                {
-                                    score += 10;
-                                    break;
-                                }
+                                exeOptionsMessage += $"- {Path.GetFileName(exe)}\n";
                             }
-                            
-                            // Contains common installer keywords
-                            if (fileName.Contains("setup") || fileName.Contains("install") || 
-                                fileName.Contains("launch") || fileName.Contains("start"))
-                            {
-                                score += 5;
-                            }
-                            
-                            // Contains game name (indicates main executable)
-                            if (!string.IsNullOrEmpty(gameBaseName) && gameBaseName.Length > 3 && 
-                                fileName.Contains(gameBaseName))
-                            {
-                                score += 3;
-                            }
-                            
-                            // Location-based score (installers are often in the root)
-                            var dirName = Path.GetDirectoryName(exePath)?.ToLowerInvariant() ?? "";
-                            
-                            // Root directory installers get higher score
-                            if (dirName == mountPoint.ToLowerInvariant() || 
-                                dirName == Path.Combine(mountPoint, "setup").ToLowerInvariant() ||
-                                dirName == Path.Combine(mountPoint, "install").ToLowerInvariant())
-                            {
-                                score += 4;
-                            }
-                            
-                            // Lower score for executables in subdirectories like "redist" or "support"
-                            if (dirName.Contains("redist") || dirName.Contains("vcredist") || 
-                                dirName.Contains("dotnet") || dirName.Contains("support") ||
-                                dirName.Contains("unins") || dirName.Contains("prereq"))
-                            {
-                                score -= 5;
-                            }
-                            
-                            // Size-based heuristics - setup files tend to be larger
-                            try
-                            {
-                                var fileInfo = new FileInfo(exePath);
-                                // Large files are more likely to be installers (>1MB)
-                                if (fileInfo.Length > 1024 * 1024)
-                                {
-                                    score += 2;
-                                }
-                            }
-                            catch {}
-                            
-                            // Store the score
-                            scoredInstallers[exePath] = score;
+                            exeOptionsMessage += "\n";
                         }
                         
-                        // Sort by score descending
-                        var sortedInstallers = scoredInstallers.OrderByDescending(pair => pair.Value)
-                            .Select(pair => new { Path = pair.Key, Score = pair.Value })
+                        // Show a subset of other executables
+                        var otherExecutables = exeFiles
+                            .Where(exe => !suggestedInstallers.Contains(exe))
+                            .Take(7)
                             .ToList();
                             
-                        if (sortedInstallers.Any())
+                        if (otherExecutables.Any())
                         {
-                            _emuLibrary.Logger.Info($"Top 3 potential installers:");
-                            foreach (var installer in sortedInstallers.Take(3))
+                            exeOptionsMessage += "OTHER EXECUTABLES:\n";
+                            foreach (var exe in otherExecutables)
                             {
-                                _emuLibrary.Logger.Info($"- {Path.GetFileName(installer.Path)} (Score: {installer.Score})");
+                                exeOptionsMessage += $"- {Path.GetFileName(exe)}\n";
                             }
                             
-                            // If highest scoring installer has a significant score (>5), use it automatically
-                            if (sortedInstallers.First().Score > 5 && 
-                               (sortedInstallers.Count == 1 || sortedInstallers.First().Score > sortedInstallers[1].Score + 3))
+                            if (exeFiles.Count > suggestedInstallers.Count + otherExecutables.Count)
                             {
-                                selectedInstaller = sortedInstallers.First().Path;
-                                _emuLibrary.Logger.Info($"Auto-selected highest scoring installer: {Path.GetFileName(selectedInstaller)} (Score: {sortedInstallers.First().Score})");
+                                int remaining = exeFiles.Count - suggestedInstallers.Count - otherExecutables.Count;
+                                exeOptionsMessage += $"...and {remaining} more\n";
                             }
                         }
                         
-                        // If no suitable installer was automatically selected, ask the user
-                        if (selectedInstaller == null)
+                        // Add instructions
+                        exeOptionsMessage += "\nPlease select an installer executable to run. " +
+                            "After the installation completes, you'll be asked where the game was installed.";
+                        
+                        // Show the notification
+                        _emuLibrary.Playnite.Notifications.Add(
+                            Game.GameId,
+                            exeOptionsMessage,
+                            NotificationType.Info
+                        );
+                        
+                        // Use Playnite's file selection dialog
+                        var selectFileDialog = _emuLibrary.Playnite.Dialogs.SelectFile("Executable files (*.exe)|*.exe");
+                        
+                        if (!string.IsNullOrEmpty(selectFileDialog))
                         {
-                            _emuLibrary.Logger.Info("No clear installer identified. User will select one.");
+                            selectedExecutable = selectFileDialog;
+                            _emuLibrary.Logger.Info($"User selected executable: {selectedExecutable}");
+                        }
+                        else
+                        {
+                            // If user cancels, give them another chance
+                            _emuLibrary.Playnite.Notifications.Add(
+                                Game.GameId,
+                                $"Please select an executable from the ISO for {Game.Name}, or the installation will be cancelled.",
+                                NotificationType.Warning
+                            );
                             
-                            if (exeFiles.Count > 0)
+                            // Try one more time
+                            var secondAttempt = _emuLibrary.Playnite.Dialogs.SelectFile("Executable files (*.exe)|*.exe");
+                            
+                            if (!string.IsNullOrEmpty(secondAttempt))
                             {
-                                // Show the top-scored installers first in the message
-                                var recommendedInstallers = sortedInstallers
-                                    .Where(i => i.Score > 0)
-                                    .Take(3)
-                                    .Select(i => Path.GetFileName(i.Path))
-                                    .ToList();
-                                
-                                string exeOptionsMessage = "Found these executables in the ISO:";
-                                
-                                // Show recommended installers first if available
-                                if (recommendedInstallers.Any())
-                                {
-                                    exeOptionsMessage += "\n\nRECOMMENDED INSTALLERS:";
-                                    foreach (var exe in recommendedInstallers)
-                                    {
-                                        exeOptionsMessage += $"\n- {exe}";
-                                    }
-                                    exeOptionsMessage += "\n\nOTHER OPTIONS:";
-                                }
-                                
-                                // Then show other executables
-                                var otherInstallers = exeFiles
-                                    .Where(f => !recommendedInstallers.Contains(Path.GetFileName(f)))
-                                    .Take(5)
-                                    .Select(f => Path.GetFileName(f))
-                                    .ToList();
-                                
-                                foreach (var exe in otherInstallers)
-                                {
-                                    exeOptionsMessage += $"\n- {exe}";
-                                }
-                                
-                                if (exeFiles.Count > 8) // 3 recommended + 5 others
-                                {
-                                    exeOptionsMessage += $"\n- Plus {exeFiles.Count - 8} more...";
-                                }
-                                
-                                _emuLibrary.Playnite.Notifications.Add(
-                                    Game.GameId,
-                                    $"{exeOptionsMessage}\n\nPlease select an installer for {Game.Name}.",
-                                    NotificationType.Info
-                                );
-                                
-                                // Use Playnite's file selection dialog
-                                var selectFileDialog = _emuLibrary.Playnite.Dialogs.SelectFile("Executable files (*.exe)|*.exe");
-                                
-                                if (!string.IsNullOrEmpty(selectFileDialog))
-                                {
-                                    selectedInstaller = selectFileDialog;
-                                    _emuLibrary.Logger.Info($"User selected installer: {selectedInstaller}");
-                                }
-                                else
-                                {
-                                    // If user cancels, give them another chance
-                                    _emuLibrary.Playnite.Notifications.Add(
-                                        Game.GameId,
-                                        $"Please select an installer from the ISO for {Game.Name}, or the installation will be cancelled.",
-                                        NotificationType.Error
-                                    );
-                                    
-                                    // Try one more time with a more direct prompt
-                                    var secondAttempt = _emuLibrary.Playnite.Dialogs.SelectFile("Executable files (*.exe)|*.exe");
-                                    
-                                    if (!string.IsNullOrEmpty(secondAttempt))
-                                    {
-                                        selectedInstaller = secondAttempt;
-                                        _emuLibrary.Logger.Info($"User selected installer on second attempt: {selectedInstaller}");
-                                    }
-                                    else
-                                    {
-                                        throw new OperationCanceledException("No installer was selected from the ISO.");
-                                    }
-                                }
+                                selectedExecutable = secondAttempt;
+                                _emuLibrary.Logger.Info($"User selected executable on second attempt: {selectedExecutable}");
+                            }
+                            else
+                            {
+                                throw new OperationCanceledException("No executable was selected from the ISO.");
                             }
                         }
                     });
                     
-                    if (string.IsNullOrEmpty(selectedInstaller))
+                    if (string.IsNullOrEmpty(selectedExecutable))
                     {
-                        throw new OperationCanceledException("No installer was selected.");
+                        throw new OperationCanceledException("No executable was selected.");
                     }
                     
-                    info.SelectedInstaller = selectedInstaller;
-                    _emuLibrary.Logger.Info($"Selected installer: {selectedInstaller}");
+                    info.SelectedInstaller = selectedExecutable;
+                    _emuLibrary.Logger.Info($"Selected executable: {selectedExecutable}");
                     
                     // Show a notification to the user
-                    UpdateProgress("Running installer...", 40);
+                    UpdateProgress("Running selected executable...", 40);
                     
                     _emuLibrary.Playnite.Notifications.Add(
                         Game.GameId,
-                        $"Running installer for {Game.Name}. Follow the installation prompts.",
+                        $"Running {Path.GetFileName(selectedExecutable)} for {Game.Name}. Follow the installation prompts.",
                         NotificationType.Info
                     );
                     
-                    // Execute the installer
+                    // Execute the selected executable
                     Process process = null;
                     try
                     {
@@ -463,23 +364,23 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                         {
                             StartInfo = new ProcessStartInfo
                             {
-                                FileName = selectedInstaller,
-                                WorkingDirectory = Path.GetDirectoryName(selectedInstaller),
+                                FileName = selectedExecutable,
+                                WorkingDirectory = Path.GetDirectoryName(selectedExecutable),
                                 UseShellExecute = true
                             }
                         };
                         
-                        // Verify installer file exists before attempting to launch
-                        if (!File.Exists(selectedInstaller))
+                        // Verify file exists before attempting to launch
+                        if (!File.Exists(selectedExecutable))
                         {
-                            throw new FileNotFoundException($"Selected installer not found: {selectedInstaller}");
+                            throw new FileNotFoundException($"Selected executable not found: {selectedExecutable}");
                         }
                         
                         process.Start();
                     }
                     catch (Exception ex)
                     {
-                        _emuLibrary.Logger.Error($"Failed to start installer: {ex.Message}");
+                        _emuLibrary.Logger.Error($"Failed to start executable: {ex.Message}");
                         throw;
                     }
                     
@@ -566,172 +467,102 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                     
                     info.InstallDirectory = installDir;
                     
-                    // Find executable files in the installation directory for potential play action
+                    // Ask user to select the main game executable
                     string primaryExe = null;
                     try
                     {
+                        // Find executables in the installation directory for potential play action
                         var installedExeFiles = Directory.GetFiles(installDir, "*.exe", SearchOption.AllDirectories);
                         
                         if (installedExeFiles.Length > 0)
                         {
                             _emuLibrary.Logger.Info($"Found {installedExeFiles.Length} executable files in installation directory");
                             
-                            // Extract game name for matching
-                            string gameName = Game.Name?.ToLowerInvariant() ?? "";
-                            string gameBaseName = null;
-                            
-                            // Extract base game name (without numbers, special chars) for matching
-                            if (!string.IsNullOrEmpty(gameName))
-                            {
-                                gameBaseName = Regex.Replace(gameName, @"[^a-z]", "");
-                                _emuLibrary.Logger.Info($"Derived base game name for executable matching: {gameBaseName}");
-                            }
-                            
-                            // More comprehensive list of common main executable names
-                            var commonMainExeNames = new[] { 
-                                "launcher.exe", "game.exe", "play.exe", "start.exe", "run.exe",
-                                "client.exe", "app.exe", "main.exe", "bin.exe",
-                                Game.Name.ToLower() + ".exe" 
-                            };
-                            
-                            // Score all executables to find the most likely main game executable
-                            var scoredExecutables = new Dictionary<string, int>();
-                            
-                            foreach (var exePath in installedExeFiles)
-                            {
-                                string fileName = Path.GetFileName(exePath).ToLowerInvariant();
-                                string fileNameWithoutExt = Path.GetFileNameWithoutExtension(exePath).ToLowerInvariant();
-                                string directory = Path.GetDirectoryName(exePath)?.ToLowerInvariant() ?? "";
-                                int score = 0;
-                                
-                                // Exact matches with common names
-                                foreach (var commonName in commonMainExeNames)
-                                {
-                                    if (fileName.Equals(commonName, StringComparison.OrdinalIgnoreCase))
-                                    {
-                                        score += 8;
-                                        break;
-                                    }
-                                }
-                                
-                                // Check for exact game name match
-                                if (fileNameWithoutExt.Equals(gameName, StringComparison.OrdinalIgnoreCase))
-                                {
-                                    score += 10;
-                                    _emuLibrary.Logger.Info($"Found exact game name match: {fileName}");
-                                }
-                                // Check for close game name match (contains base name)
-                                else if (!string.IsNullOrEmpty(gameBaseName) && gameBaseName.Length > 3 && 
-                                        fileNameWithoutExt.Contains(gameBaseName))
-                                {
-                                    score += 7;
-                                    _emuLibrary.Logger.Info($"Found partial game name match: {fileName} contains {gameBaseName}");
-                                }
-                                
-                                // Penalize common utility applications
-                                if (fileName.Contains("unins") || fileName.Contains("setup") || 
-                                    fileName.Contains("config") || fileName.Contains("install") ||
-                                    fileName.Contains("update") || fileName.Contains("patch") ||
-                                    fileName.Contains("crash") || fileName.Contains("redist") ||
-                                    fileName.Contains("settings"))
-                                {
-                                    score -= 6;
-                                }
-                                
-                                // Location-based scoring
-                                
-                                // Prefer executables in common game binary locations
-                                if (directory.EndsWith("\\bin") || directory.EndsWith("\\binaries") ||
-                                    directory.EndsWith("\\game") || directory.EndsWith("\\app") ||
-                                    directory.EndsWith("\\engine\\binaries\\win64")) // Unreal Engine pattern
-                                {
-                                    score += 4;
-                                }
-                                
-                                // Penalize executables in system or utility folders
-                                if (directory.Contains("\\redist") || directory.Contains("\\support") || 
-                                    directory.Contains("\\tools") || directory.Contains("\\vcredist") ||
-                                    directory.Contains("\\utilities") || directory.Contains("\\setup"))
-                                {
-                                    score -= 5;
-                                }
-                                
-                                // File size heuristic (main executables are usually larger)
-                                try
-                                {
-                                    var fileInfo = new FileInfo(exePath);
-                                    // Main game executables are often larger (>10MB)
-                                    if (fileInfo.Length > 10 * 1024 * 1024)
-                                    {
-                                        score += 3;
-                                    }
-                                    // Very small executables are likely utilities
-                                    else if (fileInfo.Length < 1 * 1024 * 1024)
-                                    {
-                                        score -= 2;
-                                    }
-                                }
-                                catch {}
-                                
-                                // Save the score
-                                scoredExecutables[exePath] = score;
-                            }
-                            
-                            // Sort executables by score descending
-                            var sortedExecutables = scoredExecutables.OrderByDescending(pair => pair.Value)
-                                .Select(pair => new { Path = pair.Key, Score = pair.Value, Name = Path.GetFileName(pair.Key) })
+                            // Filter out common non-game executables
+                            var filteredExeFiles = installedExeFiles
+                                .Where(path => {
+                                    string fileName = Path.GetFileName(path).ToLowerInvariant();
+                                    string dirName = Path.GetDirectoryName(path)?.ToLowerInvariant() ?? "";
+                                    
+                                    // Exclude common utility/helper executables
+                                    return !fileName.Contains("unins") && 
+                                           !fileName.Contains("setup") &&
+                                           !fileName.Contains("redist") &&
+                                           !fileName.Contains("vcredist") &&
+                                           !dirName.Contains("\\redist") &&
+                                           !dirName.Contains("\\dotnet") &&
+                                           !dirName.Contains("\\directx") &&
+                                           !dirName.Contains("\\support");
+                                })
                                 .ToList();
+                                
+                            _emuLibrary.Logger.Info($"Filtered to {filteredExeFiles.Count} potential game executables");
                             
-                            // Log top executables
-                            _emuLibrary.Logger.Info("Top 5 potential main executables:");
-                            foreach (var exe in sortedExecutables.Take(5))
+                            // Ask user to select the main game executable
+                            _emuLibrary.Playnite.MainView.UIDispatcher.Invoke(() =>
                             {
-                                _emuLibrary.Logger.Info($"- {exe.Name} (Score: {exe.Score})");
-                            }
-                            
-                            // If we have a clear winner (high score and significantly higher than second place)
-                            if (sortedExecutables.Count > 0 && 
-                                sortedExecutables[0].Score > 5 && 
-                                (sortedExecutables.Count == 1 || 
-                                 sortedExecutables[0].Score > sortedExecutables[1].Score + 3))
-                            {
-                                primaryExe = sortedExecutables[0].Path;
-                                _emuLibrary.Logger.Info($"Auto-selected highest scoring executable: {Path.GetFileName(primaryExe)} (Score: {sortedExecutables[0].Score})");
-                            }
-                            // If no clear winner but we have multiple options
-                            else if (sortedExecutables.Count > 1)
-                            {
-                                _emuLibrary.Playnite.MainView.UIDispatcher.Invoke(() =>
+                                // Prepare notification message with executable options
+                                string message = $"Installation for \"{Game.Name}\" is complete!\n\n" +
+                                                "Please select the main game executable to launch the game:";
+                                
+                                // Show at most 10 executables to avoid overwhelming the user
+                                var displayExes = filteredExeFiles.Take(10).ToList();
+                                foreach (var exe in displayExes)
                                 {
-                                    // Collect top executables for display
-                                    var topExecutables = sortedExecutables.Take(5)
-                                        .Select(e => $"{e.Name} (Score: {e.Score})")
-                                        .ToList();
-                                    
-                                    string message = $"Multiple potential executables found for {Game.Name}. Recommended options:\n";
-                                    foreach (var exe in topExecutables)
-                                    {
-                                        message += $"- {exe}\n";
-                                    }
-                                    
+                                    message += $"\n- {Path.GetFileName(exe)}";
+                                }
+                                
+                                if (filteredExeFiles.Count > 10)
+                                {
+                                    message += $"\n- Plus {filteredExeFiles.Count - 10} more...";
+                                }
+                                
+                                _emuLibrary.Playnite.Notifications.Add(
+                                    Game.GameId,
+                                    message,
+                                    NotificationType.Info
+                                );
+                                
+                                // Use Playnite's file selection dialog
+                                var selectFileDialog = _emuLibrary.Playnite.Dialogs.SelectFile("Executable files (*.exe)|*.exe");
+                                
+                                if (!string.IsNullOrEmpty(selectFileDialog))
+                                {
+                                    primaryExe = selectFileDialog;
+                                    _emuLibrary.Logger.Info($"User selected main executable: {primaryExe}");
+                                }
+                                else
+                                {
+                                    // If user cancels, give them another chance
                                     _emuLibrary.Playnite.Notifications.Add(
                                         Game.GameId,
-                                        message,
-                                        NotificationType.Info
+                                        $"Please select a main executable for {Game.Name}, or the installation will be incomplete.",
+                                        NotificationType.Warning
                                     );
                                     
-                                    // For now, use highest scoring executable
-                                    // TODO: Implement a proper selection dialog here
-                                    primaryExe = sortedExecutables[0].Path;
-                                    _emuLibrary.Logger.Info($"Selected highest scoring executable: {Path.GetFileName(primaryExe)}");
-                                });
-                            }
-                            else if (sortedExecutables.Count == 1)
+                                    // Try one more time
+                                    var secondAttempt = _emuLibrary.Playnite.Dialogs.SelectFile("Executable files (*.exe)|*.exe");
+                                    
+                                    if (!string.IsNullOrEmpty(secondAttempt))
+                                    {
+                                        primaryExe = secondAttempt;
+                                        _emuLibrary.Logger.Info($"User selected main executable on second attempt: {primaryExe}");
+                                    }
+                                }
+                            });
+                            
+                            // If user didn't select anything, use the first executable as a fallback
+                            if (primaryExe == null && filteredExeFiles.Count > 0)
                             {
-                                // If only one executable, use it
-                                primaryExe = sortedExecutables[0].Path;
-                                _emuLibrary.Logger.Info($"Only one executable found: {Path.GetFileName(primaryExe)}");
+                                primaryExe = filteredExeFiles[0];
+                                _emuLibrary.Logger.Warn($"User did not select an executable; using first filtered executable as fallback: {primaryExe}");
                             }
+                            else if (primaryExe == null && installedExeFiles.Length > 0)
+                            {
+                                primaryExe = installedExeFiles[0];
+                                _emuLibrary.Logger.Warn($"User did not select an executable; using first executable as fallback: {primaryExe}");
+                            }
+                        }
                             
                             // Store the primary executable path in the game info
                             if (!string.IsNullOrEmpty(primaryExe))
