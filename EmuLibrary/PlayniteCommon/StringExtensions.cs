@@ -100,8 +100,16 @@ namespace System
             newName = newName.RemoveTrademarks();
             newName = newName.Replace("_", " ");
             newName = newName.Replace(".", " ");
+            
+            // Add CamelCase splitting - insert space before capital letters that aren't at the start
+            // and aren't preceded by a capital letter
+            newName = Regex.Replace(newName, @"(?<=[a-z])(?=[A-Z])", " ");
+            
+            // Handle special case like "S P" which should be "SP" (single letters separated by space)
+            newName = Regex.Replace(newName, @"\b([A-Za-z])\s([A-Za-z])\b", "$1$2");
+            
             newName = RemoveTrademarks(newName);
-            newName = newName.Replace('’', '\'');
+            newName = newName.Replace(''', '\'');
             newName = Regex.Replace(newName, @"\[.*?\]", "");
             newName = Regex.Replace(newName, @"\(.*?\)", "");
             newName = Regex.Replace(newName, @"\s*:\s*", ": ");

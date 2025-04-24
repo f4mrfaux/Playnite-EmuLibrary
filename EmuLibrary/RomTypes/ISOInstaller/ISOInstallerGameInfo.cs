@@ -13,6 +13,13 @@ namespace EmuLibrary.RomTypes.ISOInstaller
     {
         // Use shared content type from PCInstallerGameInfo instead of duplicating
         
+        public ISOInstallerGameInfo()
+        {
+            // Provide default placeholder values when creating new instances
+            SourcePath = "";
+            InstallerFullPath = "";
+        }
+        
         [SerializationPropertyName("MappingId")]
         public new Guid MappingId { get; set; }
 
@@ -61,6 +68,13 @@ namespace EmuLibrary.RomTypes.ISOInstaller
 
         public override RomType RomType => RomType.ISOInstaller;
 
+        public ISOInstallerGameInfo()
+        {
+            // Provide default placeholder values when creating new instances
+            SourcePath = "";
+            InstallerFullPath = "";
+        }
+        
         public string SourceFullPath
         {
             get
@@ -79,6 +93,14 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                     // If SourcePath is empty, return the InstallerFullPath directly
                     if (string.IsNullOrEmpty(SourcePath))
                     {
+                        // Add additional logging and error handling
+                        if (string.IsNullOrEmpty(InstallerFullPath))
+                        {
+                            logger.Error("Both SourcePath and InstallerFullPath are empty");
+                            // Return a non-null value to prevent null reference exceptions
+                            return "";
+                        }
+                        
                         logger.Info($"SourcePath is empty, using InstallerFullPath: {InstallerFullPath}");
                         return InstallerFullPath;
                     }
