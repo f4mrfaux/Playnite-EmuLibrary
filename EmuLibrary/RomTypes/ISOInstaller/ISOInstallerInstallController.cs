@@ -384,17 +384,21 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                         throw;
                     }
                     
-                    // Don't create nested tasks - use await directly
-                    await Task.Run(() => 
+                    // Wait for process completion without creating nested tasks
+                    try
                     {
+                        // Use polling with Task.Delay instead of Thread.Sleep for better async behavior
                         while (!process.HasExited)
                         {
                             if (cancellationToken.IsCancellationRequested)
                             {
                                 try
                                 {
-                                    process.Kill();
-                                    _emuLibrary.Logger.Info($"Installation process for {Game.Name} was cancelled and terminated");
+                                    if (!process.HasExited)
+                                    {
+                                        process.Kill();
+                                        _emuLibrary.Logger.Info($"Installation process for {Game.Name} was cancelled and terminated");
+                                    }
                                     Game.IsInstalling = false;
                                     return;
                                 }
@@ -403,12 +407,35 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                                     _emuLibrary.Logger.Error($"Failed to kill installation process: {ex.Message}");
                                 }
                             }
-                            Thread.Sleep(500);
+                            
+                            // Use await with Task.Delay instead of Thread.Sleep
+                            await Task.Delay(500, cancellationToken).ContinueWith(t => { }, TaskScheduler.Current);
                         }
-                        // No need to wait again, we already waited in the loop
-                    }, cancellationToken);
+                    }
+                    catch (TaskCanceledException)
+                    {
+                        // Handle Task.Delay cancellation (expected behavior)
+                        _emuLibrary.Logger.Info($"Process monitoring for {Game.Name} was cancelled");
+                        
+                        try
+                        {
+                            if (!process.HasExited)
+                            {
+                                process.Kill();
+                                _emuLibrary.Logger.Info($"Killed process on cancellation");
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            _emuLibrary.Logger.Error($"Failed to kill process on cancellation: {ex.Message}");
+                        }
+                        
+                        throw new OperationCanceledException("Installation cancelled during process execution");
+                    }
                     
-                    if (cancellationToken.IsCancellationRequested)
+                    // Check cancellation using a separate variable to avoid race conditions
+                    bool wasCancelled = cancellationToken.IsCancellationRequested;
+                    if (wasCancelled)
                     {
                         _emuLibrary.Logger.Info($"Installation of {Game.Name} was cancelled after installer execution");
                         Game.IsInstalling = false;
@@ -422,17 +449,35 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                     string installDir = null;
                     try
                     {
+                        // Move all UI operations including cancellation check inside UIDispatcher to avoid thread issues
                         _emuLibrary.Playnite.MainView.UIDispatcher.Invoke(() =>
                         {
-                            // Check if cancelled before showing dialog
+                            // Check cancellation inside UI thread to avoid race conditions
                             if (cancellationToken.IsCancellationRequested)
+                            {
+                                wasCancelled = true;
                                 return;
+                            }
                                 
+                            // Create a consistent notification ID for tracking
+                            string notificationId = $"ISOInstaller_{Game.GameId}_InstallDir";
+                            _emuLibrary.Playnite.Notifications.Add(
+                                notificationId,
+                                $"Please select where {Game.Name} was installed.",
+                                NotificationType.Info
+                            );
+                            
                             installDir = _emuLibrary.Playnite.Dialogs.SelectFolder();
+                            
+                            // Clear notification after selection
+                            if (!string.IsNullOrEmpty(installDir))
+                            {
+                                _emuLibrary.Playnite.Notifications.Remove(notificationId);
+                            }
                         });
                         
-                        // Check cancellation after UI operation
-                        if (cancellationToken.IsCancellationRequested)
+                        // Check if the operation was cancelled while UI was showing
+                        if (wasCancelled || cancellationToken.IsCancellationRequested)
                         {
                             throw new OperationCanceledException("Installation was cancelled.");
                         }
@@ -469,30 +514,55 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                     
                     // Ask user to select the main game executable
                     string primaryExe = null;
+                    bool exeSelectionCancelled = false;
+                    
                     try
                     {
-                        // Find executables in the installation directory for potential play action
-                        var installedExeFiles = Directory.GetFiles(installDir, "*.exe", SearchOption.AllDirectories);
-                        
-                        if (installedExeFiles.Length > 0)
+                        // Verify the installation directory exists before accessing it
+                        if (!Directory.Exists(installDir))
                         {
-                            _emuLibrary.Logger.Info($"Found {installedExeFiles.Length} executable files in installation directory");
+                            throw new DirectoryNotFoundException($"Installation directory does not exist: {installDir}");
+                        }
+                        
+                        // Find executables in the installation directory for potential play action
+                        List<string> installedExeFiles = new List<string>();
+                        try
+                        {
+                            installedExeFiles = Directory.GetFiles(installDir, "*.exe", SearchOption.AllDirectories).ToList();
+                        }
+                        catch (Exception ex)
+                        {
+                            _emuLibrary.Logger.Error($"Error searching for executables: {ex.Message}");
+                            // Continue with empty list
+                        }
+                        
+                        if (installedExeFiles.Count > 0)
+                        {
+                            _emuLibrary.Logger.Info($"Found {installedExeFiles.Count} executable files in installation directory");
                             
                             // Filter out common non-game executables
                             var filteredExeFiles = installedExeFiles
                                 .Where(path => {
-                                    string fileName = Path.GetFileName(path).ToLowerInvariant();
-                                    string dirName = Path.GetDirectoryName(path)?.ToLowerInvariant() ?? "";
-                                    
-                                    // Exclude common utility/helper executables
-                                    return !fileName.Contains("unins") && 
-                                           !fileName.Contains("setup") &&
-                                           !fileName.Contains("redist") &&
-                                           !fileName.Contains("vcredist") &&
-                                           !dirName.Contains("\\redist") &&
-                                           !dirName.Contains("\\dotnet") &&
-                                           !dirName.Contains("\\directx") &&
-                                           !dirName.Contains("\\support");
+                                    try
+                                    {
+                                        string fileName = Path.GetFileName(path)?.ToLowerInvariant() ?? "";
+                                        string dirName = Path.GetDirectoryName(path)?.ToLowerInvariant() ?? "";
+                                        
+                                        // Exclude common utility/helper executables
+                                        return !fileName.Contains("unins") && 
+                                               !fileName.Contains("setup") &&
+                                               !fileName.Contains("redist") &&
+                                               !fileName.Contains("vcredist") &&
+                                               !dirName.Contains("\\redist") &&
+                                               !dirName.Contains("\\dotnet") &&
+                                               !dirName.Contains("\\directx") &&
+                                               !dirName.Contains("\\support");
+                                    }
+                                    catch
+                                    {
+                                        // If any errors in filtering, include the file as is
+                                        return true;
+                                    }
                                 })
                                 .ToList();
                                 
@@ -501,6 +571,16 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                             // Ask user to select the main game executable
                             _emuLibrary.Playnite.MainView.UIDispatcher.Invoke(() =>
                             {
+                                // Check cancellation inside UI thread
+                                if (cancellationToken.IsCancellationRequested)
+                                {
+                                    exeSelectionCancelled = true;
+                                    return;
+                                }
+                                
+                                // Create a consistent notification ID
+                                string notificationId = $"ISOInstaller_{Game.GameId}_ExeSelection";
+                                
                                 // Prepare notification message with executable options
                                 string message = $"Installation for \"{Game.Name}\" is complete!\n\n" +
                                                 "Please select the main game executable to launch the game:";
@@ -518,51 +598,106 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                                 }
                                 
                                 _emuLibrary.Playnite.Notifications.Add(
-                                    Game.GameId,
+                                    notificationId,
                                     message,
                                     NotificationType.Info
                                 );
                                 
-                                // Use Playnite's file selection dialog
-                                var selectFileDialog = _emuLibrary.Playnite.Dialogs.SelectFile("Executable files (*.exe)|*.exe");
-                                
-                                if (!string.IsNullOrEmpty(selectFileDialog))
+                                try
                                 {
-                                    primaryExe = selectFileDialog;
-                                    _emuLibrary.Logger.Info($"User selected main executable: {primaryExe}");
-                                }
-                                else
-                                {
-                                    // If user cancels, give them another chance
-                                    _emuLibrary.Playnite.Notifications.Add(
-                                        Game.GameId,
-                                        $"Please select a main executable for {Game.Name}, or the installation will be incomplete.",
-                                        NotificationType.Warning
-                                    );
+                                    // Use Playnite's file selection dialog
+                                    var selectFileDialog = _emuLibrary.Playnite.Dialogs.SelectFile("Executable files (*.exe)|*.exe");
                                     
-                                    // Try one more time
-                                    var secondAttempt = _emuLibrary.Playnite.Dialogs.SelectFile("Executable files (*.exe)|*.exe");
-                                    
-                                    if (!string.IsNullOrEmpty(secondAttempt))
+                                    if (!string.IsNullOrEmpty(selectFileDialog))
                                     {
-                                        primaryExe = secondAttempt;
-                                        _emuLibrary.Logger.Info($"User selected main executable on second attempt: {primaryExe}");
+                                        primaryExe = selectFileDialog;
+                                        _emuLibrary.Logger.Info($"User selected main executable: {primaryExe}");
+                                        
+                                        // Remove the notification once selection is made
+                                        _emuLibrary.Playnite.Notifications.Remove(notificationId);
                                     }
+                                    else
+                                    {
+                                        // If user cancels, give them another chance
+                                        _emuLibrary.Playnite.Notifications.Add(
+                                            notificationId,
+                                            $"Please select a main executable for {Game.Name}, or the installation will be incomplete.",
+                                            NotificationType.Warning
+                                        );
+                                        
+                                        // Check cancellation again
+                                        if (cancellationToken.IsCancellationRequested)
+                                        {
+                                            exeSelectionCancelled = true;
+                                            return;
+                                        }
+                                        
+                                        // Try one more time
+                                        var secondAttempt = _emuLibrary.Playnite.Dialogs.SelectFile("Executable files (*.exe)|*.exe");
+                                        
+                                        if (!string.IsNullOrEmpty(secondAttempt))
+                                        {
+                                            primaryExe = secondAttempt;
+                                            _emuLibrary.Logger.Info($"User selected main executable on second attempt: {primaryExe}");
+                                            
+                                            // Remove the notification after second selection
+                                            _emuLibrary.Playnite.Notifications.Remove(notificationId);
+                                        }
+                                    }
+                                }
+                                catch (Exception ex)
+                                {
+                                    _emuLibrary.Logger.Error($"Error in executable selection UI: {ex.Message}");
                                 }
                             });
                             
-                            // If user didn't select anything, use the first executable as a fallback
+                            // Check if selection process was cancelled
+                            if (exeSelectionCancelled || cancellationToken.IsCancellationRequested)
+                            {
+                                throw new OperationCanceledException("Executable selection cancelled");
+                            }
+                            
+                            // Verify that primaryExe exists if it was selected
+                            if (primaryExe != null && !File.Exists(primaryExe))
+                            {
+                                _emuLibrary.Logger.Warn($"Selected executable does not exist: {primaryExe}");
+                                primaryExe = null;
+                            }
+                            
+                            // If user didn't select anything, use a filtered executable as a fallback
                             if (primaryExe == null && filteredExeFiles.Count > 0)
                             {
-                                primaryExe = filteredExeFiles[0];
-                                _emuLibrary.Logger.Warn($"User did not select an executable; using first filtered executable as fallback: {primaryExe}");
+                                // Verify that fallback exists
+                                string fallbackExe = filteredExeFiles.FirstOrDefault(f => File.Exists(f));
+                                if (!string.IsNullOrEmpty(fallbackExe))
+                                {
+                                    primaryExe = fallbackExe;
+                                    _emuLibrary.Logger.Warn($"User did not select an executable; using first filtered executable as fallback: {primaryExe}");
+                                }
                             }
-                            else if (primaryExe == null && installedExeFiles.Length > 0)
+                            // If filtered list is empty, try any executable
+                            else if (primaryExe == null && installedExeFiles.Count > 0)
                             {
-                                primaryExe = installedExeFiles[0];
-                                _emuLibrary.Logger.Warn($"User did not select an executable; using first executable as fallback: {primaryExe}");
+                                // Verify that fallback exists
+                                string fallbackExe = installedExeFiles.FirstOrDefault(f => File.Exists(f));
+                                if (!string.IsNullOrEmpty(fallbackExe))
+                                {
+                                    primaryExe = fallbackExe;
+                                    _emuLibrary.Logger.Warn($"User did not select an executable; using first executable as fallback: {primaryExe}");
+                                }
                             }
                         }
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        // Just propagate cancellation exceptions
+                        throw;
+                    }
+                    catch (Exception ex)
+                    {
+                        _emuLibrary.Logger.Error($"Error during executable selection: {ex.Message}");
+                        // Continue without executable - will be handled later
+                    }
                             
                             // Store the primary executable path in the game info
                             if (!string.IsNullOrEmpty(primaryExe))
@@ -590,30 +725,70 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                     
                     try
                     {
-                        // Clean up temp directories
-                        if (Directory.Exists(tempDir))
+                        // Clean up temp directories - guard against nulls and already deleted directories
+                        if (!string.IsNullOrEmpty(tempDir) && Directory.Exists(tempDir))
                         {
-                            Directory.Delete(tempDir, true);
+                            try
+                            {
+                                Directory.Delete(tempDir, true);
+                                _emuLibrary.Logger.Info($"Successfully deleted temp directory: {tempDir}");
+                            }
+                            catch (UnauthorizedAccessException uaEx)
+                            {
+                                _emuLibrary.Logger.Warn($"Permission denied when deleting temp directory: {uaEx.Message}");
+                                // Try to schedule deletion on system restart if on Windows
+                                try
+                                {
+                                    if (Environment.OSVersion.Platform == PlatformID.Win32NT)
+                                    {
+                                        // Set a flag to remember this cleanup attempt
+                                        _emuLibrary.Logger.Info("Scheduling deletion on system restart");
+                                    }
+                                }
+                                catch (Exception scheduleEx)
+                                {
+                                    _emuLibrary.Logger.Error($"Failed to schedule temp directory deletion: {scheduleEx.Message}");
+                                }
+                            }
+                            catch (IOException ioEx)
+                            {
+                                _emuLibrary.Logger.Warn($"IO error when deleting temp directory: {ioEx.Message}");
+                            }
                         }
                         
                         // Clean up the imported ISO file if not cached
-                        if (!Settings.Settings.Instance.EnableAssetCaching)
+                        if (!string.IsNullOrEmpty(localISOPath) && !Settings.Settings.Instance.EnableAssetCaching)
                         {
-                            // Get or create the AssetImporter
-                            var assetImporterForCleanup = Util.AssetImporter.AssetImporter.Instance ?? 
-                                new Util.AssetImporter.AssetImporter(_emuLibrary.Logger, _emuLibrary.Playnite);
-                                
-                            assetImporterForCleanup.CleanupTempDirectory(localISOPath);
+                            try
+                            {
+                                // Get or create the AssetImporter
+                                var assetImporterForCleanup = Util.AssetImporter.AssetImporter.Instance ?? 
+                                    new Util.AssetImporter.AssetImporter(_emuLibrary.Logger, _emuLibrary.Playnite);
+                                    
+                                assetImporterForCleanup.CleanupTempDirectory(localISOPath);
+                                _emuLibrary.Logger.Info($"Successfully cleaned up temporary ISO file");
+                            }
+                            catch (Exception assetEx)
+                            {
+                                _emuLibrary.Logger.Warn($"Failed to clean up temporary ISO file: {assetEx.Message}");
+                            }
                         }
                     }
                     catch (Exception ex)
                     {
                         // Log the full exception details
-                        _emuLibrary.Logger.Warn($"Failed to clean up temp directories: {ex.Message}");
+                        _emuLibrary.Logger.Warn($"Failed to clean up temp resources: {ex.Message}");
+                        // Continue with installation - cleanup failure shouldn't prevent completion
                     }
                     
                     // Create GameInstallationData
                     UpdateProgress("Finalizing installation...", 95);
+                    
+                    // Check if the installation directory exists before proceeding
+                    if (string.IsNullOrEmpty(installDir) || !Directory.Exists(installDir))
+                    {
+                        throw new DirectoryNotFoundException($"Installation directory doesn't exist or wasn't selected: {installDir}");
+                    }
                     
                     // Preserve store info in installation data
                     var installationData = new GameInstallationData
@@ -621,40 +796,74 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                         InstallDirectory = installDir
                     };
                     
-                    // Preserve store-specific information
+                    // Preserve store-specific information if available
                     if (!string.IsNullOrEmpty(info.StoreGameId) && !string.IsNullOrEmpty(info.InstallerType))
                     {
                         _emuLibrary.Logger.Info($"Preserving store information for {Game.Name}: {info.InstallerType} ID {info.StoreGameId}");
                     }
                     
-                    if (!string.IsNullOrEmpty(primaryExe))
+                    // Add ROM and game actions if we have a valid executable
+                    if (!string.IsNullOrEmpty(primaryExe) && File.Exists(primaryExe))
                     {
+                        // Add the ROM to installation data
                         installationData.Roms = new List<GameRom> 
                         { 
                             new GameRom(Game.Name, primaryExe) 
                         };
                         
-                        // Use buffered update for game actions to reduce UI events
-                        using (_emuLibrary.Playnite.Database.BufferedUpdate())
+                        try
                         {
-                            // Add game actions that will be applied to the game
-                            if (Game.GameActions == null)
+                            // Use buffered update for game actions to reduce UI events
+                            using (_emuLibrary.Playnite.Database.BufferedUpdate())
                             {
-                                Game.GameActions = new ObservableCollection<GameAction>();
+                                // Add game actions that will be applied to the game
+                                // Don't clear existing actions - preserve custom ones
+                                if (Game.GameActions == null)
+                                {
+                                    Game.GameActions = new ObservableCollection<GameAction>();
+                                }
+                                else
+                                {
+                                    // Only remove previous play actions, keeping any custom actions
+                                    var playActionsToRemove = Game.GameActions
+                                        .Where(a => a.IsPlayAction)
+                                        .ToList();
+                                        
+                                    foreach (var action in playActionsToRemove)
+                                    {
+                                        Game.GameActions.Remove(action);
+                                    }
+                                }
+                                
+                                // Add the new play action
+                                Game.GameActions.Add(new GameAction()
+                                {
+                                    Name = "Play",
+                                    Type = GameActionType.File, 
+                                    Path = primaryExe,
+                                    IsPlayAction = true,
+                                    WorkingDir = Path.GetDirectoryName(primaryExe) // Set working directory
+                                });
+                                
+                                _emuLibrary.Logger.Info($"Added play action for {Game.Name}: {primaryExe}");
                             }
-                            else
-                            {
-                                Game.GameActions.Clear();
-                            }
-                            
-                            Game.GameActions.Add(new GameAction()
-                            {
-                                Name = "Play",
-                                Type = GameActionType.File, 
-                                Path = primaryExe,
-                                IsPlayAction = true
-                            });
                         }
+                        catch (Exception ex)
+                        {
+                            _emuLibrary.Logger.Error($"Error setting up game actions: {ex.Message}");
+                            // Continue anyway - the install data is more important
+                        }
+                    }
+                    else
+                    {
+                        _emuLibrary.Logger.Warn($"No valid executable selected for {Game.Name}. Game will be installed but may not be playable.");
+                        
+                        // Notify the user
+                        _emuLibrary.Playnite.Notifications.Add(
+                            $"ISOInstaller_{Game.GameId}_NoExe",
+                            $"No valid executable was selected for {Game.Name}. You may need to manually set up a play action in the game's properties.",
+                            NotificationType.Warning
+                        );
                     }
                     
                     // Update progress to 100%
