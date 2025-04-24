@@ -229,7 +229,7 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                     }
                     
                     // Get all executables in the mounted ISO
-                    UpdateProgress("Finding installers in ISO...", 20);
+                    UpdateProgress("Finding executables in ISO...", 20);
                     
                     var exeFiles = Directory.GetFiles(mountPoint, "*.exe", SearchOption.AllDirectories)
                         .OrderBy(f => Path.GetFileName(f))
@@ -698,23 +698,6 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                         _emuLibrary.Logger.Error($"Error during executable selection: {ex.Message}");
                         // Continue without executable - will be handled later
                     }
-                            
-                            // Store the primary executable path in the game info
-                            if (!string.IsNullOrEmpty(primaryExe))
-                            {
-                                info.PrimaryExecutable = primaryExe;
-                                _emuLibrary.Logger.Info($"Selected primary executable for {Game.Name}: {primaryExe}");
-                            }
-                        }
-                        else
-                        {
-                            _emuLibrary.Logger.Warn($"No executable files found in installation directory: {installDir}");
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        _emuLibrary.Logger.Error($"Error finding executable files: {ex.Message}");
-                    }
                     
                     // Unmount the ISO
                     UpdateProgress("Unmounting ISO...", 85);
@@ -882,7 +865,7 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                     );
                     Game.IsInstalling = false;
                     
-                        // Clean up if cancelled
+                    // Clean up if cancelled
                     try
                     {
                         if (!string.IsNullOrEmpty(mountPoint))

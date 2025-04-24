@@ -109,6 +109,8 @@ namespace System
             newName = Regex.Replace(newName, @"\b([A-Za-z])\s([A-Za-z])\b", "$1$2");
             
             newName = RemoveTrademarks(newName);
+            // Replace special apostrophe with standard one
+            newName = newName.Replace(''', '\'');
             newName = newName.Replace(''', '\'');
             newName = Regex.Replace(newName, @"\[.*?\]", "");
             newName = Regex.Replace(newName, @"\(.*?\)", "");
