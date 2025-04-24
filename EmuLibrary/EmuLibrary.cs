@@ -231,6 +231,13 @@ private readonly Dictionary<RomType, RomTypeScanner> _scanners = new Dictionary<
                     continue;
                 }
                 
+                // Skip any legacy or invalid mapping types
+                if (!_scanners.ContainsKey(mapping.RomType))
+                {
+                    Logger.Warn($"No scanner registered for RomType {mapping.RomType}, skipping mapping {mapping.MappingId}.");
+                    continue;
+                }
+                
                 // PCInstaller and ISOInstaller don't require an emulator
                 if (mapping.Emulator == null && 
                     mapping.RomType != RomType.PCInstaller && 
@@ -276,17 +283,7 @@ private readonly Dictionary<RomType, RomTypeScanner> _scanners = new Dictionary<
                             mapping.PlatformId = "PC"; // Generic ID
                             Logger.Info("Set generic PC platform ID as fallback");
                         }
-                    }
                         
-                    if (pcPlatform != null)
-                    {
-                        // Always update to the latest platform ID
-                        mapping.PlatformId = pcPlatform.SpecificationId ?? pcPlatform.Id.ToString();
-                        // Don't set Platform property directly, PlatformId is used to resolve it
-                        Logger.Info($"Set platform to {pcPlatform.Name} (ID: {mapping.PlatformId})");
-                    }
-                    else
-                    {
                         // Try to use ANY platform as a fallback
                         var anyPlatform = Playnite.Database.Platforms.FirstOrDefault(p => p != null);
                         if (anyPlatform != null)

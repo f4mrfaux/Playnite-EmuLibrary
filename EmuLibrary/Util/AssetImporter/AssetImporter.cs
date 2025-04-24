@@ -18,8 +18,12 @@ namespace EmuLibrary.Util.AssetImporter
     /// </summary>
     public class AssetImporter : IAssetImporter
     {
-        private static AssetImporter _instance;
-        public static AssetImporter Instance => _instance;
+        private static readonly Lazy<AssetImporter> _lazyInstance = 
+            new Lazy<AssetImporter>(() => new AssetImporter(
+                Playnite.SDK.LogManager.GetLogger(),
+                Playnite.SDK.API.Instance));
+                
+        public static AssetImporter Instance => _lazyInstance.Value;
         
         private readonly ILogger _logger;
         private readonly IPlayniteAPI _playnite;
@@ -31,23 +35,38 @@ namespace EmuLibrary.Util.AssetImporter
         
         public AssetImporter(ILogger logger, IPlayniteAPI playnite)
         {
-            _logger = logger;
-            _playnite = playnite;
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _playnite = playnite ?? throw new ArgumentNullException(nameof(playnite));
             _cachePath = Path.Combine(Path.GetTempPath(), "EmuLibrary_AssetCache");
             
-            // Ensure cache directory exists
-            if (!Directory.Exists(_cachePath))
+            try
             {
-                Directory.CreateDirectory(_cachePath);
+                // Ensure cache directory exists
+                if (!Directory.Exists(_cachePath))
+                {
+                    Directory.CreateDirectory(_cachePath);
+                }
+                
+                // Load cache registry if it exists
+                if (Settings.Settings.Instance?.EnableAssetCaching == true)
+                {
+                    LoadCacheRegistry();
+                }
             }
-            
-            // Load cache registry if it exists
-            if (Settings.Settings.Instance.EnableAssetCaching)
+            catch (Exception ex)
             {
-                LoadCacheRegistry();
+                _logger.Error($"Error initializing asset importer: {ex.Message}");
+                // Create a fallback path in temp directory
+                try
+                {
+                    _cachePath = Path.Combine(Path.GetTempPath(), "EL_Cache_" + Guid.NewGuid().ToString("N"));
+                    Directory.CreateDirectory(_cachePath);
+                }
+                catch (Exception innerEx)
+                {
+                    _logger.Error($"Failed to create fallback cache path: {innerEx.Message}");
+                }
             }
-            
-            _instance = this;
         }
 
         /// <summary>

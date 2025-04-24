@@ -183,7 +183,7 @@ namespace EmuLibrary.Settings
                     // For ISO installers, we support common disc image formats
                     imageExtensionsLower = new[] { "iso", "bin", "img", "cue", "nrg", "mds", "mdf" };
                 }
-                // Archive installer removed
+                // Use emulator profile for other ROM types
                 else if (EmulatorProfile is CustomEmulatorProfile)
                 {
                     imageExtensionsLower = (EmulatorProfile as CustomEmulatorProfile).ImageExtensions?.Where(ext => !ext.IsNullOrEmpty()).Select(ext => ext.Trim().ToLower());
