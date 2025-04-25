@@ -591,8 +591,8 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                         continue;
                     }
                     
-                    // Get relative path from source folder
-                    var relativePath = isoFile.Substring(srcPath.Length).TrimStart(Path.DirectorySeparatorChar);
+                    // Get relative path from source folder (reuse the one we calculated earlier)
+                    relativePath = isoFile.Substring(srcPath.Length).TrimStart(Path.DirectorySeparatorChar);
                     
                     // Create game info with unique properties to ensure unique GameId
                     var info = new ISOInstallerGameInfo()

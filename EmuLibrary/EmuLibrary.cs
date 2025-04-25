@@ -494,22 +494,29 @@ private readonly Dictionary<RomType, RomTypeScanner> _scanners = new Dictionary<
                         var elInfo = args.Game.GetELGameInfo();
                         if (elInfo?.RomType == RomType.ISOInstaller)
                         {
-                            var isoInfo = elInfo as ISOInstaller.ISOInstallerGameInfo;
+                            var isoInfo = elInfo as RomTypes.ISOInstaller.ISOInstallerGameInfo;
                             Logger.Info($"Preserving ISO paths after installation for {args.Game.Name}: SourcePath={isoInfo.SourcePath}, InstallerFullPath={isoInfo.InstallerFullPath}");
                             
                             // If we have a valid game with paths
                             if (!string.IsNullOrEmpty(isoInfo.SourcePath) && !string.IsNullOrEmpty(isoInfo.InstallerFullPath))
                             {
-                                // Add to game properties to ensure persistent storage
-                                args.Game.OtherActions = new System.Collections.ObjectModel.ObservableCollection<GameAction>()
+                                // Add to game actions to ensure persistent storage
+                                var gameActions = args.Game.GameActions?.ToList() ?? new List<GameAction>();
+                                
+                                // Add a browse action if it doesn't exist
+                                if (!gameActions.Any(a => a.Name == "Browse ISO Source"))
                                 {
-                                    new GameAction()
+                                    gameActions.Add(new GameAction()
                                     {
                                         Name = "Browse ISO Source",
                                         Path = isoInfo.InstallerFullPath,
-                                        Type = GameActionType.File
-                                    }
-                                };
+                                        Type = GameActionType.File,
+                                        IsPlayAction = false
+                                    });
+                                    
+                                    // Update game actions
+                                    args.Game.GameActions = new System.Collections.ObjectModel.ObservableCollection<GameAction>(gameActions);
+                                }
                                 
                                 // Request metadata refresh to apply changes if needed
                                 bool isAutoMetadata = Settings.AutoRequestMetadata;

@@ -229,7 +229,7 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                         // Save game to update metadata
                         try
                         {
-                            _emuLibrary.PlayniteApi.Database.Games.Update(Game);
+                            _emuLibrary.Playnite.Database.Games.Update(Game);
                             _emuLibrary.Logger.Info($"Updated game metadata with new path info");
                         }
                         catch (Exception ex)

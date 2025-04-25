@@ -69,9 +69,9 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                     
                     // Get API reference from any existing game
                     var settings = Settings.Settings.Instance;
-                    if (settings?.EmuLibrary?.PlayniteApi != null)
+                    if (settings?.EmuLibrary?.Playnite != null)
                     {
-                        settings.EmuLibrary.PlayniteApi.Database.Games.Update(game);
+                        settings.EmuLibrary.Playnite.Database.Games.Update(game);
                         logger.Info($"Updated game {game.Name} with preserved ISO paths");
                     }
                 }
