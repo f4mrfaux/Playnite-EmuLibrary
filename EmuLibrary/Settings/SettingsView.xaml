@@ -19,9 +19,6 @@
                     </Hyperlink>
                 </TextBlock>
                 <Separator Margin="0,5,0,10" />
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,0,10">
-                    <Button Content="Add ISO Mapping" Click="Click_AddIsoMapping" Padding="10,5" FontWeight="SemiBold"/>
-                </StackPanel>
                 <Grid Height="Auto" Margin="0,0,0,10">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />

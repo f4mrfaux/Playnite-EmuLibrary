@@ -566,17 +566,19 @@ private readonly Dictionary<RomType, RomTypeScanner> _scanners = new Dictionary<
                     MenuSection = "EmuLibrary"
                 };
                 
-                // Menu item for PC Installer games that are not installed
-                var uninstalledPCInstallers = ourGameInfos
-                    .Where(ggi => ggi.gameInfo.RomType == RomType.PCInstaller && !ggi.game.IsInstalled);
+                // Menu item for installer-type games that are not installed
+                var uninstalledInstallerGames = ourGameInfos
+                    .Where(ggi => (ggi.gameInfo.RomType == RomType.PCInstaller || 
+                                  ggi.gameInfo.RomType == RomType.ISOInstaller) && 
+                                  !ggi.game.IsInstalled);
                 
-                if (uninstalledPCInstallers.Any())
+                if (uninstalledInstallerGames.Any())
                 {
                     yield return new GameMenuItem()
                     {
                         Action = (arags) =>
                         {
-                            uninstalledPCInstallers.ForEach(ggi => 
+                            uninstalledInstallerGames.ForEach(ggi => 
                             {
                                 ggi.game.IsInstalling = true;
                                 var controller = ggi.gameInfo.GetInstallController(ggi.game, this);
@@ -584,28 +586,6 @@ private readonly Dictionary<RomType, RomTypeScanner> _scanners = new Dictionary<
                             });
                         },
                         Description = "Install Game",
-                        MenuSection = "EmuLibrary"
-                    };
-                }
-                
-                // Menu item for ISO Installer games that are not installed
-                var uninstalledISOInstallers = ourGameInfos
-                    .Where(ggi => ggi.gameInfo.RomType == RomType.ISOInstaller && !ggi.game.IsInstalled);
-                
-                if (uninstalledISOInstallers.Any())
-                {
-                    yield return new GameMenuItem()
-                    {
-                        Action = (arags) =>
-                        {
-                            uninstalledISOInstallers.ForEach(ggi => 
-                            {
-                                ggi.game.IsInstalling = true;
-                                var controller = ggi.gameInfo.GetInstallController(ggi.game, this);
-                                controller.Install(new InstallActionArgs());
-                            });
-                        },
-                        Description = "Install ISO Game",
                         MenuSection = "EmuLibrary"
                     };
                 }

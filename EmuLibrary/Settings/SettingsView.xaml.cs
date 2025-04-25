@@ -39,14 +39,11 @@ namespace EmuLibrary.Settings
                 mapping.SourcePath = path;
                 Settings.Instance.EmuLibrary.Logger.Info($"Updated mapping source path: ID={mapping.MappingId}, Type={mapping.RomType}, Path={path}");
                 
-                // For ISO installers, show a help message
-                if (mapping.RomType == RomType.ISOInstaller)
-                {
-                    Settings.Instance.PlayniteAPI.Notifications.Add(
-                        $"EmuLibrary-ISOInstaller-PathSet-{mapping.MappingId}",
-                        $"ISO Installer source path set to: {path}. Make sure this folder contains your ISO files.",
-                        Playnite.SDK.NotificationType.Info);
-                }
+                // Show a generic path set notification for any ROM type
+                Settings.Instance.PlayniteAPI.Notifications.Add(
+                    $"EmuLibrary-Mapping-PathSet-{mapping.MappingId}",
+                    $"{mapping.RomType} source path set to: {path}.",
+                    Playnite.SDK.NotificationType.Info);
             }
         }
 
@@ -63,6 +60,7 @@ namespace EmuLibrary.Settings
                 }
 
                 mapping.DestinationPath = path;
+                Settings.Instance.EmuLibrary.Logger.Info($"Updated mapping destination path: ID={mapping.MappingId}, Type={mapping.RomType}, Path={path}");
             }
         }
 
@@ -111,7 +109,7 @@ namespace EmuLibrary.Settings
 
         private void DataGrid_CurrentCellChanged(object sender, EventArgs e)
         {
-            
+            // This is intentionally empty as there is no specific action to perform
         }
 
         private void Hyperlink_RequestNavigate(object sender, System.Windows.Navigation.RequestNavigateEventArgs e)
@@ -140,74 +138,6 @@ namespace EmuLibrary.Settings
                     "Cache Cleared",
                     MessageBoxButton.OK);
             }
-        }
-        
-        // Helper button to quickly create an ISO installer mapping
-        private void Click_AddIsoMapping(object sender, RoutedEventArgs e)
-        {
-            var logger = Settings.Instance.EmuLibrary.Logger;
-            logger.Info("Creating a new ISO Installer mapping");
-            
-            // Select source folder
-            string sourcePath = GetSelectedFolderPath();
-            if (string.IsNullOrEmpty(sourcePath))
-            {
-                logger.Warn("No source path selected, cancelling ISO mapping creation");
-                return;
-            }
-            
-            // Get default destination path (user's Documents folder)
-            string destPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-            destPath = Path.Combine(destPath, "InstalledGames");
-            
-            // Create the mapping
-            var mapping = new EmulatorMapping()
-            {
-                MappingId = Guid.NewGuid(),
-                RomType = RomType.ISOInstaller,
-                SourcePath = sourcePath,
-                DestinationPath = destPath,
-                Enabled = true
-            };
-            
-            // Find PC platform
-            try
-            {
-                var pcPlatform = Settings.Instance.PlayniteAPI.Database.Platforms
-                    .FirstOrDefault(p => p.Name == "PC");
-                
-                if (pcPlatform != null)
-                {
-                    mapping.PlatformId = pcPlatform.SpecificationId ?? pcPlatform.Id.ToString();
-                    logger.Info($"Set platform to PC (ID: {mapping.PlatformId})");
-                }
-            }
-            catch (Exception ex)
-            {
-                logger.Error($"Error finding PC platform: {ex.Message}");
-            }
-            
-            // Add to mappings
-            Settings.Instance.Mappings.Add(mapping);
-            logger.Info($"Added new ISO mapping: ID={mapping.MappingId}, Source={sourcePath}, Destination={destPath}");
-            
-            // Show notification
-            Settings.Instance.PlayniteAPI.Notifications.Add(
-                "EmuLibrary-ISOMapping-Created",
-                $"Created new ISO Installer mapping for {sourcePath}. After closing settings, Playnite will scan for ISO files.",
-                Playnite.SDK.NotificationType.Info);
-                
-            // Display a detailed help message
-            Settings.Instance.PlayniteAPI.Dialogs.ShowMessage(
-                "ISO Installer mapping has been created successfully.\n\n" +
-                "Important tips for ISO scanning:\n" +
-                "1. Make sure your ISO files are actual game installers (not disk images of installed games)\n" +
-                "2. Supported formats: ISO, BIN, CUE, IMG, MDF, MDS\n" +
-                "3. The scanner looks inside all subdirectories automatically\n" +
-                "4. After finding games, they will appear in Playnite's Games list\n" +
-                "5. Click 'Install ISO Game' from the right-click menu to install them\n\n" +
-                "If games aren't appearing, check Playnite logs for more details.",
-                "ISO Mapping Created");
         }
         
         private void Click_ViewCacheInfo(object sender, RoutedEventArgs e)
@@ -240,8 +170,5 @@ namespace EmuLibrary.Settings
                 "Cache Information",
                 MessageBoxButton.OK);
         }
-        
-        // The SteamGridDbApiKey button and handler have been removed
-        // Now using Playnite's built-in metadata providers
     }
 }

@@ -67,13 +67,6 @@ namespace EmuLibrary.RomTypes.ISOInstaller
         public string ContentDescription { get; set; }
 
         public override RomType RomType => RomType.ISOInstaller;
-
-        public ISOInstallerGameInfo()
-        {
-            // Provide default placeholder values when creating new instances
-            SourcePath = "";
-            InstallerFullPath = "";
-        }
         
         public string SourceFullPath
         {
@@ -82,6 +75,9 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                 try 
                 {
                     var logger = Playnite.SDK.LogManager.GetLogger();
+                    
+                    // FIX: Add extra debugging to see what's causing the empty path issue
+                    logger.Info($"Getting SourceFullPath - Current values: SourcePath={SourcePath}, InstallerFullPath={InstallerFullPath}");
                     
                     // If InstallerFullPath is provided and exists, use it directly
                     if (!string.IsNullOrEmpty(InstallerFullPath) && File.Exists(InstallerFullPath))
@@ -107,11 +103,28 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                     
                     var settings = Settings.Settings.Instance;
                     var mapping = settings.GetMapping(MappingId);
+                    logger.Info($"Mapping ID: {MappingId}, Mapping found: {mapping != null}");
+                    
                     if (mapping == null)
                     {
-                        // Fallback to direct path if mapping is missing
-                        logger.Warn($"Mapping not found for ID {MappingId}, using InstallerFullPath: {InstallerFullPath}");
-                        return InstallerFullPath;
+                        // FIX: Try to find a mapping by checking all available mappings with the same ROM type
+                        var mappings = settings.Mappings.Where(m => m.RomType == RomType.ISOInstaller).ToList();
+                        logger.Info($"Trying to find alternative mapping. Found {mappings.Count} ISO installer mappings.");
+                        
+                        if (mappings.Count > 0)
+                        {
+                            mapping = mappings.FirstOrDefault();
+                            logger.Info($"Using alternative mapping ID: {mapping.MappingId}");
+                            
+                            // Update the mapping ID to fix the issue for future operations
+                            this.MappingId = mapping.MappingId;
+                        }
+                        else
+                        {
+                            // Fallback to direct path if mapping is missing
+                            logger.Warn($"No ISO installer mappings found, using InstallerFullPath: {InstallerFullPath}");
+                            return InstallerFullPath;
+                        }
                     }
                     
                     if (string.IsNullOrEmpty(mapping.SourcePath))
@@ -123,6 +136,7 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                     
                     // Combine paths and verify the file exists
                     string combinedPath = Path.Combine(mapping.SourcePath, SourcePath);
+                    logger.Info($"Combined path: {combinedPath}");
                     
                     if (File.Exists(combinedPath))
                     {
@@ -131,6 +145,13 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                     }
                     else
                     {
+                        // Try alternative: If SourcePath might already be a full path
+                        if (File.Exists(SourcePath))
+                        {
+                            logger.Info($"SourcePath exists as a full path: {SourcePath}");
+                            return SourcePath;
+                        }
+                        
                         // If combined path doesn't exist but InstallerFullPath does, use it
                         if (!string.IsNullOrEmpty(InstallerFullPath) && File.Exists(InstallerFullPath))
                         {

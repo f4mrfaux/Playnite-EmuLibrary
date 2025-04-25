@@ -48,10 +48,10 @@ Best for: Multi-disc games or ROMs with multiple files (CD-based systems like Pl
 
 Best for: PC games distributed as disc images (.iso, .bin/.cue, etc.)
 
-1. **Setup**: Create an ISOInstaller mapping pointing to your disc image collection
+1. **Setup**: Create an ISOInstaller mapping using the standard mapping table in settings
 2. **Scanning**: EmuLibrary finds all compatible disc images (.iso, .bin, .img, etc.)
 3. **Installation Process**:
-   - When you click "Install" on an ISO game, the system copies the ISO to temporary storage (if needed)
+   - When you click "Install Game" on an ISO game, the system copies the ISO to temporary storage (if needed)
    - The ISO is automatically mounted as a virtual drive using Windows' built-in mounting
    - You'll see a list of executables found on the ISO and can select which installer to run
    - The installer runs and you complete the normal game installation process
@@ -168,8 +168,9 @@ For collections with multi-disc games:
 1. **Mounting Requirements**: ISO mounting requires Windows 8 or newer with built-in mounting capabilities.
 2. **File Extensions**: ISO scanning supports various disc image formats including .iso, .bin, .img, .cue, .nrg, .mds, and .mdf.
 3. **Emulator Mapping**: For PCInstaller and ISOInstaller mappings, you must select an emulator even though none is needed. Create a dummy emulator called "EmuLib-PC" and use it for these mappings.
-4. **Command-Line Arguments**: You can add command-line arguments to game launches by editing the play action after installation.
-5. **Installation Interruptions**: If an installation is interrupted, you might need to manually unmount any ISO files using Windows Explorer.
+4. **Consistent Interface**: Both PCInstaller and ISOInstaller use the same standard mapping table interface and "Install Game" menu option for a consistent experience.
+5. **Command-Line Arguments**: You can add command-line arguments to game launches by editing the play action after installation.
+6. **Installation Interruptions**: If an installation is interrupted, you might need to manually unmount any ISO files using Windows Explorer.
 
 ### Log Files
 

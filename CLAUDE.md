@@ -70,6 +70,17 @@ EmuLibrary is a library extension for Playnite, an open source video game librar
 - Target .NET Framework 4.6.2
 - Use WPF for UI components
 
+## CRITICAL USER INTERFACE GUIDELINES
+- NEVER create special UI elements for ONE specific RomType - all RomTypes MUST use the same UI patterns
+- ALWAYS maintain workflow consistency across all RomType implementations
+- ALWAYS ensure that ISO installer, PCInstaller, and other types use the EXACT SAME table interface for mapping configuration
+- NEVER create special buttons or workflows that bypass the standard mapping configuration system
+- ALWAYS conform to the standard SDK interface patterns established in Playnite
+- ALWAYS ensure the standard table interface fully works for ALL RomTypes without special case handling
+- When adding a new feature, implement it universally for ALL similar RomTypes, not just one specific type
+- NEVER create UI elements that make the system confusing or inconsistent for users
+- NEVER break existing UI workflows or create inconsistent UX between similar components
+
 ## Playnite SDK API Key Interfaces
 
 ### IPlayniteAPI
@@ -181,6 +192,7 @@ EmuLibrary is a library extension for Playnite, an open source video game librar
   - Similar to PCInstaller but handles disc image formats
   - Supports common ISO formats like .iso, .bin/.cue, .mdf/.mds
   - Mounts disc images before executing installers
+  - MUST use the SAME UI workflow as PCInstaller - configured through the main mapping table
 - **ArchiveInstaller**:
   - Handles archives containing ISOs with installers
   - Supports common archive formats (.zip, .rar, .7z)
@@ -492,6 +504,11 @@ We've made several improvements to the ISOInstallerScanner to fix issues with de
    }
    ```
 
-These changes should help identify and fix the issue with the ISOInstallerScanner not finding ISO files. The direct file search will show if any ISO files exist in the specified directories, and the enhanced debugging information will help track down where the process is failing.
+8. Fixed ISOInstaller to use standard table workflow:
+   - Removed special "Add ISO Mapping" button
+   - Ensured ISOInstaller works identically to PCInstaller using the standard table interface
+   - Fixed SourceFullPath handling to find any available ISO mapping
+   - Added additional diagnostics to help track down path resolution issues
+   - Ensured consistent user experience across all RomTypes
 
 Note: Since the project must be built on Windows, these changes will need to be transferred to a Windows environment for proper testing and validation.
