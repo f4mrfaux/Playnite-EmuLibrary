@@ -6,6 +6,14 @@ While Playnite has had built-in support for scanning paths for installed ROMs an
 
 EmuLibrary treats one or more folders of ROMs/Disc images or PC game installers as a library from which you can "install" games. It can be useful if you have a large collection of emulated games and PC installers with limited storage where you play them versus where you store them (HTPC vs. NAS, for example). It also is useful for keeping the list of games up to date, and for being able to filter via installed/uninstalled.
 
+## Key Features
+
+* **Manage Multiple ROM Sources**: Connect to multiple ROM repositories or disc image collections
+* **Support for Various ROM Types**: Handle single files, multi-file games, disc images (ISOs), and PC installers
+* **Space-Efficient**: Install only the games you want to play, keeping your local storage optimized
+* **Game State Management**: Easily track installed and uninstalled games
+* **Platform Integration**: Special handling for different platforms (including GOG, Steam, and Nintendo Switch)
+
 Disclaimer: This extension was originally created for personal usage, and that is still the primary focus. Because of this, many parts of it are still tailored to specific needs and usage patterns. Despite that, it's being shared with others in case it is useful to them. It is still in the process of being adapted for more general use.
 
 ## Setup
@@ -31,7 +39,14 @@ SingleFile is the simplest type of ROM supported. This is for source folders in 
 
 ### MultiFile
 
-With the MultiFile type, each subfolder directly within the source folder is scanned as a potential "ROM". This is for games that have multiple loose files. (Ex. one or more .bin/.cue, with optional .m3u). When installing a MultiFile game, the whole folder is copied. 
+With the MultiFile type, each subfolder directly within the source folder is scanned as a potential "ROM". This is for games that have multiple loose files or those that use disc images (ISOs, BIN/CUE, etc.). When installing a MultiFile game, the whole folder is copied.
+
+#### Working with Disc Images (ISOs and other formats)
+
+The MultiFile type is the recommended ROM type for handling disc-based games with ISO files, BIN/CUE files, or other disc image formats. By organizing your disc images in folders (one folder per game), you can manage these games effectively:
+
+* **Single-disc games**: Place the ISO or BIN/CUE files in a folder named after the game
+* **Multi-disc games**: Place all disc images in a single folder, preferably with an M3U playlist file
 
 To determine which file is used as the one to tell the emulator to load, all files matching the configured emulator profile's supported extensions are considered. Precedence is by configured image extension list order, and then by alphabetical order. For example, if file names are the same except for `(Disc 1)` versus `(Disc 2)`, the first disc takes precedence. Similarly, if you have `.cue` in the extension list before `.m3u` (as some of the built-in profiles have at the time of writing), `.cue` would be chosen over `.m3u`, which may not be desired for multi-disc games.
 
@@ -44,6 +59,13 @@ The PCInstaller type supports PC game installer executables (.exe files). This t
 * Manage PC games alongside your emulated games collection
 
 When using the PCInstaller type, you'll be able to select from PC-related platforms (Windows, Steam, GOG, etc.) regardless of which emulator or profile you've selected. This makes it suitable for organizing PC game installers from various sources.
+
+#### PCInstaller Features and Capabilities
+
+* **Platform Detection**: Automatically identifies and categorizes games from different platforms (GOG, Steam, etc.)
+* **Installer Organization**: Manages your collection of installer files separately from installed games
+* **Space Efficiency**: Only install the games you want to play, keeping others in your library as "uninstalled"
+* **Cross-Platform Support**: Works with various PC gaming platforms without requiring emulation
 
 #### GOG Integration
 
@@ -72,7 +94,46 @@ When a game is installed, the latest update and any DLC from the source will als
 * If the connection to the source folder's storage is unstable, Playnite may crash when when updating the library. This is unlikely to be able to be completely fixed until Playnite uses a newer .NET version (currently being targeted for Playnite 11). Some some mitigations are planned in the meantime, but are not yet implemented.
 * If the mapping is disabled or if EmuLibrary update is cancelled before the scan for the mapping completes, game installation for the mapping's games may result in an error message. This will be fixed in a later version of this addon.
 
-## Usage Workflow
+## Usage Workflows
+
+### Working with Disc Image (ISO) Files
+
+Here's a step-by-step workflow for managing a collection of disc images (ISOs):
+
+1. **Organize your disc images**: Create a folder structure where each game has its own folder:
+   ```
+   N:\games\PS2\
+   ├── Final Fantasy X\
+   │   └── Final Fantasy X.iso
+   ├── God of War\
+   │   └── God of War.iso
+   ├── Metal Gear Solid 3\
+   │   ├── Metal Gear Solid 3 (Disc 1).iso
+   │   └── Metal Gear Solid 3 (Disc 2).iso
+   ```
+
+2. **Configure EmuLibrary**:
+   - Open Playnite and go to Add-ons → Extensions → EmuLibrary → Configure
+   - Click "Add Mapping" to create a new mapping
+   - Set "Emulator" to your preferred emulator (e.g., PCSX2 for PS2 games)
+   - Select an appropriate emulator profile
+   - Set "Rom Type" to "MultiFile"
+   - Set "Source Path" to your ISO repository (e.g., "N:\games\PS2\")
+   - Set "Destination Path" to where you want to install the games (e.g., "D:\Installed Games\PS2\")
+   - Select the appropriate platform (e.g., PlayStation 2)
+
+3. **Scan and Install**:
+   - Update your Playnite library (F5)
+   - Your games will appear as "uninstalled" in the library
+   - To install a game, right-click it and select "Install"
+   - The entire game folder will be copied to your destination path
+   - The game will be marked as "installed" and ready to play
+
+4. **Multi-disc Game Management**:
+   - For multi-disc games, create M3U playlist files in the game folder
+   - Name the playlist after the game (e.g., "Metal Gear Solid 3.m3u")
+   - List each disc in the playlist file in the correct order
+   - Configure your emulator profile to prioritize M3U files if needed
 
 ### Example: Adding a Repository of PC Games (e.g., GOG games)
 
@@ -102,7 +163,7 @@ Here's a step-by-step workflow for adding a repository of PC game installers usi
 
 9. After installation, the game will be marked as "installed" and you can launch it directly from Playnite.
 
-This workflow allows you to maintain a central repository of game installers while only keeping installed games on your local machine.
+These workflows allow you to maintain central repositories of games while only keeping installed games on your local machine, saving disk space and better organizing your collection.
 
 ## Support
 
