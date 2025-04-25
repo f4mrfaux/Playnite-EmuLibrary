@@ -485,6 +485,43 @@ private readonly Dictionary<RomType, RomTypeScanner> _scanners = new Dictionary<
             if (args.Game != null && args.Game.GameId != null && args.Game.GameId.StartsWith("!"))
             {
                 EnsurePluginId(args.Game);
+                
+                try 
+                {
+                    // For ISO installer games, ensure paths are preserved
+                    if (args.Game.GameId.StartsWith("!"))
+                    {
+                        var elInfo = args.Game.GetELGameInfo();
+                        if (elInfo?.RomType == RomType.ISOInstaller)
+                        {
+                            var isoInfo = elInfo as ISOInstaller.ISOInstallerGameInfo;
+                            Logger.Info($"Preserving ISO paths after installation for {args.Game.Name}: SourcePath={isoInfo.SourcePath}, InstallerFullPath={isoInfo.InstallerFullPath}");
+                            
+                            // If we have a valid game with paths
+                            if (!string.IsNullOrEmpty(isoInfo.SourcePath) && !string.IsNullOrEmpty(isoInfo.InstallerFullPath))
+                            {
+                                // Add to game properties to ensure persistent storage
+                                args.Game.OtherActions = new System.Collections.ObjectModel.ObservableCollection<GameAction>()
+                                {
+                                    new GameAction()
+                                    {
+                                        Name = "Browse ISO Source",
+                                        Path = isoInfo.InstallerFullPath,
+                                        Type = GameActionType.File
+                                    }
+                                };
+                                
+                                // Request metadata refresh to apply changes if needed
+                                bool isAutoMetadata = Settings.AutoRequestMetadata;
+                                Logger.Info($"Auto-download metadata for game: {isAutoMetadata}");
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error($"Error preserving ISO paths: {ex.Message}");
+                }
             }
 
             if (args.Game.PluginId == PluginId && Settings.NotifyOnInstallComplete)
@@ -1386,6 +1423,7 @@ private readonly Dictionary<RomType, RomTypeScanner> _scanners = new Dictionary<
                 Logger.Info($"Found {potentialISOGames.Count} potential ISO games based on GameId");
                 
                 int fixedGames = 0;
+                int pathsFixed = 0;
                 
                 using (PlayniteApi.Database.BufferedUpdate())
                 {
@@ -1399,17 +1437,51 @@ private readonly Dictionary<RomType, RomTypeScanner> _scanners = new Dictionary<
                             PlayniteApi.Database.Games.Update(game);
                             fixedGames++;
                         }
+                        
+                        // For all ISO games, ensure paths are preserved
+                        try
+                        {
+                            // Get the game info and check if it's an ISO installer game
+                            var gameInfo = game.GetELGameInfo();
+                            if (gameInfo?.RomType == RomType.ISOInstaller)
+                            {
+                                var isoInfo = gameInfo as ISOInstallerGameInfo;
+                                Logger.Info($"Checking ISO paths for {game.Name}: SourcePath={isoInfo.SourcePath}, InstallerFullPath={isoInfo.InstallerFullPath}");
+                                
+                                // If paths are incomplete, try to resolve them
+                                if (string.IsNullOrEmpty(isoInfo.InstallerFullPath) || !File.Exists(isoInfo.InstallerFullPath))
+                                {
+                                    // Force path resolution via SourceFullPath property
+                                    var sourcePath = isoInfo.SourceFullPath;
+                                    if (!string.IsNullOrEmpty(sourcePath) && File.Exists(sourcePath) && 
+                                        sourcePath != isoInfo.InstallerFullPath)
+                                    {
+                                        // Update the path info
+                                        Logger.Info($"Updating ISO path for {game.Name} to: {sourcePath}");
+                                        isoInfo.InstallerFullPath = sourcePath;
+                                        game.GameId = isoInfo.AsGameId(); // Update serialized info
+                                        PlayniteApi.Database.Games.Update(game);
+                                        pathsFixed++;
+                                    }
+                                }
+                            }
+                        }
+                        catch (Exception pathEx)
+                        {
+                            // This may not be an ISO game despite matching our filter
+                            Logger.Debug($"Game {game.Name} is not an ISO installer game or has invalid data: {pathEx.Message}");
+                        }
                     }
                 }
                 
-                if (fixedGames > 0)
+                if (fixedGames > 0 || pathsFixed > 0)
                 {
-                    Logger.Info($"Fixed PluginId for {fixedGames} ISO games");
+                    Logger.Info($"Fixed PluginId for {fixedGames} ISO games, fixed paths for {pathsFixed} games");
                     
                     // Add notification to inform user
                     Playnite.Notifications.Add(
                         "EmuLibrary-ISO-FixedPluginIds",
-                        $"Fixed {fixedGames} ISO games that had incorrect plugin IDs. They should now appear in your library.",
+                        $"Fixed {fixedGames} ISO games that had incorrect plugin IDs. Fixed paths for {pathsFixed} ISO games. They should now appear in your library.",
                         NotificationType.Info);
                 }
                 else
