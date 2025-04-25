@@ -76,107 +76,144 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                 try 
                 {
                     var logger = Playnite.SDK.LogManager.GetLogger();
+                    var settings = Settings.Settings.Instance;
                     
                     // FIX: Add extra debugging to see what's causing the empty path issue
-                    logger.Info($"Getting SourceFullPath - Current values: SourcePath={SourcePath}, InstallerFullPath={InstallerFullPath}");
+                    logger.Info($"Getting SourceFullPath - Current values: SourcePath={SourcePath}, InstallerFullPath={InstallerFullPath}, MappingId={MappingId}");
                     
-                    // If InstallerFullPath is provided and exists, use it directly
-                    if (!string.IsNullOrEmpty(InstallerFullPath) && File.Exists(InstallerFullPath))
+                    // CRITICAL: InstallerFullPath should always have priority since it's explicitly set 
+                    // during scanning with the full path to the ISO file
+                    if (!string.IsNullOrEmpty(InstallerFullPath))
                     {
-                        logger.Info($"Using InstallerFullPath directly (exists): {InstallerFullPath}");
-                        return InstallerFullPath;
-                    }
-                    
-                    // If SourcePath is empty, return the InstallerFullPath directly
-                    if (string.IsNullOrEmpty(SourcePath))
-                    {
-                        // Add additional logging and error handling
-                        if (string.IsNullOrEmpty(InstallerFullPath))
+                        if (File.Exists(InstallerFullPath))
                         {
-                            logger.Error("Both SourcePath and InstallerFullPath are empty");
-                            
-                            // Try to find a valid mapping to set
-                            var allMappings = settings.Mappings.Where(m => m.RomType == RomType.ISOInstaller).ToList();
-                            if (allMappings.Count > 0)
-                            {
-                                var firstMapping = allMappings.FirstOrDefault();
-                                if (firstMapping != null)
-                                {
-                                    this.MappingId = firstMapping.MappingId;
-                                    logger.Info($"Auto-assigned mapping ID {firstMapping.MappingId} to resolve empty paths");
-                                }
-                            }
-                            
-                            // Return a non-null value to prevent null reference exceptions
-                            return "";
-                        }
-                        
-                        logger.Info($"SourcePath is empty, using InstallerFullPath: {InstallerFullPath}");
-                        return InstallerFullPath;
-                    }
-                    
-                    var settings = Settings.Settings.Instance;
-                    var mapping = settings.GetMapping(MappingId);
-                    logger.Info($"Mapping ID: {MappingId}, Mapping found: {mapping != null}");
-                    
-                    if (mapping == null)
-                    {
-                        // FIX: Try to find a mapping by checking all available mappings with the same ROM type
-                        var mappings = settings.Mappings.Where(m => m.RomType == RomType.ISOInstaller).ToList();
-                        logger.Info($"Trying to find alternative mapping. Found {mappings.Count} ISO installer mappings.");
-                        
-                        if (mappings.Count > 0)
-                        {
-                            mapping = mappings.FirstOrDefault();
-                            logger.Info($"Using alternative mapping ID: {mapping.MappingId}");
-                            
-                            // Update the mapping ID to fix the issue for future operations
-                            this.MappingId = mapping.MappingId;
+                            logger.Info($"Using InstallerFullPath directly (exists): {InstallerFullPath}");
+                            return InstallerFullPath;
                         }
                         else
                         {
-                            // Fallback to direct path if mapping is missing
-                            logger.Warn($"No ISO installer mappings found, using InstallerFullPath: {InstallerFullPath}");
-                            return InstallerFullPath;
+                            logger.Warn($"InstallerFullPath doesn't exist: {InstallerFullPath}, will try alternatives");
                         }
                     }
                     
-                    if (string.IsNullOrEmpty(mapping.SourcePath))
+                    // If we have a source path and mapping, try to combine them
+                    if (!string.IsNullOrEmpty(SourcePath) && MappingId != Guid.Empty)
                     {
-                        // If mapping source path is empty, return direct path
-                        logger.Warn($"Mapping source path is empty, using InstallerFullPath: {InstallerFullPath}");
-                        return InstallerFullPath;
-                    }
-                    
-                    // Combine paths and verify the file exists
-                    string combinedPath = Path.Combine(mapping.SourcePath, SourcePath);
-                    logger.Info($"Combined path: {combinedPath}");
-                    
-                    if (File.Exists(combinedPath))
-                    {
-                        logger.Info($"Combined path exists: {combinedPath}");
-                        return combinedPath;
-                    }
-                    else
-                    {
-                        // Try alternative: If SourcePath might already be a full path
-                        if (File.Exists(SourcePath))
-                        {
-                            logger.Info($"SourcePath exists as a full path: {SourcePath}");
-                            return SourcePath;
-                        }
+                        var mapping = settings.GetMapping(MappingId);
                         
-                        // If combined path doesn't exist but InstallerFullPath does, use it
-                        if (!string.IsNullOrEmpty(InstallerFullPath) && File.Exists(InstallerFullPath))
+                        if (mapping != null && !string.IsNullOrEmpty(mapping.SourcePath))
                         {
-                            logger.Warn($"Combined path doesn't exist, using InstallerFullPath: {InstallerFullPath}");
-                            return InstallerFullPath;
+                            // Combine paths and verify the file exists
+                            string combinedPath = Path.Combine(mapping.SourcePath, SourcePath);
+                            logger.Info($"Trying combined path from mapping: {combinedPath}");
+                            
+                            if (File.Exists(combinedPath))
+                            {
+                                logger.Info($"Combined path exists: {combinedPath}");
+                                return combinedPath;
+                            }
                         }
-                        
-                        // Log the error but still return the combined path for diagnostic purposes
-                        logger.Error($"ISO file not found at combined path: {combinedPath}");
-                        return combinedPath;
                     }
+                    
+                    // At this point, we couldn't find the ISO file using the stored paths
+                    // Try all available mappings with our source path
+                    if (!string.IsNullOrEmpty(SourcePath))
+                    {
+                        logger.Info($"Trying all mappings with SourcePath: {SourcePath}");
+                        foreach (var mapping in settings.Mappings.Where(m => m.RomType == RomType.ISOInstaller))
+                        {
+                            if (string.IsNullOrEmpty(mapping.SourcePath))
+                                continue;
+                                
+                            string combinedPath = Path.Combine(mapping.SourcePath, SourcePath);
+                            logger.Info($"Checking in mapping {mapping.MappingId}: {combinedPath}");
+                            
+                            if (File.Exists(combinedPath))
+                            {
+                                // Update our mapping ID for future use
+                                this.MappingId = mapping.MappingId;
+                                logger.Info($"Found in mapping {mapping.MappingId}: {combinedPath}");
+                                return combinedPath;
+                            }
+                        }
+                    }
+
+                    // Last resort: If we have the game name, try to find an ISO file with that name in any mapping
+                    string gameName = null;
+                    
+                    // Try to get game name from SourcePath first
+                    if (!string.IsNullOrEmpty(SourcePath))
+                    {
+                        gameName = Path.GetFileNameWithoutExtension(SourcePath);
+                    }
+                    // Also check by filename of InstallerFullPath
+                    else if (!string.IsNullOrEmpty(InstallerFullPath))
+                    {
+                        gameName = Path.GetFileNameWithoutExtension(InstallerFullPath);
+                    }
+                    
+                    if (!string.IsNullOrEmpty(gameName))
+                    {
+                        logger.Info($"Looking for ISOs with name similar to: {gameName}");
+                        
+                        // Normalize the game name for better matching
+                        gameName = gameName.Replace(":", "_").Replace("\\", "_").Replace("/", "_");
+                        
+                        foreach (var mapping in settings.Mappings.Where(m => m.RomType == RomType.ISOInstaller))
+                        {
+                            if (string.IsNullOrEmpty(mapping.SourcePath) || !Directory.Exists(mapping.SourcePath))
+                                continue;
+                                
+                            logger.Info($"Searching in mapping {mapping.MappingId}: {mapping.SourcePath}");
+                            
+                            // Search for common ISO formats
+                            string[] extensions = new[] { ".iso", ".bin", ".img", ".cue", ".nrg", ".mds", ".mdf" };
+                            
+                            foreach (var ext in extensions)
+                            {
+                                try
+                                {
+                                    // Try exact match with each extension
+                                    var exactPath = Path.Combine(mapping.SourcePath, gameName + ext);
+                                    if (File.Exists(exactPath))
+                                    {
+                                        this.MappingId = mapping.MappingId;
+                                        this.SourcePath = gameName + ext;
+                                        this.InstallerFullPath = exactPath;
+                                        logger.Info($"Found exact ISO match: {exactPath}");
+                                        return exactPath;
+                                    }
+                                    
+                                    // Try fuzzy match (case insensitive, partial name)
+                                    var files = Directory.GetFiles(mapping.SourcePath, "*" + ext, SearchOption.AllDirectories);
+                                    
+                                    foreach (var file in files)
+                                    {
+                                        var fileName = Path.GetFileNameWithoutExtension(file);
+                                        
+                                        if (fileName.IndexOf(gameName, StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                            gameName.IndexOf(fileName, StringComparison.OrdinalIgnoreCase) >= 0)
+                                        {
+                                            // Update our path information
+                                            this.MappingId = mapping.MappingId;
+                                            this.SourcePath = Path.GetFileName(file);
+                                            this.InstallerFullPath = file;
+                                            logger.Info($"Found similar ISO match: {file}");
+                                            return file;
+                                        }
+                                    }
+                                }
+                                catch (Exception searchEx)
+                                {
+                                    logger.Error($"Error searching for {gameName}{ext} in {mapping.SourcePath}: {searchEx.Message}");
+                                }
+                            }
+                        }
+                    }
+                    
+                    // We failed to find the ISO file, return an empty string
+                    logger.Error($"Failed to resolve ISO path. SourcePath={SourcePath}, InstallerFullPath={InstallerFullPath}");
+                    return "";
                 }
                 catch (System.Exception ex)
                 {

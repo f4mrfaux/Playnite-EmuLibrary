@@ -219,6 +219,25 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                     string isoSourcePath = info.SourceFullPath;
                     _emuLibrary.Logger.Info($"Mounting ISO directly from source: {isoSourcePath}");
                     
+                    // Important: Save any path changes back to the game metadata
+                    // This happens when SourceFullPath searches and finds files in different locations
+                    if (!string.IsNullOrEmpty(isoSourcePath) && isoSourcePath != info.InstallerFullPath)
+                    {
+                        info.InstallerFullPath = isoSourcePath;
+                        _emuLibrary.Logger.Info($"Updating InstallerFullPath to newly found location: {isoSourcePath}");
+                        
+                        // Save game to update metadata
+                        try
+                        {
+                            _emuLibrary.PlayniteApi.Database.Games.Update(Game);
+                            _emuLibrary.Logger.Info($"Updated game metadata with new path info");
+                        }
+                        catch (Exception ex)
+                        {
+                            _emuLibrary.Logger.Error($"Failed to update game metadata: {ex.Message}");
+                        }
+                    }
+                    
                     mountPoint = MountIsoFile(isoSourcePath);
                     if (string.IsNullOrEmpty(mountPoint))
                     {
