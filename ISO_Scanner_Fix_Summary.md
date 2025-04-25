@@ -1,6 +1,6 @@
-# ISO Scanner Fix Summary
+# ISO Scanner and Installer Fix Summary
 
-This document summarizes the changes made to fix issues with ISO games not appearing in the Playnite UI despite being correctly detected by the scanner.
+This document summarizes the changes made to fix issues with ISO games not appearing in the Playnite UI and installation failures for ISO-based games.
 
 ## Root Causes
 
@@ -9,6 +9,8 @@ This document summarizes the changes made to fix issues with ISO games not appea
 3. **Platform Assignment**: ISO games weren't consistently assigned to the PC platform
 4. **Duplicate Handling**: Games with the same name were not properly cleared before adding new ones
 5. **GameID Format**: The GameId format needed to include a timestamp to ensure uniqueness
+6. **Path Resolution**: Path information was not properly preserved during scanning and installation
+7. **ISO Path Search**: The path search algorithm was not robust enough to handle partial paths
 
 ## Key Fixes
 
@@ -257,14 +259,156 @@ Playnite.Notifications.Add(
     NotificationType.Info);
 ```
 
+## Installation Path Resolution Improvements
+
+### 1. Enhanced Path Resolution and Recovery
+
+Added more robust path resolution in `ISOInstallerGameInfo.cs`:
+
+```csharp
+public string SourceFullPath
+{
+    get
+    {
+        // Use InstallerFullPath directly if available and valid
+        if (!string.IsNullOrEmpty(InstallerFullPath) && File.Exists(InstallerFullPath))
+        {
+            return InstallerFullPath;
+        }
+
+        // Create game name variations for better search
+        var gameNameVariations = new List<string> {
+            gameName,
+            gameName.Replace(" ", ""),           // NoSpaces
+            gameName.Replace(" ", "_"),          // Snake_Case
+            gameName.Replace(" ", "-"),          // Kebab-Case
+            gameName.Replace(" ", "."),          // Dot.Notation
+            // Additional variations...
+        };
+        
+        // Score-based matching for better file selection
+        string bestMatch = null;
+        int bestScore = 0;
+        
+        foreach (var file in discFiles)
+        {
+            // Various scoring algorithms to find best match
+            // ...
+            
+            if (score > bestScore)
+            {
+                bestScore = score;
+                bestMatch = file;
+            }
+        }
+    }
+}
+```
+
+### 2. Fallback Search by Game Name
+
+Added fallback search by game name during installation in `ISOInstallerInstallController.cs`:
+
+```csharp
+// Try to find the ISO file by game name in all configured ISO source folders
+string gameName = Game.Name.Replace(":", "_").Replace("\\", "_").Replace("/", "_");
+bool foundIso = false;
+
+foreach (var mapping in isoMappings)
+{
+    // Search directly for common ISO formats with the game name
+    string[] possibleExtensions = new[] { ".iso", ".bin", ".img", ".cue", ".nrg", ".mds", ".mdf" };
+    
+    foreach (var nameVariant in gameNameVariations)
+    {
+        foreach (var ext in possibleExtensions)
+        {
+            string possiblePath = Path.Combine(mapping.SourcePath, nameVariant + ext);
+            
+            if (File.Exists(possiblePath))
+            {
+                info.SourceFullPath = possiblePath;
+                info.SourcePath = nameVariant + ext;
+                info.MappingId = mapping.MappingId;
+                foundIso = true;
+                break;
+            }
+        }
+    }
+}
+```
+
+### 3. ISO Path Fix on Startup
+
+Enhanced `FixISOGamesPluginId()` to also fix missing paths:
+
+```csharp
+// For all ISO games, ensure paths are preserved and valid
+if (string.IsNullOrEmpty(isoInfo.InstallerFullPath) || !File.Exists(isoInfo.InstallerFullPath))
+{
+    // Force path resolution via SourceFullPath property
+    var sourcePath = isoInfo.SourceFullPath;
+    if (!string.IsNullOrEmpty(sourcePath) && File.Exists(sourcePath) && 
+        sourcePath != isoInfo.InstallerFullPath)
+    {
+        // Update the path info
+        Logger.Info($"Updating ISO path for {game.Name} to: {sourcePath}");
+        isoInfo.InstallerFullPath = sourcePath;
+        game.GameId = isoInfo.AsGameId(); // Update serialized info
+        PlayniteApi.Database.Games.Update(game);
+    }
+}
+```
+
+### 4. User Interface Improvements
+
+Added context menu option for locating missing ISO files:
+
+```csharp
+// Menu item for ISO installer games with missing ISO paths
+var missingPathISOGames = ourGameInfos
+    .Where(ggi => ggi.gameInfo.RomType == RomType.ISOInstaller)
+    .Where(ggi => {
+        var isoInfo = ggi.gameInfo as RomTypes.ISOInstaller.ISOInstallerGameInfo;
+        return string.IsNullOrEmpty(isoInfo.InstallerFullPath) || 
+               !File.Exists(isoInfo.InstallerFullPath);
+    })
+    .ToList();
+
+if (missingPathISOGames.Any())
+{
+    yield return new GameMenuItem()
+    {
+        Action = (arags) =>
+        {
+            missingPathISOGames.ForEach(ggi => 
+            {
+                // Ask user to select the ISO file
+                var isoPath = Playnite.Dialogs.SelectFile("ISO Files|*.iso;*.bin;*.img;*.cue;*.nrg;*.mds;*.mdf|All Files|*.*");
+                
+                // Update path information
+                if (!string.IsNullOrEmpty(isoPath) && File.Exists(isoPath))
+                {
+                    // Update game information with new path
+                }
+            });
+        },
+        Description = "Find Missing ISO...",
+        MenuSection = "EmuLibrary"
+    };
+}
+```
+
 ## Results
 
 These changes should ensure that:
 
-1. All ISO games have unique GameIds
+1. All ISO games have unique GameIds and appear in the Playnite UI
 2. All ISO games have the correct PluginId after import
 3. Existing ISO games with incorrect PluginIds are fixed on startup
 4. No duplicate games are created when the same game is detected multiple times
 5. Games are properly assigned to the PC platform
+6. ISO files can be reliably located during installation even with partial path information
+7. Users can manually locate ISO files when automatic resolution fails
 
-With these fixes, ISO games should now appear in the Playnite UI just like PC installer games.
+With these fixes, ISO games should now appear in the Playnite UI and be installable just like PC installer games.

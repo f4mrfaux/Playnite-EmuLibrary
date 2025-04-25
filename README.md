@@ -4,6 +4,16 @@ EmuLibrary is a library extension for [Playnite](https://www.playnite.link), an 
 
 > **Attribution**: This is a fork of [psychonic's EmuLibrary](https://github.com/psychonic/Playnite-EmuLibrary), extended by f4mrfaux to add PC game installer support, ISOInstaller, and other improvements.
 
+## Latest Updates (v1.6.0)
+
+### New in v1.6.0:
+- **Fixed ISO File Installation**: Resolved issues with ISO files not being found during installation
+- **Enhanced Path Resolution**: Added more robust path detection for ISO files with multiple fallback mechanisms
+- **Improved Game Scanning**: Better detection of ISO files with various naming conventions
+- **User Interface Additions**: Added "Find Missing ISO" context menu option for manually selecting ISO files
+- **Automatic Path Recovery**: Added system to recover and repair ISO paths during startup
+- **Diagnostic Improvements**: More detailed logging for easier troubleshooting
+
 ## Key Features
 
 - **Multiple ROM Types**: Support for various game formats including single-file ROMs, multi-file game folders, PC installers, ISO disk images, and Yuzu Switch games
@@ -162,6 +172,8 @@ For collections with multi-disc games:
 - **Emulator Issues**: Make sure emulators are properly configured in Playnite
 - **ISO Mounting Problems**: Requires Windows 8 or higher with built-in ISO mounting capabilities
 - **ISO Games Not Visible**: Ensure you've set the correct platform (PC) and that the ISO files have proper extensions
+- **ISO Files Not Found**: If you see an error about ISO files not being found during installation, right-click the game and use "Find Missing ISO..." to manually select the file
+- **Missing Context Menu**: If a newly added feature like "Find Missing ISO..." isn't appearing in the context menu, restart Playnite
 
 ### Special Notes for ISO and PC Installers
 
@@ -171,6 +183,8 @@ For collections with multi-disc games:
 4. **Consistent Interface**: Both PCInstaller and ISOInstaller use the same standard mapping table interface and "Install Game" menu option for a consistent experience.
 5. **Command-Line Arguments**: You can add command-line arguments to game launches by editing the play action after installation.
 6. **Installation Interruptions**: If an installation is interrupted, you might need to manually unmount any ISO files using Windows Explorer.
+7. **Missing ISO Files**: If an ISO file can't be found during installation, use the "Find Missing ISO..." context menu option to manually select the ISO file.
+8. **Path Flexibility**: The system can now find ISO files even if they've been moved, as long as they remain in one of your configured mapping folders.
 
 ### Log Files
 

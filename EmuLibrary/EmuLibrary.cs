@@ -488,7 +488,7 @@ private readonly Dictionary<RomType, RomTypeScanner> _scanners = new Dictionary<
                 
                 try 
                 {
-                    // For ISO installer games, ensure paths are preserved
+                    // For ISO installer games, ensure paths are preserved and tracked
                     if (args.Game.GameId.StartsWith("!"))
                     {
                         var elInfo = args.Game.GetELGameInfo();
@@ -497,8 +497,112 @@ private readonly Dictionary<RomType, RomTypeScanner> _scanners = new Dictionary<
                             var isoInfo = elInfo as RomTypes.ISOInstaller.ISOInstallerGameInfo;
                             Logger.Info($"Preserving ISO paths after installation for {args.Game.Name}: SourcePath={isoInfo.SourcePath}, InstallerFullPath={isoInfo.InstallerFullPath}");
                             
-                            // If we have a valid game with paths
-                            if (!string.IsNullOrEmpty(isoInfo.SourcePath) && !string.IsNullOrEmpty(isoInfo.InstallerFullPath))
+                            // Handle possible missing path info - check if the paths are valid
+                            if (string.IsNullOrEmpty(isoInfo.InstallerFullPath) || !File.Exists(isoInfo.InstallerFullPath))
+                            {
+                                // If we have a source path but no full path, try to resolve it
+                                if (!string.IsNullOrEmpty(isoInfo.SourcePath))
+                                {
+                                    // Force path resolution via SourceFullPath getter
+                                    var resolvedPath = isoInfo.SourceFullPath;
+                                    if (!string.IsNullOrEmpty(resolvedPath) && File.Exists(resolvedPath))
+                                    {
+                                        Logger.Info($"Resolved missing ISO path for {args.Game.Name}: {resolvedPath}");
+                                        isoInfo.InstallerFullPath = resolvedPath;
+                                        
+                                        // Update game with new path info
+                                        args.Game.GameId = isoInfo.AsGameId();
+                                        PlayniteApi.Database.Games.Update(args.Game);
+                                    }
+                                    else
+                                    {
+                                        Logger.Error($"Failed to resolve ISO path for {args.Game.Name}. Path remains invalid.");
+                                    }
+                                }
+                                // If no source path either, offer the user a chance to select the ISO file
+                                else if (args.Game.IsInstalled)
+                                {
+                                    Logger.Warn($"Both ISO paths are empty/invalid for {args.Game.Name} - ask user to locate ISO");
+                                    
+                                    // Only show dialog if in GUI mode
+                                    if (Playnite.ApplicationInfo.Mode != ApplicationMode.Fullscreen)
+                                    {
+                                        // Send notification
+                                        Playnite.Notifications.Add(
+                                            $"EmuLibrary-ISO-MissingPath-{args.Game.Id}",
+                                            $"The ISO file for {args.Game.Name} could not be found. Would you like to select it manually?",
+                                            NotificationType.Error);
+                                        
+                                        // Ask user to select the ISO file
+                                        var result = Playnite.Dialogs.ShowMessage(
+                                            $"The ISO file for {args.Game.Name} could not be found. Would you like to select it manually?",
+                                            "ISO Not Found",
+                                            System.Windows.MessageBoxButton.YesNo);
+                                        
+                                        if (result == System.Windows.MessageBoxResult.Yes)
+                                        {
+                                            // Use Playnite's file selection dialog
+                                            var isoPath = Playnite.Dialogs.SelectFile("ISO Files|*.iso;*.bin;*.img;*.cue;*.nrg;*.mds;*.mdf|All Files|*.*");
+                                            
+                                            if (!string.IsNullOrEmpty(isoPath) && File.Exists(isoPath))
+                                            {
+                                                Logger.Info($"User selected ISO file: {isoPath}");
+                                                
+                                                // Find the right mapping for this file
+                                                var bestMapping = Settings.Mappings
+                                                    .Where(m => m.RomType == RomType.ISOInstaller && m.Enabled)
+                                                    .Where(m => !string.IsNullOrEmpty(m.SourcePath))
+                                                    .Where(m => isoPath.StartsWith(m.SourcePath, StringComparison.OrdinalIgnoreCase))
+                                                    .OrderByDescending(m => m.SourcePath.Length) // Prefer most specific match
+                                                    .FirstOrDefault();
+                                                
+                                                // If no mapping contains this path, use the first available mapping
+                                                if (bestMapping == null)
+                                                {
+                                                    bestMapping = Settings.Mappings
+                                                        .FirstOrDefault(m => m.RomType == RomType.ISOInstaller && m.Enabled);
+                                                }
+                                                
+                                                if (bestMapping != null)
+                                                {
+                                                    // Update the game info with the selected ISO file
+                                                    isoInfo.InstallerFullPath = isoPath;
+                                                    isoInfo.MappingId = bestMapping.MappingId;
+                                                    
+                                                    // Get the relative path if the file is inside a mapping
+                                                    if (isoPath.StartsWith(bestMapping.SourcePath, StringComparison.OrdinalIgnoreCase))
+                                                    {
+                                                        string relativePath = isoPath.Substring(bestMapping.SourcePath.Length).TrimStart('\\', '/');
+                                                        isoInfo.SourcePath = relativePath;
+                                                    }
+                                                    else
+                                                    {
+                                                        // Just use the filename if not inside a mapping
+                                                        isoInfo.SourcePath = Path.GetFileName(isoPath);
+                                                    }
+                                                    
+                                                    // Update the game with new info
+                                                    args.Game.GameId = isoInfo.AsGameId();
+                                                    PlayniteApi.Database.Games.Update(args.Game);
+                                                    
+                                                    // Add notification
+                                                    Playnite.Notifications.Add(
+                                                        $"EmuLibrary-ISO-PathFixed-{args.Game.Id}",
+                                                        $"ISO path for {args.Game.Name} has been updated.",
+                                                        NotificationType.Info);
+                                                }
+                                                else
+                                                {
+                                                    Logger.Error($"No valid ISO mapping found for {args.Game.Name}");
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            
+                            // If we now have valid path info, add browse action and other metadata
+                            if (!string.IsNullOrEmpty(isoInfo.InstallerFullPath) && File.Exists(isoInfo.InstallerFullPath))
                             {
                                 // Add to game actions to ensure persistent storage
                                 var gameActions = args.Game.GameActions?.ToList() ?? new List<GameAction>();
@@ -516,6 +620,7 @@ private readonly Dictionary<RomType, RomTypeScanner> _scanners = new Dictionary<
                                     
                                     // Update game actions
                                     args.Game.GameActions = new System.Collections.ObjectModel.ObservableCollection<GameAction>(gameActions);
+                                    PlayniteApi.Database.Games.Update(args.Game);
                                 }
                                 
                                 // Request metadata refresh to apply changes if needed
@@ -631,6 +736,142 @@ private readonly Dictionary<RomType, RomTypeScanner> _scanners = new Dictionary<
                             });
                         },
                         Description = "Install Game",
+                        MenuSection = "EmuLibrary"
+                    };
+                }
+                
+                // Menu item for ISO installer games with missing ISO paths
+                var missingPathISOGames = ourGameInfos
+                    .Where(ggi => ggi.gameInfo.RomType == RomType.ISOInstaller)
+                    .Where(ggi => {
+                        var isoInfo = ggi.gameInfo as RomTypes.ISOInstaller.ISOInstallerGameInfo;
+                        return string.IsNullOrEmpty(isoInfo.InstallerFullPath) || 
+                               !File.Exists(isoInfo.InstallerFullPath);
+                    })
+                    .ToList();
+                
+                if (missingPathISOGames.Any())
+                {
+                    yield return new GameMenuItem()
+                    {
+                        Action = (arags) =>
+                        {
+                            missingPathISOGames.ForEach(ggi => 
+                            {
+                                var isoInfo = ggi.gameInfo as RomTypes.ISOInstaller.ISOInstallerGameInfo;
+                                Logger.Info($"Fixing missing ISO path for {ggi.game.Name}");
+                                
+                                // Ask user to select the ISO file
+                                var isoPath = Playnite.Dialogs.SelectFile("ISO Files|*.iso;*.bin;*.img;*.cue;*.nrg;*.mds;*.mdf|All Files|*.*");
+                                
+                                if (!string.IsNullOrEmpty(isoPath) && File.Exists(isoPath))
+                                {
+                                    Logger.Info($"User selected ISO file: {isoPath}");
+                                    
+                                    // Find the right mapping for this file
+                                    var bestMapping = Settings.Mappings
+                                        .Where(m => m.RomType == RomType.ISOInstaller && m.Enabled)
+                                        .Where(m => !string.IsNullOrEmpty(m.SourcePath))
+                                        .Where(m => isoPath.StartsWith(m.SourcePath, StringComparison.OrdinalIgnoreCase))
+                                        .OrderByDescending(m => m.SourcePath.Length) // Prefer most specific match
+                                        .FirstOrDefault();
+                                    
+                                    // If no mapping contains this path, use the first available mapping
+                                    if (bestMapping == null)
+                                    {
+                                        bestMapping = Settings.Mappings
+                                            .FirstOrDefault(m => m.RomType == RomType.ISOInstaller && m.Enabled);
+                                    }
+                                    
+                                    if (bestMapping != null)
+                                    {
+                                        // Update the game info with the selected ISO file
+                                        isoInfo.InstallerFullPath = isoPath;
+                                        isoInfo.MappingId = bestMapping.MappingId;
+                                        
+                                        // Get the relative path if the file is inside a mapping
+                                        if (isoPath.StartsWith(bestMapping.SourcePath, StringComparison.OrdinalIgnoreCase))
+                                        {
+                                            string relativePath = isoPath.Substring(bestMapping.SourcePath.Length).TrimStart('\\', '/');
+                                            isoInfo.SourcePath = relativePath;
+                                        }
+                                        else
+                                        {
+                                            // Just use the filename if not inside a mapping
+                                            isoInfo.SourcePath = Path.GetFileName(isoPath);
+                                        }
+                                        
+                                        // Update the game with new info
+                                        ggi.game.GameId = isoInfo.AsGameId();
+                                        PlayniteApi.Database.Games.Update(ggi.game);
+                                        
+                                        // We need to get a fresh version of the game to update its properties
+                                        var gameToUpdate = PlayniteApi.Database.Games.Get(ggi.game.Id);
+                                        if (gameToUpdate != null)
+                                        {
+                                            // Add or update the Browse action
+                                            var browseAction = gameToUpdate.GameActions?.FirstOrDefault(a => a.Name == "Browse ISO Source");
+                                            
+                                            if (browseAction != null)
+                                            {
+                                                // Update existing browse action
+                                                browseAction.Path = isoPath;
+                                            }
+                                            else
+                                            {
+                                                // Create a new browse action
+                                                if (gameToUpdate.GameActions == null)
+                                                {
+                                                    gameToUpdate.GameActions = new System.Collections.ObjectModel.ObservableCollection<GameAction>();
+                                                }
+                                                
+                                                gameToUpdate.GameActions.Add(new GameAction()
+                                                {
+                                                    Name = "Browse ISO Source",
+                                                    Path = isoPath,
+                                                    Type = GameActionType.File,
+                                                    IsPlayAction = false
+                                                });
+                                            }
+                                            
+                                            // Update the game
+                                            PlayniteApi.Database.Games.Update(gameToUpdate);
+                                        }
+                                        
+                                        // Add notification
+                                        Playnite.Notifications.Add(
+                                            $"EmuLibrary-ISO-PathFixed-{ggi.game.Id}",
+                                            $"ISO path for {ggi.game.Name} has been updated.",
+                                            NotificationType.Info);
+                                            
+                                        // Remove any "Missing ISO" tags - must use TagIds
+                                        if (gameToUpdate.Tags != null)
+                                        {
+                                            var missingTag = gameToUpdate.Tags.FirstOrDefault(t => t.Name == "Missing ISO");
+                                            if (missingTag != null && gameToUpdate.TagIds != null)
+                                            {
+                                                // Remove the tag ID from the game's TagIds collection
+                                                if (gameToUpdate.TagIds.Contains(missingTag.Id))
+                                                {
+                                                    gameToUpdate.TagIds.Remove(missingTag.Id);
+                                                    PlayniteApi.Database.Games.Update(gameToUpdate);
+                                                    Logger.Info($"Removed 'Missing ISO' tag from game {gameToUpdate.Name}");
+                                                }
+                                            }
+                                        }
+                                    }
+                                    else
+                                    {
+                                        Logger.Error($"No valid ISO mapping found for {ggi.game.Name}");
+                                        Playnite.Notifications.Add(
+                                            $"EmuLibrary-ISO-NoMapping-{ggi.game.Id}",
+                                            $"No valid ISO mapping found for {ggi.game.Name}. Please add a mapping in settings first.",
+                                            NotificationType.Error);
+                                    }
+                                }
+                            });
+                        },
+                        Description = "Find Missing ISO...",
                         MenuSection = "EmuLibrary"
                     };
                 }
@@ -1420,7 +1661,7 @@ private readonly Dictionary<RomType, RomTypeScanner> _scanners = new Dictionary<
         {
             try
             {
-                Logger.Info("Scanning for ISO games with incorrect PluginId...");
+                Logger.Info("Scanning for ISO games with incorrect PluginId or path issues...");
                 
                 // Get all games that might be ISO installer games based on their GameId
                 var potentialISOGames = PlayniteApi.Database.Games
@@ -1431,6 +1672,7 @@ private readonly Dictionary<RomType, RomTypeScanner> _scanners = new Dictionary<
                 
                 int fixedGames = 0;
                 int pathsFixed = 0;
+                int gameNameSearched = 0;
                 
                 using (PlayniteApi.Database.BufferedUpdate())
                 {
@@ -1445,7 +1687,7 @@ private readonly Dictionary<RomType, RomTypeScanner> _scanners = new Dictionary<
                             fixedGames++;
                         }
                         
-                        // For all ISO games, ensure paths are preserved
+                        // For all ISO games, ensure paths are preserved and valid
                         try
                         {
                             // Get the game info and check if it's an ISO installer game
@@ -1453,7 +1695,7 @@ private readonly Dictionary<RomType, RomTypeScanner> _scanners = new Dictionary<
                             if (gameInfo?.RomType == RomType.ISOInstaller)
                             {
                                 var isoInfo = gameInfo as ISOInstallerGameInfo;
-                                Logger.Info($"Checking ISO paths for {game.Name}: SourcePath={isoInfo.SourcePath}, InstallerFullPath={isoInfo.InstallerFullPath}");
+                                Logger.Info($"Checking ISO paths for {game.Name}: SourcePath={isoInfo.SourcePath}, InstallerFullPath={isoInfo.InstallerFullPath}, MappingId={isoInfo.MappingId}");
                                 
                                 // If paths are incomplete, try to resolve them
                                 if (string.IsNullOrEmpty(isoInfo.InstallerFullPath) || !File.Exists(isoInfo.InstallerFullPath))
@@ -1470,25 +1712,211 @@ private readonly Dictionary<RomType, RomTypeScanner> _scanners = new Dictionary<
                                         PlayniteApi.Database.Games.Update(game);
                                         pathsFixed++;
                                     }
+                                    else
+                                    {
+                                        Logger.Warn($"ISO file not found for {game.Name} - trying search by game name");
+                                        
+                                        // Try to find by game name in mappings
+                                        bool foundByName = false;
+                                        string gameName = game.Name.Replace(":", "_").Replace("\\", "_").Replace("/", "_");
+                                        
+                                        foreach (var mapping in Settings.Mappings.Where(m => m.RomType == RomType.ISOInstaller))
+                                        {
+                                            if (string.IsNullOrEmpty(mapping.SourcePath) || !Directory.Exists(mapping.SourcePath))
+                                                continue;
+                                                
+                                            Logger.Info($"Searching for {gameName} in {mapping.SourcePath}");
+                                            
+                                            // Try different variations of the name
+                                            var nameVariations = new List<string> {
+                                                gameName,
+                                                gameName.Replace(" ", ""),           // NoSpaces
+                                                gameName.Replace(" ", "_"),          // Snake_Case
+                                                gameName.Replace(" ", "-"),          // Kebab-Case
+                                                gameName.Replace(" ", "."),          // Dot.Notation
+                                            };
+                                            
+                                            // Search for all extensions
+                                            string[] extensions = new[] { ".iso", ".bin", ".img", ".cue", ".nrg", ".mds", ".mdf" };
+                                            
+                                            foreach (var nameVariant in nameVariations)
+                                            {
+                                                foreach (var ext in extensions)
+                                                {
+                                                    string possiblePath = Path.Combine(mapping.SourcePath, nameVariant + ext);
+                                                    Logger.Info($"Checking {possiblePath}");
+                                                    
+                                                    if (File.Exists(possiblePath))
+                                                    {
+                                                        // Update the path info
+                                                        Logger.Info($"Found ISO for {game.Name} at: {possiblePath}");
+                                                        isoInfo.SourcePath = nameVariant + ext;
+                                                        isoInfo.InstallerFullPath = possiblePath;
+                                                        isoInfo.MappingId = mapping.MappingId;
+                                                        
+                                                        // Update the game with new info
+                                                        game.GameId = isoInfo.AsGameId();
+                                                        PlayniteApi.Database.Games.Update(game);
+                                                        
+                                                        foundByName = true;
+                                                        pathsFixed++;
+                                                        gameNameSearched++;
+                                                        break;
+                                                    }
+                                                }
+                                                
+                                                if (foundByName) break;
+                                            }
+                                            
+                                            if (foundByName) break;
+                                            
+                                            // If not found by exact name, try all ISOs in the folder
+                                            if (!foundByName)
+                                            {
+                                                try
+                                                {
+                                                    foreach (var ext in new[] { "iso", "bin", "img", "cue", "nrg", "mds", "mdf" })
+                                                    {
+                                                        var files = Directory.GetFiles(mapping.SourcePath, $"*.{ext}", SearchOption.AllDirectories);
+                                                        
+                                                        foreach (var file in files)
+                                                        {
+                                                            var fileName = Path.GetFileNameWithoutExtension(file);
+                                                            
+                                                            // Check if file name matches game name (fuzzy match)
+                                                            if (fileName.IndexOf(gameName, StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                                                gameName.IndexOf(fileName, StringComparison.OrdinalIgnoreCase) >= 0)
+                                                            {
+                                                                // Update the path info
+                                                                Logger.Info($"Found fuzzy match ISO for {game.Name} at: {file}");
+                                                                isoInfo.SourcePath = Path.GetFileName(file);
+                                                                isoInfo.InstallerFullPath = file;
+                                                                isoInfo.MappingId = mapping.MappingId;
+                                                                
+                                                                // Update the game with new info
+                                                                game.GameId = isoInfo.AsGameId();
+                                                                PlayniteApi.Database.Games.Update(game);
+                                                                
+                                                                foundByName = true;
+                                                                pathsFixed++;
+                                                                gameNameSearched++;
+                                                                break;
+                                                            }
+                                                        }
+                                                        
+                                                        if (foundByName) break;
+                                                    }
+                                                }
+                                                catch (Exception ex)
+                                                {
+                                                    Logger.Error($"Error searching for ISOs by file pattern: {ex.Message}");
+                                                }
+                                            }
+                                        }
+                                        
+                                        // If still not found, update game for diagnostic purposes
+                                        if (!foundByName)
+                                        {
+                                            Logger.Warn($"ISO file not found for {game.Name} after extensive search");
+                                            
+                                            // Update game with diagnostic info
+                                            // For Game objects in Playnite, we need to add tags using TagIds
+                                            Logger.Warn($"Adding 'Missing ISO' tag to game {game.Name}");
+                                            
+                                            // Check if game already has the tag
+                                            bool hasMissingTag = false;
+                                            if (game.Tags != null)
+                                            {
+                                                hasMissingTag = game.Tags.Any(t => t.Name == "Missing ISO");
+                                            }
+                                            
+                                            if (!hasMissingTag)
+                                            {
+                                                // Create a copy of the game to work with
+                                                var gameToUpdate = PlayniteApi.Database.Games.Get(game.Id);
+                                                if (gameToUpdate == null)
+                                                {
+                                                    Logger.Error($"Failed to get game {game.Id} from database");
+                                                    continue;
+                                                }
+                                                
+                                                // First add the tag to the Tags database if it doesn't exist
+                                                var existingTag = PlayniteApi.Database.Tags.FirstOrDefault(t => t.Name == "Missing ISO");
+                                                
+                                                Guid tagId;
+                                                if (existingTag == null)
+                                                {
+                                                    // Create a new tag and get its ID
+                                                    var tag = new Tag("Missing ISO");
+                                                    PlayniteApi.Database.Tags.Add(tag);
+                                                    
+                                                    // Get the tag we just added to ensure we have its ID
+                                                    var newTag = PlayniteApi.Database.Tags.FirstOrDefault(t => t.Name == "Missing ISO");
+                                                    if (newTag != null)
+                                                    {
+                                                        tagId = newTag.Id;
+                                                    }
+                                                    else
+                                                    {
+                                                        // Fallback in case we can't find it
+                                                        Logger.Error("Failed to retrieve the newly added 'Missing ISO' tag");
+                                                        continue;
+                                                    }
+                                                }
+                                                else
+                                                {
+                                                    tagId = existingTag.Id;
+                                                }
+                                                
+                                                // Add the tag ID to the game's TagIds collection
+                                                // Check the type of TagIds - it might be List<Guid> in some versions
+                                                if (gameToUpdate.TagIds == null)
+                                                {
+                                                    // Create appropriate TagIds collection depending on its type
+                                                    try
+                                                    {
+                                                        // Just attempt to create a new collection - the compiler will determine the correct type
+                                                        var emptyCollection = new System.Collections.Generic.List<Guid>();
+                                                        gameToUpdate.TagIds = emptyCollection;
+                                                    }
+                                                    catch (Exception ex)
+                                                    {
+                                                        Logger.Error($"Error creating TagIds collection: {ex.Message}");
+                                                        
+                                                        // Skip this game if we can't initialize TagIds
+                                                        continue;
+                                                    }
+                                                }
+                                                
+                                                // Add only if not already added
+                                                if (!gameToUpdate.TagIds.Contains(tagId))
+                                                {
+                                                    gameToUpdate.TagIds.Add(tagId);
+                                                    PlayniteApi.Database.Games.Update(gameToUpdate);
+                                                    Logger.Info($"Added 'Missing ISO' tag to game {gameToUpdate.Name}");
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
                         catch (Exception pathEx)
                         {
                             // This may not be an ISO game despite matching our filter
-                            Logger.Debug($"Game {game.Name} is not an ISO installer game or has invalid data: {pathEx.Message}");
+                            Logger.Error($"Game {game.Name} is not an ISO installer game or has invalid data: {pathEx.Message}");
                         }
                     }
                 }
                 
                 if (fixedGames > 0 || pathsFixed > 0)
                 {
-                    Logger.Info($"Fixed PluginId for {fixedGames} ISO games, fixed paths for {pathsFixed} games");
+                    Logger.Info($"Fixed PluginId for {fixedGames} ISO games, fixed paths for {pathsFixed} games, found {gameNameSearched} by game name search");
                     
                     // Add notification to inform user
                     Playnite.Notifications.Add(
                         "EmuLibrary-ISO-FixedPluginIds",
-                        $"Fixed {fixedGames} ISO games that had incorrect plugin IDs. Fixed paths for {pathsFixed} ISO games. They should now appear in your library.",
+                        $"Fixed {fixedGames} ISO games with incorrect plugin IDs. Fixed paths for {pathsFixed} ISO games (found {gameNameSearched} by game name). They should now appear in your library.",
                         NotificationType.Info);
                 }
                 else

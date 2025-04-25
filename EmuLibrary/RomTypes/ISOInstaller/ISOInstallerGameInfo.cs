@@ -150,32 +150,83 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                             {
                                 // Update our mapping ID for future use
                                 this.MappingId = mapping.MappingId;
+                                // Also update InstallerFullPath for consistency
+                                this.InstallerFullPath = combinedPath;
                                 logger.Info($"Found in mapping {mapping.MappingId}: {combinedPath}");
                                 return combinedPath;
                             }
                         }
                     }
 
-                    // Last resort: If we have the game name, try to find an ISO file with that name in any mapping
+                    // Try to extract game name from various sources
+                    // This is used for searching for ISO files by name
                     string gameName = null;
+                    List<string> gameNameVariations = new List<string>();
                     
-                    // Try to get game name from SourcePath first
-                    if (!string.IsNullOrEmpty(SourcePath))
+                    // Try to get game name from metadata first - this is the most reliable source
+                    try
                     {
-                        gameName = Path.GetFileNameWithoutExtension(SourcePath);
+                        // Try to check if we're in a GameInfo that's part of a Game object
+                        var game = settings.EmuLibrary?.Playnite?.Database?.Games?
+                            .FirstOrDefault(g => g.GameId == this.AsGameId());
+                            
+                        if (game != null && !string.IsNullOrEmpty(game.Name))
+                        {
+                            gameName = game.Name;
+                            logger.Info($"Using game name from database: {gameName}");
+                        }
                     }
-                    // Also check by filename of InstallerFullPath
-                    else if (!string.IsNullOrEmpty(InstallerFullPath))
+                    catch (Exception ex)
                     {
-                        gameName = Path.GetFileNameWithoutExtension(InstallerFullPath);
+                        logger.Error($"Error getting game name from database: {ex.Message}");
+                    }
+                    
+                    // If we couldn't get the name from the database, try other sources
+                    if (string.IsNullOrEmpty(gameName))
+                    {
+                        // Try to get game name from SourcePath first
+                        if (!string.IsNullOrEmpty(SourcePath))
+                        {
+                            gameName = Path.GetFileNameWithoutExtension(SourcePath);
+                            logger.Info($"Using game name from SourcePath: {gameName}");
+                        }
+                        // Then try InstallerFullPath
+                        else if (!string.IsNullOrEmpty(InstallerFullPath))
+                        {
+                            gameName = Path.GetFileNameWithoutExtension(InstallerFullPath);
+                            logger.Info($"Using game name from InstallerFullPath: {gameName}");
+                        }
+                        // Then try StoreGameId
+                        else if (!string.IsNullOrEmpty(StoreGameId))
+                        {
+                            // If StoreGameId has a format like "GameName_file.iso", extract the game name
+                            var parts = StoreGameId.Split(new[] { '_' }, 2);
+                            if (parts.Length > 0)
+                            {
+                                gameName = parts[0];
+                                logger.Info($"Using game name from StoreGameId: {gameName}");
+                            }
+                        }
                     }
                     
                     if (!string.IsNullOrEmpty(gameName))
                     {
                         logger.Info($"Looking for ISOs with name similar to: {gameName}");
                         
-                        // Normalize the game name for better matching
-                        gameName = gameName.Replace(":", "_").Replace("\\", "_").Replace("/", "_");
+                        // Normalize the game name and create variations for better matching
+                        string normalizedName = gameName.Replace(":", "_").Replace("\\", "_").Replace("/", "_").Trim();
+                        
+                        // Create different name variations to increase chance of matching
+                        gameNameVariations = new List<string> {
+                            normalizedName,
+                            normalizedName.Replace(" ", ""),           // NoSpaces
+                            normalizedName.Replace(" ", "_"),          // Snake_Case
+                            normalizedName.Replace(" ", "-"),          // Kebab-Case
+                            normalizedName.Replace(" ", "."),          // Dot.Notation
+                            System.Text.RegularExpressions.Regex.Replace(normalizedName, @"[^a-zA-Z0-9]", "") // AlphanumericOnly
+                        };
+                        
+                        logger.Info($"Generated name variations: {string.Join(", ", gameNameVariations)}");
                         
                         foreach (var mapping in settings.Mappings.Where(m => m.RomType == RomType.ISOInstaller))
                         {
@@ -184,46 +235,229 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                                 
                             logger.Info($"Searching in mapping {mapping.MappingId}: {mapping.SourcePath}");
                             
+                            // Score-based matching for all ISO files in the mapping directory
+                            try
+                            {
+                                // Scan for all ISO files in this mapping
+                                var discFiles = new List<string>();
+                                
+                                // Search for common ISO formats - use both lowercase and uppercase extensions
+                                foreach (var ext in new[] { "iso", "bin", "img", "cue", "nrg", "mds", "mdf" })
+                                {
+                                    try
+                                    {
+                                        discFiles.AddRange(Directory.GetFiles(mapping.SourcePath, $"*.{ext}", SearchOption.AllDirectories));
+                                        discFiles.AddRange(Directory.GetFiles(mapping.SourcePath, $"*.{ext.ToUpper()}", SearchOption.AllDirectories));
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        logger.Error($"Error searching for {ext} files: {ex.Message}");
+                                    }
+                                }
+                                
+                                logger.Info($"Found {discFiles.Count} total ISO files to check");
+                                
+                                if (discFiles.Count > 0)
+                                {
+                                    // Sort by filename length (shorter filenames first) to prefer simpler names
+                                    discFiles = discFiles
+                                        .OrderBy(f => Path.GetFileName(f).Length)
+                                        .ThenBy(f => Path.GetFileName(f))
+                                        .ToList();
+                                    
+                                    // Score-based best match selection
+                                    string bestMatch = null;
+                                    int bestScore = 0;
+                                    
+                                    foreach (var file in discFiles)
+                                    {
+                                        // Skip invalid files
+                                        if (string.IsNullOrEmpty(file) || !File.Exists(file))
+                                            continue;
+                                            
+                                        string fileName = Path.GetFileNameWithoutExtension(file);
+                                        
+                                        // Calculate match score
+                                        int score = 0;
+                                        
+                                        // Exact match is best
+                                        if (fileName.Equals(gameName, StringComparison.OrdinalIgnoreCase))
+                                        {
+                                            score = 1000;
+                                        }
+                                        // Try all name variations
+                                        else
+                                        {
+                                            foreach (var variant in gameNameVariations)
+                                            {
+                                                // Perfect match with a variant
+                                                if (fileName.Equals(variant, StringComparison.OrdinalIgnoreCase))
+                                                {
+                                                    score = 900;
+                                                    break;
+                                                }
+                                                
+                                                // File contains full game name
+                                                if (fileName.IndexOf(variant, StringComparison.OrdinalIgnoreCase) >= 0)
+                                                {
+                                                    score = Math.Max(score, 700);
+                                                }
+                                                
+                                                // Game name contains file name
+                                                if (variant.IndexOf(fileName, StringComparison.OrdinalIgnoreCase) >= 0)
+                                                {
+                                                    score = Math.Max(score, 600);
+                                                }
+                                                
+                                                // Check for word-by-word match (partial match)
+                                                var fileWords = fileName.Split(new[] { ' ', '_', '-', '.' }, StringSplitOptions.RemoveEmptyEntries);
+                                                var gameWords = variant.Split(new[] { ' ', '_', '-', '.' }, StringSplitOptions.RemoveEmptyEntries);
+                                                
+                                                int matchingWords = fileWords.Count(fw => 
+                                                    gameWords.Any(gw => fw.Equals(gw, StringComparison.OrdinalIgnoreCase)));
+                                                    
+                                                if (matchingWords > 0)
+                                                {
+                                                    // Score based on percentage of matching words
+                                                    double matchPercent = (double)matchingWords / Math.Max(fileWords.Length, gameWords.Length);
+                                                    int partialScore = (int)(500 * matchPercent);
+                                                    score = Math.Max(score, partialScore);
+                                                }
+                                            }
+                                        }
+                                        
+                                        // Log high-scoring matches
+                                        if (score > 400)
+                                        {
+                                            logger.Info($"Potential match: {fileName} (Score: {score})");
+                                        }
+                                        
+                                        // Save best match so far
+                                        if (score > bestScore)
+                                        {
+                                            bestScore = score;
+                                            bestMatch = file;
+                                            logger.Info($"New best match: {bestMatch} (Score: {bestScore})");
+                                        }
+                                    }
+                                    
+                                    // If we have a good match, use it
+                                    if (bestScore > 400 && !string.IsNullOrEmpty(bestMatch))
+                                    {
+                                        // Update all our path information
+                                        this.MappingId = mapping.MappingId;
+                                        this.SourcePath = Path.GetFileName(bestMatch);
+                                        this.InstallerFullPath = bestMatch;
+                                        
+                                        logger.Info($"Found best matching ISO with score {bestScore}: {bestMatch}");
+                                        return bestMatch;
+                                    }
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                logger.Error($"Error during advanced ISO search: {ex.Message}");
+                            }
+                            
+                            // Try simple extension-based matching as a fallback
                             // Search for common ISO formats
                             string[] extensions = new[] { ".iso", ".bin", ".img", ".cue", ".nrg", ".mds", ".mdf" };
                             
                             foreach (var ext in extensions)
                             {
+                                // Try all name variations with each extension
+                                foreach (var variant in gameNameVariations)
+                                {
+                                    try
+                                    {
+                                        // Try exact match with each extension
+                                        var exactPath = Path.Combine(mapping.SourcePath, variant + ext);
+                                        logger.Info($"Checking specific path: {exactPath}");
+                                        
+                                        if (File.Exists(exactPath))
+                                        {
+                                            this.MappingId = mapping.MappingId;
+                                            this.SourcePath = variant + ext;
+                                            this.InstallerFullPath = exactPath;
+                                            logger.Info($"Found exact ISO match: {exactPath}");
+                                            return exactPath;
+                                        }
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        logger.Error($"Error checking exact path for {variant}{ext}: {ex.Message}");
+                                    }
+                                }
+                                
                                 try
                                 {
-                                    // Try exact match with each extension
-                                    var exactPath = Path.Combine(mapping.SourcePath, gameName + ext);
-                                    if (File.Exists(exactPath))
-                                    {
-                                        this.MappingId = mapping.MappingId;
-                                        this.SourcePath = gameName + ext;
-                                        this.InstallerFullPath = exactPath;
-                                        logger.Info($"Found exact ISO match: {exactPath}");
-                                        return exactPath;
-                                    }
+                                    // Try fuzzy match with each extension (case insensitive, partial name)
+                                    var pattern = $"*{ext}";
+                                    logger.Info($"Searching with pattern: {pattern}");
                                     
-                                    // Try fuzzy match (case insensitive, partial name)
-                                    var files = Directory.GetFiles(mapping.SourcePath, "*" + ext, SearchOption.AllDirectories);
+                                    var files = Directory.GetFiles(mapping.SourcePath, pattern, SearchOption.AllDirectories);
+                                    logger.Info($"Found {files.Length} files with pattern {pattern}");
                                     
                                     foreach (var file in files)
                                     {
-                                        var fileName = Path.GetFileNameWithoutExtension(file);
-                                        
-                                        if (fileName.IndexOf(gameName, StringComparison.OrdinalIgnoreCase) >= 0 ||
-                                            gameName.IndexOf(fileName, StringComparison.OrdinalIgnoreCase) >= 0)
+                                        try
                                         {
-                                            // Update our path information
-                                            this.MappingId = mapping.MappingId;
-                                            this.SourcePath = Path.GetFileName(file);
-                                            this.InstallerFullPath = file;
-                                            logger.Info($"Found similar ISO match: {file}");
-                                            return file;
+                                            var fileName = Path.GetFileNameWithoutExtension(file);
+                                            
+                                            // Try all name variations for fuzzy matching
+                                            foreach (var variant in gameNameVariations)
+                                            {
+                                                if (fileName.IndexOf(variant, StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                                    variant.IndexOf(fileName, StringComparison.OrdinalIgnoreCase) >= 0)
+                                                {
+                                                    // Update our path information
+                                                    this.MappingId = mapping.MappingId;
+                                                    this.SourcePath = Path.GetFileName(file);
+                                                    this.InstallerFullPath = file;
+                                                    logger.Info($"Found fuzzy match: {file}");
+                                                    return file;
+                                                }
+                                            }
+                                        }
+                                        catch (Exception ex)
+                                        {
+                                            logger.Error($"Error processing file {file}: {ex.Message}");
                                         }
                                     }
                                 }
                                 catch (Exception searchEx)
                                 {
-                                    logger.Error($"Error searching for {gameName}{ext} in {mapping.SourcePath}: {searchEx.Message}");
+                                    logger.Error($"Error searching for pattern in {mapping.SourcePath}: {searchEx.Message}");
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Last resort: Check for ISO files with the exact name in all mappings
+                    if (!string.IsNullOrEmpty(gameName))
+                    {
+                        foreach (var mapping in settings.Mappings.Where(m => m.RomType == RomType.ISOInstaller))
+                        {
+                            if (string.IsNullOrEmpty(mapping.SourcePath) || !Directory.Exists(mapping.SourcePath))
+                                continue;
+                            
+                            // Log that we're checking this mapping as a last resort
+                            logger.Info($"Last resort check in mapping {mapping.MappingId}: {mapping.SourcePath}");
+                            
+                            // Check for common disc image formats directly
+                            foreach (var ext in new[] { ".iso", ".bin", ".img", ".cue", ".nrg", ".mds", ".mdf" })
+                            {
+                                string possiblePath = Path.Combine(mapping.SourcePath, gameName + ext);
+                                logger.Info($"Checking {possiblePath}");
+                                
+                                if (File.Exists(possiblePath))
+                                {
+                                    // Update our path information
+                                    this.MappingId = mapping.MappingId;
+                                    this.SourcePath = gameName + ext;
+                                    this.InstallerFullPath = possiblePath;
+                                    logger.Info($"Found last resort match: {possiblePath}");
+                                    return possiblePath;
                                 }
                             }
                         }

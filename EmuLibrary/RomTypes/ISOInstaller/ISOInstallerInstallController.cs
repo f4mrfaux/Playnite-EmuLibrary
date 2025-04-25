@@ -112,7 +112,20 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                             
                             _emuLibrary.Logger.Info($"Searching for ISO in {isoMappings.Count} configured mapping folders");
                             
+                            // Normalize game name for better file matching
                             string gameName = Game.Name.Replace(":", "_").Replace("\\", "_").Replace("/", "_");
+                            _emuLibrary.Logger.Info($"Using normalized game name for search: {gameName}");
+                            
+                            // Also try with different common separators removed
+                            var gameNameVariations = new List<string> {
+                                gameName,
+                                gameName.Replace(" ", ""),           // NoSpaces
+                                gameName.Replace(" ", "_"),          // Snake_Case
+                                gameName.Replace(" ", "-"),          // Kebab-Case
+                                gameName.Replace(" ", "."),          // Dot.Notation
+                                System.Text.RegularExpressions.Regex.Replace(gameName, @"[^a-zA-Z0-9]", "") // AlphanumericOnly
+                            };
+                            
                             bool foundIso = false;
                             
                             foreach (var mapping in isoMappings)
@@ -122,43 +135,187 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                                     
                                 _emuLibrary.Logger.Info($"Searching for {gameName} in {mapping.SourcePath}");
                                 
-                                // Search directly for common ISO formats with the game name
-                                string[] possibleExtensions = new[] { ".iso", ".bin", ".img", ".cue", ".nrg", ".mds", ".mdf" };
-                                foreach (var ext in possibleExtensions)
+                                // First, try a direct file search to find any matching ISO files
+                                try
                                 {
-                                    // Try exact match
-                                    string possiblePath = Path.Combine(mapping.SourcePath, gameName + ext);
-                                    _emuLibrary.Logger.Info($"Checking {possiblePath}");
-                                    
-                                    if (File.Exists(possiblePath))
+                                    // Search for all files with common disc image extensions
+                                    var discFiles = new List<string>();
+                                    foreach (var ext in new[] { "iso", "bin", "img", "cue", "nrg", "mds", "mdf" })
                                     {
-                                        info.SourceFullPath = possiblePath;
-                                        info.SourcePath = gameName + ext;
+                                        try
+                                        {
+                                            // Try both lowercase and uppercase extensions
+                                            discFiles.AddRange(Directory.GetFiles(mapping.SourcePath, $"*.{ext}", SearchOption.AllDirectories));
+                                            discFiles.AddRange(Directory.GetFiles(mapping.SourcePath, $"*.{ext.ToUpper()}", SearchOption.AllDirectories));
+                                        }
+                                        catch (Exception ex)
+                                        {
+                                            _emuLibrary.Logger.Error($"Error searching for {ext} files: {ex.Message}");
+                                        }
+                                    }
+                                    
+                                    _emuLibrary.Logger.Info($"Found {discFiles.Count} total disc image files to check");
+                                    
+                                    // Sort by filename length (shorter filenames first) to prefer simpler names
+                                    discFiles = discFiles
+                                        .OrderBy(f => Path.GetFileName(f).Length)
+                                        .ThenBy(f => Path.GetFileName(f))
+                                        .ToList();
+                                    
+                                    // Score-based best match selection
+                                    string bestMatch = null;
+                                    int bestScore = 0;
+                                    
+                                    foreach (var file in discFiles)
+                                    {
+                                        // Skip invalid files
+                                        if (string.IsNullOrEmpty(file) || !File.Exists(file))
+                                            continue;
+                                            
+                                        string fileName = Path.GetFileNameWithoutExtension(file);
+                                        
+                                        // Calculate match score
+                                        int score = 0;
+                                        
+                                        // Exact match is best
+                                        if (fileName.Equals(gameName, StringComparison.OrdinalIgnoreCase))
+                                        {
+                                            score = 1000;
+                                        }
+                                        // Try all name variations
+                                        else
+                                        {
+                                            foreach (var variant in gameNameVariations)
+                                            {
+                                                // Perfect match with a variant
+                                                if (fileName.Equals(variant, StringComparison.OrdinalIgnoreCase))
+                                                {
+                                                    score = 900;
+                                                    break;
+                                                }
+                                                
+                                                // File contains full game name
+                                                if (fileName.IndexOf(variant, StringComparison.OrdinalIgnoreCase) >= 0)
+                                                {
+                                                    score = Math.Max(score, 700);
+                                                }
+                                                
+                                                // Game name contains file name
+                                                if (variant.IndexOf(fileName, StringComparison.OrdinalIgnoreCase) >= 0)
+                                                {
+                                                    score = Math.Max(score, 600);
+                                                }
+                                                
+                                                // Check for word-by-word match (partial match)
+                                                var fileWords = fileName.Split(new[] { ' ', '_', '-', '.' }, StringSplitOptions.RemoveEmptyEntries);
+                                                var gameWords = variant.Split(new[] { ' ', '_', '-', '.' }, StringSplitOptions.RemoveEmptyEntries);
+                                                
+                                                int matchingWords = fileWords.Count(fw => 
+                                                    gameWords.Any(gw => fw.Equals(gw, StringComparison.OrdinalIgnoreCase)));
+                                                    
+                                                if (matchingWords > 0)
+                                                {
+                                                    // Score based on percentage of matching words
+                                                    double matchPercent = (double)matchingWords / Math.Max(fileWords.Length, gameWords.Length);
+                                                    int partialScore = (int)(500 * matchPercent);
+                                                    score = Math.Max(score, partialScore);
+                                                }
+                                            }
+                                        }
+                                        
+                                        // Log high-scoring matches
+                                        if (score > 400)
+                                        {
+                                            _emuLibrary.Logger.Info($"Potential match: {fileName} (Score: {score})");
+                                        }
+                                        
+                                        // Save best match so far
+                                        if (score > bestScore)
+                                        {
+                                            bestScore = score;
+                                            bestMatch = file;
+                                        }
+                                    }
+                                    
+                                    // If we have a good match, use it
+                                    if (bestScore > 400 && !string.IsNullOrEmpty(bestMatch))
+                                    {
+                                        info.SourceFullPath = bestMatch;
+                                        info.SourcePath = Path.GetFileName(bestMatch);
                                         info.MappingId = mapping.MappingId;
-                                        _emuLibrary.Logger.Info($"Found exact match ISO: {possiblePath}");
+                                        info.InstallerFullPath = bestMatch;
+                                        
+                                        _emuLibrary.Logger.Info($"Found matching ISO with score {bestScore}: {bestMatch}");
                                         foundIso = true;
                                         break;
                                     }
-                                    
-                                    // Try case-insensitive search
-                                    try {
-                                        var files = Directory.GetFiles(mapping.SourcePath, "*" + ext);
-                                        var matchingFile = files.FirstOrDefault(f => 
-                                            Path.GetFileNameWithoutExtension(f).Equals(gameName, StringComparison.OrdinalIgnoreCase) ||
-                                            Path.GetFileNameWithoutExtension(f).Contains(gameName) ||
-                                            gameName.Contains(Path.GetFileNameWithoutExtension(f)));
-                                        
-                                        if (!string.IsNullOrEmpty(matchingFile))
+                                }
+                                catch (Exception ex)
+                                {
+                                    _emuLibrary.Logger.Error($"Error during advanced ISO search: {ex.Message}");
+                                }
+                                
+                                // If we haven't found a match yet, try the original method with extensions
+                                if (!foundIso)
+                                {
+                                    // Search directly for common ISO formats with the game name
+                                    string[] possibleExtensions = new[] { ".iso", ".bin", ".img", ".cue", ".nrg", ".mds", ".mdf" };
+                                    foreach (var ext in possibleExtensions)
+                                    {
+                                        // Try each game name variation
+                                        foreach (var nameVariant in gameNameVariations)
                                         {
-                                            info.SourceFullPath = matchingFile;
-                                            info.SourcePath = Path.GetFileName(matchingFile);
-                                            info.MappingId = mapping.MappingId;
-                                            _emuLibrary.Logger.Info($"Found similar ISO: {matchingFile}");
-                                            foundIso = true;
-                                            break;
+                                            // Try exact match
+                                            string possiblePath = Path.Combine(mapping.SourcePath, nameVariant + ext);
+                                            _emuLibrary.Logger.Info($"Checking {possiblePath}");
+                                            
+                                            if (File.Exists(possiblePath))
+                                            {
+                                                info.SourceFullPath = possiblePath;
+                                                info.SourcePath = nameVariant + ext;
+                                                info.MappingId = mapping.MappingId;
+                                                info.InstallerFullPath = possiblePath;
+                                                _emuLibrary.Logger.Info($"Found exact match ISO: {possiblePath}");
+                                                foundIso = true;
+                                                break;
+                                            }
                                         }
-                                    } catch (Exception ex) {
-                                        _emuLibrary.Logger.Error($"Error searching in {mapping.SourcePath}: {ex.Message}");
+                                        
+                                        if (foundIso) break;
+                                        
+                                        // Try case-insensitive search
+                                        try {
+                                            var files = Directory.GetFiles(mapping.SourcePath, "*" + ext);
+                                            
+                                            // Check each file against all name variations
+                                            foreach (var file in files)
+                                            {
+                                                var fileName = Path.GetFileNameWithoutExtension(file);
+                                                
+                                                // Check against each game name variation
+                                                foreach (var nameVariant in gameNameVariations)
+                                                {
+                                                    if (fileName.Equals(nameVariant, StringComparison.OrdinalIgnoreCase) ||
+                                                        fileName.Contains(nameVariant) ||
+                                                        nameVariant.Contains(fileName))
+                                                    {
+                                                        info.SourceFullPath = file;
+                                                        info.SourcePath = Path.GetFileName(file);
+                                                        info.MappingId = mapping.MappingId;
+                                                        info.InstallerFullPath = file;
+                                                        _emuLibrary.Logger.Info($"Found similar ISO: {file}");
+                                                        foundIso = true;
+                                                        break;
+                                                    }
+                                                }
+                                                
+                                                if (foundIso) break;
+                                            }
+                                        } catch (Exception ex) {
+                                            _emuLibrary.Logger.Error($"Error searching in {mapping.SourcePath}: {ex.Message}");
+                                        }
+                                        
+                                        if (foundIso) break;
                                     }
                                 }
                                 
