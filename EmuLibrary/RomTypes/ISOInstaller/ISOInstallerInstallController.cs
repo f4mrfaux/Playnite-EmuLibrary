@@ -90,25 +90,13 @@ namespace EmuLibrary.RomTypes.ISOInstaller
 
             Task.Run(async () =>
             {
-                // Track installation state for logging
-                var tempDir = string.Empty;
+                // We only need to track the mount point
                 var mountPoint = string.Empty;
-                var localISOPath = string.Empty;
                 
                 try
                 {
-                    // Create a temporary directory for the ISO operation
-                    UpdateProgress("Creating temporary directory...", 0);
-                    
-                    tempDir = Path.Combine(Path.GetTempPath(), "Playnite_ISOInstaller", Guid.NewGuid().ToString());
-                    Directory.CreateDirectory(tempDir);
-                    
-                    if (cancellationToken.IsCancellationRequested)
-                    {
-                        _emuLibrary.Logger.Info($"Installation of {Game.Name} was cancelled during preparation");
-                        Game.IsInstalling = false;
-                        return;
-                    }
+                    // Initialize with a clean state
+                    UpdateProgress("Preparing for installation...", 0);
                     
                     // Verify source file exists
                     if (string.IsNullOrEmpty(info.SourceFullPath))
@@ -126,7 +114,6 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                         {
                             // Use InstallerFullPath directly
                             _emuLibrary.Logger.Info($"Using InstallerFullPath directly: {info.InstallerFullPath}");
-                            // Fix the issue by setting the local variable to use later
                             info.SourceFullPath = info.InstallerFullPath;
                         }
                     }
@@ -148,61 +135,14 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                         }
                     }
                     
-                    // Import the ISO file to local temp storage first
-                    UpdateProgress("Importing ISO file to local storage...", 5);
-                    
-                    _emuLibrary.Playnite.Notifications.Add(
-                        Game.GameId,
-                        $"Importing ISO file for {Game.Name} to local storage...",
-                        NotificationType.Info
-                    );
-                    
-                    // Get or create the AssetImporter
-                    var assetImporter = Util.AssetImporter.AssetImporter.Instance ?? 
-                        new Util.AssetImporter.AssetImporter(_emuLibrary.Logger, _emuLibrary.Playnite);
-                    
-                    // Register for progress updates
-                    assetImporter.ImportProgress += (sender, e) => {
-                        // Calculate progress percentage from 5% to 10% during import
-                        int progressValue = 5 + (int)(e.Progress * 5);
-                        UpdateProgress($"Importing ISO file: {e.BytesTransferred / (1024 * 1024)} MB / {e.TotalBytes / (1024 * 1024)} MB", progressValue);
-                    };
-                    
-                    // Use app mode to determine dialog visibility
-                    bool showDialog = _emuLibrary.Playnite.ApplicationInfo.Mode == ApplicationMode.Desktop ?
-                        Settings.Settings.Instance.UseWindowsCopyDialogInDesktopMode :
-                        Settings.Settings.Instance.UseWindowsCopyDialogInFullscreenMode;
-                    
-                    // Import the asset
-                    var importResult = await assetImporter.ImportAsync(
-                        info.SourceFullPath, 
-                        showDialog, 
-                        cancellationToken);
-                    
-                    if (!importResult.Success || string.IsNullOrEmpty(importResult.Path) || !File.Exists(importResult.Path))
+                    if (cancellationToken.IsCancellationRequested)
                     {
-                        if (importResult.Error != null)
-                        {
-                            throw new Exception($"Failed to import ISO file: {importResult.Error.Message}", importResult.Error);
-                        }
-                        else
-                        {
-                            throw new FileNotFoundException($"Failed to import ISO file to local storage: {info.SourceFullPath}");
-                        }
+                        _emuLibrary.Logger.Info($"Installation of {Game.Name} was cancelled during preparation");
+                        Game.IsInstalling = false;
+                        return;
                     }
                     
-                    localISOPath = importResult.Path;
-                    
-                    if (importResult.FromCache)
-                    {
-                        _emuLibrary.Logger.Info($"Using cached ISO file: {localISOPath}");
-                    }
-                    else
-                    {
-                        _emuLibrary.Logger.Info($"ISO file imported successfully to {localISOPath}");
-                    }
-                    
-                    // Mount the ISO file using PowerShell (now using the local copy)
+                    // Mount the ISO file directly from its source location
                     UpdateProgress("Mounting ISO file...", 10);
                     
                     _emuLibrary.Playnite.Notifications.Add(
@@ -211,7 +151,11 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                         NotificationType.Info
                     );
                     
-                    mountPoint = MountIsoFile(localISOPath);
+                    // Use the source file directly without copying to temp storage
+                    string isoSourcePath = info.SourceFullPath;
+                    _emuLibrary.Logger.Info($"Mounting ISO directly from source: {isoSourcePath}");
+                    
+                    mountPoint = MountIsoFile(isoSourcePath);
                     if (string.IsNullOrEmpty(mountPoint))
                     {
                         throw new Exception("Failed to mount ISO file. Make sure the ISO is not corrupted.");
@@ -321,7 +265,7 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                             _emuLibrary.Playnite.Notifications.Add(
                                 Game.GameId,
                                 $"Please select an executable from the ISO for {Game.Name}, or the installation will be cancelled.",
-                                NotificationType.Warning
+                                NotificationType.Error
                             );
                             
                             // Try one more time
@@ -622,7 +566,7 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                                         _emuLibrary.Playnite.Notifications.Add(
                                             notificationId,
                                             $"Please select a main executable for {Game.Name}, or the installation will be incomplete.",
-                                            NotificationType.Warning
+                                            NotificationType.Error
                                         );
                                         
                                         // Check cancellation again
@@ -703,66 +647,11 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                     UpdateProgress("Unmounting ISO...", 85);
                     UnmountIsoFile(mountPoint);
                     
-                    // Clean up temp directory
-                    UpdateProgress("Cleaning up...", 90);
+                    // Cleanup phase
+                    UpdateProgress("Finalizing...", 90);
                     
-                    try
-                    {
-                        // Clean up temp directories - guard against nulls and already deleted directories
-                        if (!string.IsNullOrEmpty(tempDir) && Directory.Exists(tempDir))
-                        {
-                            try
-                            {
-                                Directory.Delete(tempDir, true);
-                                _emuLibrary.Logger.Info($"Successfully deleted temp directory: {tempDir}");
-                            }
-                            catch (UnauthorizedAccessException uaEx)
-                            {
-                                _emuLibrary.Logger.Warn($"Permission denied when deleting temp directory: {uaEx.Message}");
-                                // Try to schedule deletion on system restart if on Windows
-                                try
-                                {
-                                    if (Environment.OSVersion.Platform == PlatformID.Win32NT)
-                                    {
-                                        // Set a flag to remember this cleanup attempt
-                                        _emuLibrary.Logger.Info("Scheduling deletion on system restart");
-                                    }
-                                }
-                                catch (Exception scheduleEx)
-                                {
-                                    _emuLibrary.Logger.Error($"Failed to schedule temp directory deletion: {scheduleEx.Message}");
-                                }
-                            }
-                            catch (IOException ioEx)
-                            {
-                                _emuLibrary.Logger.Warn($"IO error when deleting temp directory: {ioEx.Message}");
-                            }
-                        }
-                        
-                        // Clean up the imported ISO file if not cached
-                        if (!string.IsNullOrEmpty(localISOPath) && !Settings.Settings.Instance.EnableAssetCaching)
-                        {
-                            try
-                            {
-                                // Get or create the AssetImporter
-                                var assetImporterForCleanup = Util.AssetImporter.AssetImporter.Instance ?? 
-                                    new Util.AssetImporter.AssetImporter(_emuLibrary.Logger, _emuLibrary.Playnite);
-                                    
-                                assetImporterForCleanup.CleanupTempDirectory(localISOPath);
-                                _emuLibrary.Logger.Info($"Successfully cleaned up temporary ISO file");
-                            }
-                            catch (Exception assetEx)
-                            {
-                                _emuLibrary.Logger.Warn($"Failed to clean up temporary ISO file: {assetEx.Message}");
-                            }
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        // Log the full exception details
-                        _emuLibrary.Logger.Warn($"Failed to clean up temp resources: {ex.Message}");
-                        // Continue with installation - cleanup failure shouldn't prevent completion
-                    }
+                    // No temporary files to clean up since we directly mounted the ISO
+                    _emuLibrary.Logger.Info("No temporary files to clean up - ISO was mounted directly from source");
                     
                     // Create GameInstallationData
                     UpdateProgress("Finalizing installation...", 95);
@@ -845,7 +734,7 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                         _emuLibrary.Playnite.Notifications.Add(
                             $"ISOInstaller_{Game.GameId}_NoExe",
                             $"No valid executable was selected for {Game.Name}. You may need to manually set up a play action in the game's properties.",
-                            NotificationType.Warning
+                            NotificationType.Error
                         );
                     }
                     
@@ -873,25 +762,6 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                             _emuLibrary.Logger.Info($"Cleaning up mount point {mountPoint} after cancellation");
                             UnmountIsoFile(mountPoint);
                         }
-                        
-                        // Clean up temp directories
-                        if (!string.IsNullOrEmpty(tempDir) && Directory.Exists(tempDir))
-                        {
-                            _emuLibrary.Logger.Info($"Cleaning up temp directory {tempDir} after cancellation");
-                            Directory.Delete(tempDir, true);
-                        }
-                        
-                        // Clean up the imported ISO file if it exists
-                        if (!string.IsNullOrEmpty(localISOPath) && File.Exists(localISOPath))
-                        {
-                            _emuLibrary.Logger.Info($"Cleaning up imported ISO file {localISOPath} after cancellation");
-                            
-                            // Get or create the AssetImporter
-                            var assetImporterForCleanup = Util.AssetImporter.AssetImporter.Instance ?? 
-                                new Util.AssetImporter.AssetImporter(_emuLibrary.Logger, _emuLibrary.Playnite);
-                                
-                            assetImporterForCleanup.CleanupTempDirectory(localISOPath);
-                        }
                     }
                     catch (Exception ex)
                     {
@@ -916,25 +786,6 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                         {
                             _emuLibrary.Logger.Info($"Cleaning up mount point {mountPoint} after failure");
                             UnmountIsoFile(mountPoint);
-                        }
-                        
-                        // Clean up temp directories
-                        if (!string.IsNullOrEmpty(tempDir) && Directory.Exists(tempDir))
-                        {
-                            _emuLibrary.Logger.Info($"Cleaning up temp directory {tempDir} after failure");
-                            Directory.Delete(tempDir, true);
-                        }
-                        
-                        // Clean up the imported ISO file if it exists
-                        if (!string.IsNullOrEmpty(localISOPath) && File.Exists(localISOPath))
-                        {
-                            _emuLibrary.Logger.Info($"Cleaning up imported ISO file {localISOPath} after failure");
-                            
-                            // Get or create the AssetImporter
-                            var assetImporterForCleanup = Util.AssetImporter.AssetImporter.Instance ?? 
-                                new Util.AssetImporter.AssetImporter(_emuLibrary.Logger, _emuLibrary.Playnite);
-                                
-                            assetImporterForCleanup.CleanupTempDirectory(Path.GetDirectoryName(localISOPath));
                         }
                     }
                     catch (Exception cleanupEx)

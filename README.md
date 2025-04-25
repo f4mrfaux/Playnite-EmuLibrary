@@ -51,13 +51,13 @@ Best for: PC games distributed as disc images (.iso, .bin/.cue, etc.)
 1. **Setup**: Create an ISOInstaller mapping using the standard mapping table in settings
 2. **Scanning**: EmuLibrary finds all compatible disc images (.iso, .bin, .img, etc.)
 3. **Installation Process**:
-   - When you click "Install Game" on an ISO game, the system copies the ISO to temporary storage (if needed)
-   - The ISO is automatically mounted as a virtual drive using Windows' built-in mounting
+   - When you click "Install Game" on an ISO game, the system mounts the ISO directly from its source location
+   - The ISO is mounted as a virtual drive using Windows' built-in mounting capability
    - You'll see a list of executables found on the ISO and can select which installer to run
    - The installer runs and you complete the normal game installation process
    - After installation completes, you select the directory where you installed the game
    - Next, you choose which executable from that directory is the main game launcher
-   - Finally, the ISO is unmounted and temporary files are cleaned up
+   - Finally, the ISO is unmounted
    - The game now appears as "installed" in your library
 4. **Play**: Clicking "Play" launches the game directly using the executable you selected, without needing the original ISO
 
