@@ -352,8 +352,8 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                                 }
                             }
                             
-                            // Use await with Task.Delay instead of Thread.Sleep
-                            await Task.Delay(500, cancellationToken).ContinueWith(t => { }, TaskScheduler.Current);
+                            // Use a simple await with Task.Delay for .NET 4.6.2 compatibility
+                            await Task.Delay(500, cancellationToken);
                         }
                     }
                     catch (TaskCanceledException)

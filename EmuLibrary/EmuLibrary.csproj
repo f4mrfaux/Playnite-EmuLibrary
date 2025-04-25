@@ -28,7 +28,6 @@
     <PackageReference Include="System.IO.Abstractions" Version="2.1.0.227" />
     <PackageReference Include="Microsoft.PowerShell.5.ReferenceAssemblies" Version="1.1.0" Condition="'$(OS)' == 'Windows_NT'" />
     <PackageReference Include="ZstdSharp.Port" Version="0.6.5" />
-    <PackageReference Include="System.Net.Http" Version="4.3.4" />
   </ItemGroup>
 	
   <ItemGroup>
