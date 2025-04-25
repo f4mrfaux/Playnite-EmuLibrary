@@ -4,15 +4,17 @@ EmuLibrary is a library extension for [Playnite](https://www.playnite.link), an 
 
 > **Attribution**: This is a fork of [psychonic's EmuLibrary](https://github.com/psychonic/Playnite-EmuLibrary), extended by f4mrfaux to add PC game installer support, ISOInstaller, and other improvements.
 
-## Latest Updates (v1.6.0)
+## Latest Updates (v1.7.0)
 
-### New in v1.6.0:
+### New in v1.7.0:
+- **Stable ISOInstaller**: Full stable release of the ISOInstaller for handling PC game disc images
 - **Fixed ISO File Installation**: Resolved issues with ISO files not being found during installation
 - **Enhanced Path Resolution**: Added more robust path detection for ISO files with multiple fallback mechanisms
 - **Improved Game Scanning**: Better detection of ISO files with various naming conventions
 - **User Interface Additions**: Added "Find Missing ISO" context menu option for manually selecting ISO files
 - **Automatic Path Recovery**: Added system to recover and repair ISO paths during startup
 - **Diagnostic Improvements**: More detailed logging for easier troubleshooting
+- **Performance Optimization**: Faster scanning for large collections
 
 ## Key Features
 
