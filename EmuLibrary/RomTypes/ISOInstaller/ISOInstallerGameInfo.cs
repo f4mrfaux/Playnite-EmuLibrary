@@ -38,6 +38,24 @@ namespace EmuLibrary.RomTypes.ISOInstaller
 
         [SerializationPropertyName("InstallDirectory")]
         public string InstallDirectory { get; set; }
+        
+        /// <summary>
+        /// Checks if this game is properly installed and has all necessary paths
+        /// </summary>
+        /// <returns>True if the game is installed, false otherwise</returns>
+        public bool IsProperlyInstalled()
+        {
+            // Check if game has an installation directory and it exists
+            if (string.IsNullOrEmpty(InstallDirectory) || !Directory.Exists(InstallDirectory))
+                return false;
+                
+            // Check if we have a primary executable and it exists
+            if (!string.IsNullOrEmpty(PrimaryExecutable) && !File.Exists(PrimaryExecutable))
+                return false;
+                
+            // All checks passed, game is properly installed
+            return true;
+        }
 
         [SerializationPropertyName("PrimaryExecutable")]
         public string PrimaryExecutable { get; set; }

@@ -285,6 +285,125 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                         continue;
                     }
                     
+                    // Skip ISO files that are part of regular game installations
+                    // These should be handled by PCInstaller
+                    if (isoFile.Contains("\\CD1\\") || 
+                        isoFile.Contains("\\CD2\\") ||
+                        isoFile.Contains("\\Disc1\\") ||
+                        isoFile.Contains("\\Disc2\\") ||
+                        isoFile.Contains("\\DVD1\\") ||
+                        isoFile.Contains("\\DVD2\\") ||
+                        isoFile.EndsWith("\\CD1.iso") ||
+                        isoFile.EndsWith("\\CD2.iso") ||
+                        isoFile.EndsWith("\\Disc1.iso") ||
+                        isoFile.EndsWith("\\Disc2.iso") ||
+                        isoFile.EndsWith("\\DVD1.iso") ||
+                        isoFile.EndsWith("\\DVD2.iso") ||
+                        (isoFile.Contains("\\GOG") && isoFile.EndsWith(".iso")))
+                    {
+                        _emuLibrary.Logger.Info($"[ISO SCANNER] Skipping file {isoFile} as it appears to be part of a game installation");
+                        continue;
+                    }
+                    
+                    // Skip folders that primarily contain EXE files (should be handled by PCInstaller)
+                    try
+                    {
+                        var folderPath = Path.GetDirectoryName(isoFile);
+                        if (!string.IsNullOrEmpty(folderPath))
+                        {
+                            // Check if the current file is actually a disc image
+                            var fileExtension = Path.GetExtension(isoFile).TrimStart('.').ToLowerInvariant();
+                            var isActualDiscImage = discExtensions.Contains(fileExtension);
+                            
+                            // If it's NOT a disc image, we should skip it regardless
+                            if (!isActualDiscImage)
+                            {
+                                _emuLibrary.Logger.Debug($"[ISO SCANNER] Skipping file {isoFile} as it is not a recognized disc image format");
+                                continue;
+                            }
+                            
+                            // Count executables in the folder
+                            var exeFiles = Directory.GetFiles(folderPath, "*.exe", SearchOption.TopDirectoryOnly);
+                            
+                            // Check for "Alien Isolation" or similar game folders with both EXEs and ISOs
+                            bool folderIsRegularGameInstall = 
+                                folderPath.EndsWith("GOG") ||
+                                folderPath.Contains("\\GOG\\") ||
+                                folderPath.Contains("GOG Games") ||
+                                folderPath.Contains("Steam") ||
+                                folderPath.Contains("Epic") ||
+                                folderPath.Contains("Uplay") ||
+                                folderPath.Contains("Origin") ||
+                                folderPath.Contains("Games") ||
+                                // Skip CD1/CD2 folders and similar that are part of multi-disc games
+                                folderPath.EndsWith("CD1") ||
+                                folderPath.EndsWith("CD2") ||
+                                folderPath.EndsWith("CD3") ||
+                                folderPath.EndsWith("DVD1") ||
+                                folderPath.EndsWith("DVD2") ||
+                                folderPath.Contains("\\CD1\\") ||
+                                folderPath.Contains("\\CD2\\") ||
+                                folderPath.Contains("\\CD3\\") ||
+                                folderPath.Contains("\\DVD1\\") ||
+                                folderPath.Contains("\\DVD2\\");
+                                
+                            // Check if this folder has more executables than disc images
+                            int exeCount = exeFiles.Length;
+                            
+                            // Count disc image files in the same folder
+                            int discImageCount = 0;
+                            foreach (var ext in discExtensions)
+                            {
+                                try
+                                {
+                                    var discFiles = Directory.GetFiles(folderPath, $"*.{ext}", SearchOption.TopDirectoryOnly);
+                                    discImageCount += discFiles.Length;
+                                }
+                                catch (Exception) { /* Ignore errors */ }
+                            }
+                            
+                            // Skip if the folder is a known game store folder or has more executables than disc images
+                            bool hasMoreExesThanIsos = exeCount > 0 && exeCount > discImageCount;
+                            
+                            if ((exeCount > 0 && folderIsRegularGameInstall) || hasMoreExesThanIsos)
+                            {
+                                _emuLibrary.Logger.Info($"[ISO SCANNER] Skipping file {isoFile} in folder {Path.GetFileName(folderPath)} as it appears to be a regular game installation folder with executables (exeCount: {exeCount}, discImageCount: {discImageCount})");
+                                continue;
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        // Log but continue with processing
+                        _emuLibrary.Logger.Debug($"[ISO SCANNER] Error checking folder contents: {ex.Message}");
+                    }
+                    
+                    // Skip folders that contain .exe files but no ISO files
+                    // These are likely PC game install folders, not ISO-based games
+                    try
+                    {
+                        var parentDir = Path.GetDirectoryName(isoFile);
+                        if (!string.IsNullOrEmpty(parentDir))
+                        {
+                            // Check if this folder has executables but is not a disc image
+                            var exeFiles = Directory.GetFiles(parentDir, "*.exe", SearchOption.TopDirectoryOnly);
+                            var hasExeFiles = exeFiles.Length > 0;
+                            
+                            // If this file is not actually an ISO/disc image format, it might be a folder
+                            // that contains an .exe installer that should be handled by PCInstaller instead
+                            if (hasExeFiles && !discExtensions.Contains(Path.GetExtension(isoFile).TrimStart('.').ToLowerInvariant()))
+                            {
+                                _emuLibrary.Logger.Debug($"[ISO SCANNER] Skipping file {isoFile} as it appears to be in a folder with executables but is not a disc image");
+                                continue;
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        // Log but continue with processing
+                        _emuLibrary.Logger.Debug($"[ISO SCANNER] Error checking folder contents: {ex.Message}");
+                    }
+                    
                     // Get parent folder for game name - more intelligent handling
                     var parentFolderPath = Path.GetDirectoryName(isoFile);
                     var originalParentPath = parentFolderPath; // Save for logs
@@ -302,7 +421,10 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                     // List of problematic folder names to skip
                     var problematicFolders = new HashSet<string>(StringComparer.OrdinalIgnoreCase) {
                         "Update", "Renderer", "ISO", "disc", "disk", "Image", "DVD", "CD", "Root", 
-                        "Game", "Install", "Data", "Install Files", "Setup"
+                        "Game", "Install", "Data", "Install Files", "Setup",
+                        "CD1", "CD2", "CD3", "CD4", "DVD1", "DVD2", "DVD3",
+                        "Disc1", "Disc2", "Disc3", "Disc One", "Disc Two",
+                        "DATA", "GAME"
                     };
                     
                     // Get relative path segments from srcPath to file
@@ -392,6 +514,83 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                     // Log processing of this game
                     _emuLibrary.Logger.Info($"[ISO SCANNER] Processing game: {gameName} from {isoFile}");
                     
+                    // Following the pattern from SingleFileScanner, check first if this file is already in the database
+                    
+                    // Get the relative path from source path for easier comparison
+                    var relativePath = isoFile.Substring(srcPath.Length).TrimStart(Path.DirectorySeparatorChar);
+                    
+                    // Track if we need to skip this file because it's already installed or tracked
+                    bool skipThisFile = false;
+                    
+                    try
+                    {
+                        // Check if we already have this game in our library:
+                        // 1. First check if it's installed (checking with Playnite API is faster than our own scan)
+                        var libraryGames = _playniteAPI.Database.Games
+                            .Where(g => g.PluginId == EmuLibrary.PluginId)
+                            .ToList();
+                        
+                        _emuLibrary.Logger.Debug($"[ISO SCANNER] Checking {libraryGames.Count} library games for duplication");
+                        
+                        foreach (var game in libraryGames)
+                        {
+                            try
+                            {
+                                // Try to get the game info
+                                var gameInfo = game.GetELGameInfo();
+                                if (gameInfo?.RomType != RomType.ISOInstaller)
+                                    continue;
+                                
+                                var isoGameInfo = gameInfo as ISOInstallerGameInfo;
+                                
+                                // Check different conditions that would make this a duplicate
+                                
+                                // 1. Check full paths - most reliable
+                                if (!string.IsNullOrEmpty(isoGameInfo.InstallerFullPath) && 
+                                    isoGameInfo.InstallerFullPath.Equals(isoFile, StringComparison.OrdinalIgnoreCase))
+                                {
+                                    _emuLibrary.Logger.Info($"[ISO SCANNER] Skipping {isoFile} - game with this path already exists: {game.Name}");
+                                    skipThisFile = true;
+                                    break;
+                                }
+                                
+                                // 2. Check by source path + mapping ID
+                                if (isoGameInfo.MappingId == mapping.MappingId && 
+                                    !string.IsNullOrEmpty(isoGameInfo.SourcePath) && 
+                                    isoGameInfo.SourcePath.Equals(relativePath, StringComparison.OrdinalIgnoreCase))
+                                {
+                                    _emuLibrary.Logger.Info($"[ISO SCANNER] Skipping {isoFile} - game with same source path already exists: {game.Name}");
+                                    skipThisFile = true;
+                                    break;
+                                }
+                                
+                                // 3. Check by game name as a last resort (less reliable)
+                                if (game.Name.Equals(gameName, StringComparison.OrdinalIgnoreCase) && 
+                                    isoGameInfo.MappingId == mapping.MappingId)
+                                {
+                                    _emuLibrary.Logger.Info($"[ISO SCANNER] Skipping {isoFile} - game with same name already exists in same mapping: {game.Name}");
+                                    skipThisFile = true;
+                                    break;
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                _emuLibrary.Logger.Error($"[ISO SCANNER] Error checking game {game.Name}: {ex.Message}");
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _emuLibrary.Logger.Error($"[ISO SCANNER] Error checking for duplicate games: {ex.Message}");
+                    }
+
+                    // Skip this game if it's a duplicate 
+                    if (skipThisFile)
+                    {
+                        _emuLibrary.Logger.Info($"[ISO SCANNER] Skipping duplicate game: {gameName} from {isoFile}");
+                        continue;
+                    }
+                    
                     // Get relative path from source folder
                     var relativePath = isoFile.Substring(srcPath.Length).TrimStart(Path.DirectorySeparatorChar);
                     
@@ -402,8 +601,9 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                         SourcePath = relativePath,
                         InstallerFullPath = isoFile, // Full path to the ISO file
                         InstallDirectory = null, // Will be set during installation
-                        // Add unique timestamp/hash to ensure unique GameId
-                        StoreGameId = $"{gameName}_{Path.GetFileName(isoFile)}_{DateTime.Now.Ticks}"
+                        // Use a deterministic ID based on the ISO file path instead of timestamp
+                        // This ensures the same ISO file always generates the same ID
+                        StoreGameId = $"{gameName}_{Path.GetFileName(isoFile)}"
                     };
                     
                     // Log the installer path for debugging
