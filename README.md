@@ -26,7 +26,7 @@ EmuLibrary is a library extension for [Playnite](https://www.playnite.link), an 
 
 ## Quick Start Guide
 
-1. Install the EmuLibrary extension from Playnite's add-on browser
+1. Install the EmuLibrary extension from this repo
 2. Access the extension settings: Add-ons → Extensions → EmuLibrary → Configure
 3. Add mappings for your game collections based on their type (see [ROM Types](#rom-types) below)
 4. Save settings and refresh your library (F5)
