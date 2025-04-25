@@ -1,4 +1,5 @@
-﻿using System.Globalization;
+﻿using System.Collections.Generic;
+using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -6,6 +7,21 @@ namespace System
 {
     public static class StringExtensions
     {
+        /// <summary>
+        /// Performs the specified action on each element of the IEnumerable.
+        /// </summary>
+        public static void ForEach<T>(this IEnumerable<T> source, Action<T> action)
+        {
+            if (source == null)
+                throw new ArgumentNullException(nameof(source));
+            if (action == null)
+                throw new ArgumentNullException(nameof(action));
+                
+            foreach (T item in source)
+            {
+                action(item);
+            }
+        }
         private static readonly CultureInfo enUSCultInfo = new CultureInfo("en-US", false);
 
         public static string MD5(this string s)
@@ -109,9 +125,12 @@ namespace System
             newName = Regex.Replace(newName, @"\b([A-Za-z])\s([A-Za-z])\b", "$1$2");
             
             newName = RemoveTrademarks(newName);
-            // Replace special apostrophe with standard one
-            newName = newName.Replace(''', '\'');
-            newName = newName.Replace(''', '\'');
+            
+            // Replace special apostrophes with standard one
+            // Use string.Replace instead of char.Replace to avoid character literal issues
+            newName = newName.Replace("'", "'");
+            newName = newName.Replace("'", "'");
+            
             newName = Regex.Replace(newName, @"\[.*?\]", "");
             newName = Regex.Replace(newName, @"\(.*?\)", "");
             newName = Regex.Replace(newName, @"\s*:\s*", ": ");
