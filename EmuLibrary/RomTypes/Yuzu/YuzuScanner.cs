@@ -71,6 +71,7 @@ namespace EmuLibrary.RomTypes.Yuzu
                     InstallDirectory = mapping.EmulatorBasePath,
                     IsInstalled = true,
                     GameId = gameInfo.AsGameId(),
+                    // PluginId will be set by Playnite on Game object
                     Platforms = new HashSet<MetadataProperty>() { new MetadataNameProperty(mapping.Platform.Name) },
                     Regions = _switchRegions,
                     Version = g.Version,
@@ -117,6 +118,7 @@ namespace EmuLibrary.RomTypes.Yuzu
                     Name = g.Title,
                     IsInstalled = false,
                     GameId = gameInfo.AsGameId(),
+                    // PluginId will be set by Playnite on Game object
                     Platforms = new HashSet<MetadataProperty>() { new MetadataNameProperty(mapping.Platform.Name) },
                     Regions = _switchRegions,
                     GameActions = new List<GameAction>() {

@@ -6,14 +6,10 @@ using System.IO;
 
 namespace EmuLibrary.RomTypes.PCInstaller
 {
-    class PCInstallerUninstallController : UninstallController
+    class PCInstallerUninstallController : ELUninstallController
     {
-        private readonly IEmuLibrary _emuLibrary;
-
-        internal PCInstallerUninstallController(Game game, IEmuLibrary emuLibrary) : base(game)
+        internal PCInstallerUninstallController(Game game, IEmuLibrary emuLibrary) : base(game, emuLibrary)
         {
-            Name = "Uninstall";
-            _emuLibrary = emuLibrary;
         }
 
         public override void Uninstall(UninstallActionArgs args)

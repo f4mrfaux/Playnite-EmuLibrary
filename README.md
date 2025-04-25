@@ -1,117 +1,201 @@
 # EmuLibrary
 
-EmuLibrary is a library extension for [Playnite](https://www.playnite.link), an open source video game library manager, originally focused on emulator ROM management and now extended to support PC game installers as well.
+EmuLibrary is a library extension for [Playnite](https://www.playnite.link), an open source video game library manager, focused on emulator ROM management and PC game installation. While Playnite has built-in support for scanning installed ROMs, EmuLibrary provides a different approach by treating ROM folders as libraries from which you can selectively "install" games.
 
-While Playnite has had built-in support for scanning paths for installed ROMs and adding them to the library since version 9, EmuLibrary provides alternate functionality.
+> **Attribution**: This is a fork of [psychonic's EmuLibrary](https://github.com/psychonic/Playnite-EmuLibrary), extended by f4mrfaux to add PC game installer support, ISOInstaller, and other improvements.
 
-EmuLibrary treats one or more folders of ROMs/Disc images or PC game installers as a library from which you can "install" games. It can be useful if you have a large collection of emulated games and PC installers with limited storage where you play them versus where you store them (HTPC vs. NAS, for example). It also is useful for keeping the list of games up to date, and for being able to filter via installed/uninstalled.
+## Latest Updates (v1.7.0)
 
-Disclaimer: This extension was originally created for personal usage, and that is still the primary focus. Because of this, many parts of it are still tailored to specific needs and usage patterns. Despite that, it's being shared with others in case it is useful to them. It is still in the process of being adapted for more general use.
+### New in v1.7.0:
+- **Stable ISOInstaller**: Full stable release of the ISOInstaller for handling PC game disc images
+- **Fixed ISO File Installation**: Resolved issues with ISO files not being found during installation
+- **Enhanced Path Resolution**: Added more robust path detection for ISO files with multiple fallback mechanisms
+- **Improved Game Scanning**: Better detection of ISO files with various naming conventions
+- **User Interface Additions**: Added "Find Missing ISO" context menu option for manually selecting ISO files
+- **Automatic Path Recovery**: Added system to recover and repair ISO paths during startup
+- **Diagnostic Improvements**: More detailed logging for easier troubleshooting
+- **Performance Optimization**: Faster scanning for large collections
 
-## Setup
+## Key Features
 
-To set it up, you create mappings to combine one of each of the following:
+- **Multiple ROM Types**: Support for various game formats including single-file ROMs, multi-file game folders, PC installers, ISO disk images, and Yuzu Switch games
+- **Flexible Storage Management**: Keep your collection on network/external storage and install games to local drives only when needed
+- **Smart Content Management**: Automatic detection of base games, updates, DLC, and expansions with parent-child relationships
+- **Platform & Store Detection**: Identifies appropriate platforms for games and recognizes content from various digital stores
+- **Metadata Integration**: Works with Playnite's built-in metadata system to fetch game information, covers, and backgrounds
 
-* Emulator - either a built-in emulator or a custom emulator manually added
-* Emulator Profile - either a built-in emulator profile or a custom one, out of those supported by the chosen emulator
-* Platform - the ROM platform/console, out of those that the emulator profile supports (PCInstaller type now shows PC platforms regardless of emulator selection)
-* RomType - See [Rom Types](#rom-types) below
+## Quick Start Guide
 
-## Paths
+1. Install the EmuLibrary extension from Playnite's add-on browser
+2. Access the extension settings: Add-ons → Extensions → EmuLibrary → Configure
+3. Add mappings for your game collections based on their type (see [ROM Types](#rom-types) below)
+4. Save settings and refresh your library (F5)
+5. Your games appear in Playnite as "uninstalled" titles
+6. Install games by right-clicking and selecting "Install"
+7. Manage your collection through Playnite's standard interface
 
-For source and destination, only valid Windows file paths are currently supported. The intended use case is for having the source be an SMB file share (either via UNC path or mapped drive), and the destination be a local path. However, any valid file path should work for either. This means that you can get creative with the source if you have a way to mount alternate remote storage at a Windows file path.
+## ROM Types and Workflows
 
-Additionally, for destination paths, relativity to the Playnite folder is preserved if you are using a portable installation of Playnite and your destination is below that folder hierarchically. This means that, for example, if your portable installation is at D:\playnite, and you choose `D:\playnite\rominstall` as your destination, it will be saved internally as `{PlayniteDir}\rominstall`.
+EmuLibrary supports several types of games, each with a unique workflow:
 
-## Rom Types
+### SingleFile ROM Workflow
 
-### SingleFile
+Best for: NES, SNES, Genesis and other classic console ROMs stored as individual files
 
-SingleFile is the simplest type of ROM supported. This is for source folders in which each ROM is fully contained in a single file. It's commonly used for older, non-disc-based systems where the whole ROM consists of a single file. (Ex. .nes, .sfc, .md, etc.). Archive formats are supported as well if the emulator supports them directly. (Ex. .zip)
+1. **Setup**: Create a SingleFile mapping pointing to your ROM folder
+2. **Scanning**: EmuLibrary finds all compatible ROM files based on file extensions
+3. **Installation**: When you install a ROM, it's copied from the source to your destination folder
+4. **Play**: The game launches through your selected emulator using the local ROM copy
 
-### MultiFile
+### MultiFile ROM Workflow
 
-With the MultiFile type, each subfolder directly within the source folder is scanned as a potential "ROM". This is for games that have multiple loose files. (Ex. one or more .bin/.cue, with optional .m3u). When installing a MultiFile game, the whole folder is copied. 
+Best for: Multi-disc games or ROMs with multiple files (CD-based systems like PlayStation)
 
-To determine which file is used as the one to tell the emulator to load, all files matching the configured emulator profile's supported extensions are considered. Precedence is by configured image extension list order, and then by alphabetical order. For example, if file names are the same except for `(Disc 1)` versus `(Disc 2)`, the first disc takes precedence. Similarly, if you have `.cue` in the extension list before `.m3u` (as some of the built-in profiles have at the time of writing), `.cue` would be chosen over `.m3u`, which may not be desired for multi-disc games.
+1. **Setup**: Create a MultiFile mapping pointing to a folder containing game subfolders
+2. **Scanning**: Each subfolder is treated as a single game
+3. **Installation**: The entire folder is copied to your destination
+4. **Play**: The primary file (determined by extension priority) is used to launch the game
 
-### PCInstaller
+### ISOInstaller Workflow
 
-The PCInstaller type supports PC game installer executables (.exe files). This type is designed for managing native PC games that don't require emulation. It allows you to:
+Best for: PC games distributed as disc images (.iso, .bin/.cue, etc.)
 
-* Scan folders containing PC game installers (.exe files)
-* Install these games to a specified location
-* Manage PC games alongside your emulated games collection
+1. **Setup**: Create an ISOInstaller mapping using the standard mapping table in settings
+2. **Scanning**: EmuLibrary finds all compatible disc images (.iso, .bin, .img, etc.)
+3. **Installation Process**:
+   - When you click "Install Game" on an ISO game, the system mounts the ISO directly from its source location
+   - The ISO is mounted as a virtual drive using Windows' built-in mounting capability
+   - You'll see a list of executables found on the ISO and can select which installer to run
+   - The installer runs and you complete the normal game installation process
+   - After installation completes, you select the directory where you installed the game
+   - Next, you choose which executable from that directory is the main game launcher
+   - Finally, the ISO is unmounted
+   - The game now appears as "installed" in your library
+4. **Play**: Clicking "Play" launches the game directly using the executable you selected, without needing the original ISO
 
-When using the PCInstaller type, you'll be able to select from PC-related platforms (Windows, Steam, GOG, etc.) regardless of which emulator or profile you've selected. This makes it suitable for organizing PC game installers from various sources.
+### PCInstaller Workflow
 
-#### GOG Integration
+Best for: Windows game installers (.exe files)
 
-PCInstaller has special handling for GOG games:
+1. **Setup**: Create a PCInstaller mapping pointing to your installer collection
+2. **Scanning**: EmuLibrary finds all executable installers
+3. **Installation**: The installer is copied locally and run, then you specify the installation directory
+4. **Play**: The game launches directly using the selected game executable
 
-* Automatically detects GOG installers based on file naming patterns
-* Attempts to extract GOG game IDs from installer filenames
-* Sets the correct GOG platform for proper categorization in Playnite
-* Adds metadata tags for better categorization and filtering
-* Stores store-specific IDs for future metadata integration
+### Yuzu (Nintendo Switch) Workflow
 
-The PCInstaller type preserves the store information and properly categorizes PC games based on their origin (GOG, Steam, etc.), helping with organization and filtering in Playnite.
+Best for: Nintendo Switch games with Yuzu emulator (Beta feature)
 
-### Yuzu (Beta)
+1. **Setup**: Create a Yuzu mapping pointing to your Switch ROM collection
+2. **Scanning**: EmuLibrary finds XCI/NSP/XCZ/NSZ files and detects games, updates, and DLC
+3. **Installation**: Games are installed directly to Yuzu's NAND directory
+4. **Play**: Games launch through the Yuzu emulator
 
-The Yuzu type currently has a beta level quality of support. Some of it is still being reworked. As named, it is very hardcoded to Yuzu specifically, although Ryujinx support reusing most of the same logic will likely come in the future.
+## Detailed Setup
 
-To add a functional mapping, make sure that the selected emulator is Yuzu. (It does not need to be the built-in emulator listing for Yuzu. Custom ones, including ones that point to Yuzu EA, etc. will also work). In the source path, loose XCI/NSP/XCZ/NSZ files in the root of the path are considered.
+To set up EmuLibrary, you create mappings to combine one of each of the following:
 
-NSP/NSZ files can also be updates and DLC, rather than just games. Unlike with Tinfoil shares, files are not required to include the title id in the filename. Additionally, while destination path must point to a folder that exists, the setting is ignored. Games install into the NAND directory configured in the selected Yuzu emulator profile.
+* **Emulator** - either a built-in emulator or a custom emulator manually added (optional for PCInstaller and ISOInstaller types)
+* **Emulator Profile** - either a built-in emulator profile or a custom one (optional for PCInstaller and ISOInstaller types)
+* **Platform** - the game platform/console (PCInstaller and ISOInstaller default to "PC" if none selected)
+* **RomType** - The type of game files you're adding (see [ROM Types](#rom-types) above)
+* **Source Path** - Where your original game files are stored
+* **Destination Path** - Where installed games will be copied to
 
-When a game is installed, the latest update and any DLC from the source will also be installed to the Yuzu NAND, in that order (Game, Update if available, each available DLC). Games already installed will be imported, whether or not they exist in the source folder, and will display as installed. As expected, uninstalling a game will remove the game from Yuzu's NAND. (While Yuzu does not support XCZ or NSZ files for launching or installing to NAND, this plugin installs directly to Yuzu's NAND, without relying on the emulator's built-in install functionality)
+## Path Configuration
 
-#### Known Issues
+For source and destination paths, both local and network paths are supported:
 
-* If the connection to the source folder's storage is unstable, Playnite may crash when when updating the library. This is unlikely to be able to be completely fixed until Playnite uses a newer .NET version (currently being targeted for Playnite 11). Some some mitigations are planned in the meantime, but are not yet implemented.
-* If the mapping is disabled or if EmuLibrary update is cancelled before the scan for the mapping completes, game installation for the mapping's games may result in an error message. This will be fixed in a later version of this addon.
+- **Source Path**: Can be a local folder or network location (UNC path or mapped drive)
+- **Destination Path**: Typically a local folder for better performance
+- **Relative Paths**: If using a portable Playnite installation, paths below the Playnite folder are stored relatively
 
-## Usage Workflow
+## Advanced Features
 
-### Example: Adding a Repository of PC Games (e.g., GOG games)
+### DLC, Updates, and Expansions Management
 
-Here's a step-by-step workflow for adding a repository of PC game installers using the PCInstaller type:
+EmuLibrary intelligently handles additional content:
 
-1. Launch Playnite and go to the main menu.
+1. **Automatic Detection**: The system recognizes add-on content by analyzing file and folder names
+2. **Content Classification**:
+   - Base Games: Main game installations
+   - Updates/Patches: Game updates with version tracking
+   - DLC: Downloadable content packages
+   - Expansions: Larger content additions
 
-2. Open EmuLibrary settings (Add-ons → Extensions → EmuLibrary → Configure).
+3. **Parent-Child Relationships**: 
+   - Add-on content is automatically linked to parent games
+   - Relationships are visible in Playnite through dependencies
+   - You can see all installed add-ons for each base game
 
-3. In the settings window, click "Add Mapping" to create a new mapping.
+4. **Version Tracking**:
+   - Version information is extracted from filenames when available
+   - Install newer versions to keep games up to date
 
-4. Configure your mapping:
-   - Set "Emulator" to "GOG" (or any placeholder emulator)
-   - Set "Profile" to "Choose on startup" 
-   - Set "Rom Type" to "PCInstaller"
-   - Set "Source Path" to your game repository (e.g., "N:\games\GOG\")
-   - Set "Destination Path" to where you want to install the games
-   - Select a PC platform (Windows, PC, etc.) which should now be available
+### Store Integration
 
-5. Click "Save" to save your mapping configuration.
+For games from digital stores, EmuLibrary provides special handling:
 
-6. In Playnite, update your library (F5) to scan for games.
+- **GOG Game Detection**: Automatically identifies GOG installers
+- **Store ID Preservation**: Maintains store-specific IDs for metadata matching
+- **Platform Assignment**: Sets appropriate platform tags (GOG, Steam, etc.)
 
-7. Your games should now appear in your library as "uninstalled" games.
+### Content Organization Recommendations
 
-8. To install a game, right-click on it and select "Install". This will copy the installer from your source to the destination and handle the setup.
+For best results with your game collection:
 
-9. After installation, the game will be marked as "installed" and you can launch it directly from Playnite.
+- **Consistent Naming**: Use standard naming patterns for games and related content
+- **Folder Structure**: Group related content (game + DLC + updates) in the same directory when possible
+- **Common Patterns**: Use recognizable patterns like "Game Name + DLC Name", "Game Name - Update v1.2"
 
-This workflow allows you to maintain a central repository of game installers while only keeping installed games on your local machine.
+### Metadata Integration
 
-## Support
+EmuLibrary works with Playnite's built-in metadata system:
 
-To get help, check out the #extension-support channel on the Playnite Discord, linked at the top of https://playnite.link/
+- **Automatic Metadata**: When enabled, Playnite requests metadata for imported games
+- **Manual Download**: You can also download metadata through Playnite's UI
+- **Metadata Sources**: Uses existing Playnite metadata extensions like SteamGridDB, IGDB, etc.
+- **Available Information**: Fetches covers, backgrounds, descriptions, release dates, genres, etc.
 
-The following files are generally useful for troubleshooting, relative to the folder where Playnite data is stored. For a portable installation, this is the same folder that Playnite is installed to. For non-portable installations, it is in AppData.
+### Multi-Disc Game Handling
+
+For collections with multi-disc games:
+
+- **Disc Detection**: The system recognizes related discs through standard naming patterns
+- **Installation**: Select the primary disc for installation; related discs are handled automatically
+- **Access**: All discs are accessible from the installed game
+
+## Troubleshooting
+
+### Common Issues
+
+- **Games Not Appearing**: Check file extensions and ensure your source path is accessible
+- **Installation Errors**: Verify that destination paths are valid and writeable
+- **Emulator Issues**: Make sure emulators are properly configured in Playnite
+- **ISO Mounting Problems**: Requires Windows 8 or higher with built-in ISO mounting capabilities
+- **ISO Games Not Visible**: Ensure you've set the correct platform (PC) and that the ISO files have proper extensions
+- **ISO Files Not Found**: If you see an error about ISO files not being found during installation, right-click the game and use "Find Missing ISO..." to manually select the file
+- **Missing Context Menu**: If a newly added feature like "Find Missing ISO..." isn't appearing in the context menu, restart Playnite
+
+### Special Notes for ISO and PC Installers
+
+1. **Mounting Requirements**: ISO mounting requires Windows 8 or newer with built-in mounting capabilities.
+2. **File Extensions**: ISO scanning supports various disc image formats including .iso, .bin, .img, .cue, .nrg, .mds, and .mdf.
+3. **Emulator Mapping**: For PCInstaller and ISOInstaller mappings, you must select an emulator even though none is needed. Create a dummy emulator called "EmuLib-PC" and use it for these mappings.
+4. **Consistent Interface**: Both PCInstaller and ISOInstaller use the same standard mapping table interface and "Install Game" menu option for a consistent experience.
+5. **Command-Line Arguments**: You can add command-line arguments to game launches by editing the play action after installation.
+6. **Installation Interruptions**: If an installation is interrupted, you might need to manually unmount any ISO files using Windows Explorer.
+7. **Missing ISO Files**: If an ISO file can't be found during installation, use the "Find Missing ISO..." context menu option to manually select the ISO file.
+8. **Path Flexibility**: The system can now find ISO files even if they've been moved, as long as they remain in one of your configured mapping folders.
+
+### Log Files
+
+For troubleshooting, check these log files (relative to Playnite data directory):
 
 * playnite.log
 * extensions.log
-* library\emulators.db
-* library\platforms.db
 * ExtensionsData\41e49490-0583-4148-94d2-940c7c74f1d9\config.json
+
+## Support
+
+To get help, check out the #extension-support channel on the [Playnite Discord](https://playnite.link/)..

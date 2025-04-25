@@ -7,14 +7,10 @@ using System.Windows;
 
 namespace EmuLibrary.RomTypes.SingleFile
 {
-    class SingleFileUninstallController : UninstallController
+    class SingleFileUninstallController : ELUninstallController
     {
-        private readonly IEmuLibrary _emuLibrary;
-
-        internal SingleFileUninstallController(Game game, IEmuLibrary emuLibrary) : base(game)
+        internal SingleFileUninstallController(Game game, IEmuLibrary emuLibrary) : base(game, emuLibrary)
         {
-            Name = "Uninstall";
-            _emuLibrary = emuLibrary;
         }
 
         public override void Uninstall(UninstallActionArgs args)

@@ -72,6 +72,7 @@ namespace EmuLibrary.RomTypes.SingleFile
                                 InstallDirectory = _playniteAPI.Paths.IsPortable ? dstPath.Replace(_playniteAPI.Paths.ApplicationPath, Playnite.SDK.ExpandableVariables.PlayniteDirectory) : dstPath,
                                 IsInstalled = true,
                                 GameId = info.AsGameId(),
+                                // PluginId will be set by Playnite on Game object
                                 Platforms = new HashSet<MetadataProperty>() { new MetadataNameProperty(mapping.Platform.Name) },
                                 Regions = FileNameUtils.GuessRegionsFromRomName(baseFileName).Select(r => new MetadataNameProperty(r)).ToHashSet<MetadataProperty>(),
                                 InstallSize = (ulong)new FileInfo(file.FullName).Length,
@@ -128,6 +129,7 @@ namespace EmuLibrary.RomTypes.SingleFile
                                 Name = gameName,
                                 IsInstalled = false,
                                 GameId = info.AsGameId(),
+                                // PluginId will be set by Playnite on Game object
                                 Platforms = new HashSet<MetadataProperty>() { new MetadataNameProperty(mapping.Platform.Name) },
                                 Regions = FileNameUtils.GuessRegionsFromRomName(baseFileName).Select(r => new MetadataNameProperty(r)).ToHashSet<MetadataProperty>(),
                                 InstallSize = (ulong)new FileInfo(file.FullName).Length,

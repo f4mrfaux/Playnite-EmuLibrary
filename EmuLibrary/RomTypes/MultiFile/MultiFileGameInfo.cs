@@ -27,10 +27,10 @@ namespace EmuLibrary.RomTypes.MultiFile
             }
         }
 
-        public override InstallController GetInstallController(Game game, IEmuLibrary emuLibrary) =>
+        internal override InstallController GetInstallController(Game game, IEmuLibrary emuLibrary) =>
             new MultiFileInstallController(game, emuLibrary);
 
-        public override UninstallController GetUninstallController(Game game, IEmuLibrary emuLibrary) =>
+        internal override ELUninstallController GetUninstallController(Game game, IEmuLibrary emuLibrary) =>
             new MultiFileUninstallController(game, emuLibrary);
 
         protected override IEnumerable<string> GetDescriptionLines()

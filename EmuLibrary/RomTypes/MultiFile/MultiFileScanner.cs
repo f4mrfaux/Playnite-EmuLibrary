@@ -75,6 +75,7 @@ namespace EmuLibrary.RomTypes.MultiFile
                                 InstallDirectory = _playniteAPI.Paths.IsPortable ? file.FullName.Replace(_playniteAPI.Paths.ApplicationPath, Playnite.SDK.ExpandableVariables.PlayniteDirectory) : file.FullName,
                                 IsInstalled = true,
                                 GameId = info.AsGameId(),
+                                // PluginId will be set by Playnite on Game object
                                 Platforms = new HashSet<MetadataProperty>() { new MetadataNameProperty(mapping.Platform.Name) },
                                 Regions = FileNameUtils.GuessRegionsFromRomName(baseFileName).Select(r => new MetadataNameProperty(r)).ToHashSet<MetadataProperty>(),
                                 InstallSize = (ulong)dirEnumerator.Where(f => !f.Attributes.HasFlag(FileAttributes.Directory)).Select(f => new FileInfo(f.FullName)).Sum(f => f.Length),
@@ -137,6 +138,7 @@ namespace EmuLibrary.RomTypes.MultiFile
                                 Name = gameName,
                                 IsInstalled = false,
                                 GameId = info.AsGameId(),
+                                // PluginId will be set by Playnite on Game object
                                 Platforms = new HashSet<MetadataProperty>() { new MetadataNameProperty(mapping.Platform.Name) },
                                 Regions = FileNameUtils.GuessRegionsFromRomName(baseFileName).Select(r => new MetadataNameProperty(r)).ToHashSet<MetadataProperty>(),
                                 InstallSize = (ulong)dirEnumerator.Where(f => !f.Attributes.HasFlag(FileAttributes.Directory)).Select(f => new FileInfo(f.FullName)).Sum(f => f.Length),

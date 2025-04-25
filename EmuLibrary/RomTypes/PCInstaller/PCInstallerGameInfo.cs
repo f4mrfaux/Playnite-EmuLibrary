@@ -7,6 +7,15 @@ using System.IO;
 
 namespace EmuLibrary.RomTypes.PCInstaller
 {
+    // Enum to identify content types
+    public enum ContentType
+    {
+        BaseGame,    // The main game
+        Update,      // An update/patch for the game
+        DLC,         // Downloadable content
+        Expansion    // Expansion pack (larger DLC)
+    }
+
     [ProtoContract]
     internal sealed class PCInstallerGameInfo : ELGameInfo
     {
@@ -36,6 +45,26 @@ namespace EmuLibrary.RomTypes.PCInstaller
         [ProtoMember(6)]
         public string InstallerType { get; set; }
 
+        // Content type (base game, update, DLC, etc.)
+        [ProtoMember(7)]
+        public ContentType ContentType { get; set; } = ContentType.BaseGame;
+        
+        // Parent game ID for DLC/Updates (null if this is a base game)
+        [ProtoMember(8)]
+        public string ParentGameId { get; set; }
+        
+        // Version information (for updates)
+        [ProtoMember(9)]
+        public string Version { get; set; }
+        
+        // List of installed DLC and updates
+        [ProtoMember(10)]
+        public List<string> InstalledAddons { get; set; } = new List<string>();
+        
+        // Content description (for DLC/expansions)
+        [ProtoMember(11)]
+        public string ContentDescription { get; set; }
+
         public string SourceFullPath
         {
             get
@@ -64,10 +93,10 @@ namespace EmuLibrary.RomTypes.PCInstaller
             }
         }
 
-        public override InstallController GetInstallController(Game game, IEmuLibrary emuLibrary) =>
+        internal override InstallController GetInstallController(Game game, IEmuLibrary emuLibrary) =>
             new PCInstallerInstallController(game, emuLibrary);
 
-        public override UninstallController GetUninstallController(Game game, IEmuLibrary emuLibrary) =>
+        internal override ELUninstallController GetUninstallController(Game game, IEmuLibrary emuLibrary) =>
             new PCInstallerUninstallController(game, emuLibrary);
 
         protected override IEnumerable<string> GetDescriptionLines()
@@ -79,6 +108,19 @@ namespace EmuLibrary.RomTypes.PCInstaller
             yield return $"{nameof(PrimaryExecutable)} : {PrimaryExecutable}";
             yield return $"{nameof(StoreGameId)} : {StoreGameId}";
             yield return $"{nameof(InstallerType)} : {InstallerType}";
+            yield return $"{nameof(ContentType)} : {ContentType}";
+            
+            if (!string.IsNullOrEmpty(ParentGameId))
+                yield return $"{nameof(ParentGameId)} : {ParentGameId}";
+            
+            if (!string.IsNullOrEmpty(Version))
+                yield return $"{nameof(Version)} : {Version}";
+            
+            if (!string.IsNullOrEmpty(ContentDescription))
+                yield return $"{nameof(ContentDescription)} : {ContentDescription}";
+            
+            if (InstalledAddons != null && InstalledAddons.Count > 0)
+                yield return $"Installed Addons : {InstalledAddons.Count}";
         }
 
         public override void BrowseToSource()

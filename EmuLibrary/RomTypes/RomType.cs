@@ -12,7 +12,12 @@
         [RomTypeInfo(typeof(Yuzu.YuzuGameInfo), typeof(Yuzu.YuzuScanner))]
         Yuzu = 4,
         
+        // PC installers don't require an emulator profile since they're native executables
         [RomTypeInfo(typeof(PCInstaller.PCInstallerGameInfo), typeof(PCInstaller.PCInstallerScanner))]
         PCInstaller = 5,
+        
+        // ISO installers don't require an emulator profile since they're mounted and installed natively
+        [RomTypeInfo(typeof(ISOInstaller.ISOInstallerGameInfo), typeof(ISOInstaller.ISOInstallerScanner))]
+        ISOInstaller = 6,
     }
 }

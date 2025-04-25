@@ -2,6 +2,10 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Attribution
+
+This project is a fork of [psychonic's EmuLibrary](https://github.com/psychonic/Playnite-EmuLibrary), extended by f4mrfaux to add PC game installer support, ISOInstaller, and other improvements. The original codebase was created by psychonic and all enhancements build upon that foundation.
+
 > **IMPORTANT NOTE**: This project is developed on Arch Linux but built and deployed on Windows. Do not attempt to build the project on Linux as it will fail due to Windows-specific dependencies.
 
 ## Project Overview
@@ -15,13 +19,29 @@ EmuLibrary is a library extension for Playnite, an open source video game librar
 ## Development Environment
 - Required SDK: Playnite SDK 6.4.0 (included in toolbox directory)
 - Target Framework: .NET Framework 4.6.2
-- Dependencies:
+
+## Critical Dependency Management
+- NEVER change dependency versions without careful consideration 
+- NEVER upgrade Newtonsoft.Json above version 10.0.1 - Playnite requires exactly version 10.0.1
+- NEVER enable binding redirects - this will break compatibility with Playnite
+- NEVER add dependencies that conflict with Playnite's dependencies
+- ALWAYS test on Windows after changing dependencies
+
+## Dependencies (EXACT VERSIONS REQUIRED)
   - ini-parser 2.5.2
   - LibHac 0.7.0
-  - Newtonsoft.Json 10.0.1
+  - Newtonsoft.Json 10.0.1 (CRITICAL: Must be EXACTLY 10.0.1 to match Playnite)
   - protobuf-net 3.1.25
   - System.IO.Abstractions 2.1.0.227
   - ZstdSharp.Port 0.6.5
+
+## CRITICAL DEPENDENCY MANAGEMENT
+- NEVER CHANGE OR UPDATE ANY DEPENDENCY VERSIONS - they must match exactly what's shown above
+- NEVER ADD NEW NUGET PACKAGES OR REFERENCES even if you encounter compilation errors
+- DO NOT USE SYSTEM.NET.HTTP or other modern .NET namespaces that aren't compatible with .NET Framework 4.6.2
+- AVOID USING ASYNC/AWAIT features or other C# language features not supported in .NET Framework 4.6.2
+- Work around missing features by implementing alternative solutions that work with the existing dependencies
+- If new functionality requires libraries not available, implement the functionality using basic .NET Framework classes
 
 ## Debugging
 - Log files for troubleshooting (relative to Playnite data directory):
@@ -49,6 +69,17 @@ EmuLibrary is a library extension for Playnite, an open source video game librar
 - Follow existing patterns for new code (see similar files for examples)
 - Target .NET Framework 4.6.2
 - Use WPF for UI components
+
+## CRITICAL USER INTERFACE GUIDELINES
+- NEVER create special UI elements for ONE specific RomType - all RomTypes MUST use the same UI patterns
+- ALWAYS maintain workflow consistency across all RomType implementations
+- ALWAYS ensure that ISO installer, PCInstaller, and other types use the EXACT SAME table interface for mapping configuration
+- NEVER create special buttons or workflows that bypass the standard mapping configuration system
+- ALWAYS conform to the standard SDK interface patterns established in Playnite
+- ALWAYS ensure the standard table interface fully works for ALL RomTypes without special case handling
+- When adding a new feature, implement it universally for ALL similar RomTypes, not just one specific type
+- NEVER create UI elements that make the system confusing or inconsistent for users
+- NEVER break existing UI workflows or create inconsistent UX between similar components
 
 ## Playnite SDK API Key Interfaces
 
@@ -86,6 +117,12 @@ EmuLibrary is a library extension for Playnite, an open source video game librar
   - `RemoveFile(fileId)`: Remove a file from the database
 
 ## Extension Development Patterns
+
+### Code Modification Guidelines
+- Only modify files directly related to the PCInstaller and ISOInstaller functionality when extending these features
+- Do not modify the core Yuzu, SingleFile, or MultiFile scanner classes unless absolutely necessary
+- Focus changes on the specific RomType implementation being enhanced or fixed
+- If a core component needs modification to support new features, discuss it first
 
 ### LibraryPlugin Implementation
 - Must override mandatory members:
@@ -151,11 +188,43 @@ EmuLibrary is a library extension for Playnite, an open source video game librar
   - Shows PC platforms regardless of emulator profile selection
   - Only supports .exe files as specified in EmulatorMapping.cs
   - Bypasses some emulator-specific validations
+- **ISOInstaller**: For disc images requiring mounting and installation
+  - Similar to PCInstaller but handles disc image formats
+  - Supports common ISO formats like .iso, .bin/.cue, .mdf/.mds
+  - Mounts disc images before executing installers
+  - MUST use the SAME UI workflow as PCInstaller - configured through the main mapping table
+- **ArchiveInstaller**:
+  - Handles archives containing ISOs with installers
+  - Supports common archive formats (.zip, .rar, .7z)
+  - Handles multi-part archives (especially split RAR files)
+  - Requires 7-Zip executable to be in PATH
+  - Imports all assets locally before any operations (extraction, mounting, installation)
+  - No direct network operations for extraction/mounting
+  - Multi-step workflow:
+    1. Import archive to local temp storage
+    2. Extract archive locally using 7-Zip
+    3. Find and select ISO files from extracted content
+    4. Mount ISO file
+    5. Run installer from mounted ISO
+    6. Clean up temp files after installation
+  - Special handling for multi-part archives requiring parent directory import
+  - Password support for protected archives
 
 ### Game Metadata Structure
 - Create specialized GameInfo classes for different game types
 - Implement proper serialization/deserialization of game information
 - Use extension methods on Game objects for type-specific operations
+
+### Metadata Handling
+- Playnite has a built-in metadata system for game information, covers, backgrounds, etc.
+- When `AutoRequestMetadata` setting is enabled, Playnite automatically requests metadata for imported games
+- Metadata is provided by metadata extensions (plugins) installed in Playnite
+- Common metadata providers include SteamGridDB, IGDB, GOG, etc.
+- Metadata can be obtained in different ways:
+  - Automatically on game import with `AutoRequestMetadata` enabled
+  - Bulk download via Main menu > Library > Download metadata
+  - Single game download via Game Edit Window > Download Metadata
+- Do not implement custom API integrations for metadata sources that already have Playnite extensions
 
 ## Extension Configuration
 
@@ -272,3 +341,174 @@ Example (Total Commander): `"c:\Programs\totalcmd\TOTALCMD64.EXE" /L="{Dir}" /O 
 - Use defensive programming when accessing external resources
 - Provide clear error messages to users when operations fail
 - Consider rolling back partial operations when a process fails
+
+### Network and File Operation Best Practices
+- Always import installation assets to local temp storage before operations
+- Never attempt to extract archives directly over network connections
+- Never attempt to mount disc images directly from network locations
+- Never execute installers directly from network locations
+- Implement proper progress reporting for large file operations
+- Handle network disconnections gracefully during file operations
+- Ensure proper cleanup of temp files after operations complete
+- Implement timeout handling for long-running operations
+
+### Asset Import System
+- `AssetImporter` class handles importing assets to local temp storage
+  - Always use AssetImporter for network file operations
+  - Provides caching for better performance
+  - Supports progress reporting via events
+  - Handles network retry logic automatically
+  - Implements asset verification
+  - Example usage:
+    ```csharp
+    // Get or create AssetImporter instance
+    var assetImporter = AssetImporter.Instance ?? 
+        new AssetImporter(_logger, _playnite);
+        
+    // Register for progress updates
+    assetImporter.ImportProgress += (sender, e) => {
+        UpdateProgress($"Importing: {e.BytesTransferred / (1024 * 1024)} MB / {e.TotalBytes / (1024 * 1024)} MB", 
+            (int)(e.Progress * 100));
+    };
+    
+    // Import the asset (with or without progress dialog)
+    var importResult = await assetImporter.ImportAsync(
+        sourcePath, 
+        showWindowsDialog, 
+        cancellationToken);
+        
+    if (importResult.Success) {
+        // Use the local asset path: importResult.Path
+        // Check if from cache: importResult.FromCache
+    }
+    
+    // Clean up when done (if not cached)
+    assetImporter.CleanupTempDirectory(importResult.Path);
+    ```
+
+### File Copy System
+- `FileCopier` classes handle file copy operations with progress reporting
+  - `BaseFileCopier`: Abstract base class with common functionality
+  - `SimpleFileCopier`: Implementation for standard file copy
+  - `WindowsFileCopier`: Shows Windows copy dialog
+  - Supports cancellation via CancellationToken
+  - Reports progress via IProgress<FileCopyProgress>
+  - Example usage:
+    ```csharp
+    // Choose copy implementation based on user preferences
+    IFileCopier copier = showDialog 
+        ? new WindowsFileCopier(sourceInfo, destinationDir)
+        : new SimpleFileCopier(sourceInfo, destinationDir);
+        
+    // Copy with progress reporting
+    var progress = new Progress<FileCopyProgress>(p => {
+        UpdateProgress($"{p.ProgressPercentage}% complete", 
+            (int)p.ProgressPercentage);
+    });
+    
+    // Execute copy operation with progress reporting
+    await copier.CopyWithProgressAsync(cancellationToken, progress);
+    ```
+
+## Recent Changes (ISO Scanner Fix)
+
+We've made several improvements to the ISOInstallerScanner to fix issues with detecting ISO files:
+
+1. Added case variations for supported disc image extensions:
+   ```csharp
+   var discExtensions = new List<string> { "iso", "bin", "img", "cue", "nrg", "mds", "mdf", "ISO", "BIN", "IMG", "CUE", "NRG", "MDS", "MDF" };
+   ```
+
+2. Added a direct file search diagnostic to verify file presence:
+   ```csharp
+   // Do a direct folder scan to see if any such files exist
+   try {
+       var directSearch = Directory.GetFiles(srcPath, "*.*", SearchOption.AllDirectories)
+           .Where(f => discExtensions.Contains(Path.GetExtension(f).TrimStart('.').ToLowerInvariant()))
+           .ToList();
+       
+       _emuLibrary.Logger.Info($"Direct search found {directSearch.Count} disc image files in {srcPath}");
+       
+       if (directSearch.Count > 0) {
+           _emuLibrary.Logger.Info($"Examples: {string.Join(", ", directSearch.Take(5).Select(Path.GetFileName))}");
+       }
+   }
+   catch (Exception ex) {
+       _emuLibrary.Logger.Error($"Error in direct file search: {ex.Message}");
+   }
+   ```
+
+3. Improved file extension checking to be more robust:
+   ```csharp
+   // Check the file extension directly instead of iterating through each extension
+   string fileExtension = file.Extension?.TrimStart('.')?.ToLowerInvariant();
+   
+   _emuLibrary.Logger.Debug($"Checking if file {file.Name} has extension '{fileExtension}'");
+   
+   // Check if this file has a supported extension
+   if (!string.IsNullOrEmpty(fileExtension) && discExtensions.Contains(fileExtension.ToLowerInvariant()))
+   ```
+
+4. Enhanced the HasMatchingExtension method in RomTypeScanner for better null handling:
+   ```csharp
+   protected static bool HasMatchingExtension(FileSystemInfoBase file, string extension)
+   {
+       // Handle null cases safely
+       if (file == null)
+           return false;
+           
+       if (file.Extension == null)
+           return extension == "<none>";
+           
+       // Normalize extensions for comparison
+       string fileExt = file.Extension.TrimStart('.').ToLowerInvariant();
+       string compareExt = extension.ToLowerInvariant();
+       
+       // Compare extensions case-insensitively
+       return fileExt == compareExt || (file.Extension == "" && extension == "<none>");
+   }
+   ```
+
+5. Added extensive diagnostic output when no files are found:
+   - Logs all top-level files and directories
+   - Checks what's inside the first directory 
+   - Shows examples of detected files
+
+6. Improved root folder checking to better handle update detection:
+   ```csharp
+   // Find all valid files in the root game folder to detect base game
+   var rootGameFolderFiles = rootGameFolder.GetFiles("*.*", SearchOption.TopDirectoryOnly)
+       .Where(f => {
+           string ext = Path.GetExtension(f.Name)?.TrimStart('.')?.ToLowerInvariant();
+           return !string.IsNullOrEmpty(ext) && discExtensions.Contains(ext);
+       })
+       .ToList();
+       
+   _emuLibrary.Logger.Debug($"Root folder check: Found {rootGameFolderFiles.Count} valid files in root folder {rootGameFolder.Name}");
+   if (rootGameFolderFiles.Count > 0) {
+       _emuLibrary.Logger.Debug($"Examples: {string.Join(", ", rootGameFolderFiles.Take(3).Select(f => f.Name))}");
+   }
+   ```
+
+7. Enhanced the update file detection to provide better diagnostics:
+   ```csharp
+   var files = subfolder.GetFiles("*.*", SearchOption.AllDirectories)
+       .Where(f => {
+           string ext = Path.GetExtension(f.Name)?.TrimStart('.')?.ToLowerInvariant();
+           return !string.IsNullOrEmpty(ext) && updateFileExtensions.Contains(ext);
+       }).ToList();
+       
+   _emuLibrary.Logger.Debug($"Update folder check: Found {files.Count} valid files in update folder {subfolder.Name}");
+   if (files.Count > 0) {
+       _emuLibrary.Logger.Debug($"Examples: {string.Join(", ", files.Take(3).Select(f => f.Name))}");
+   }
+   ```
+
+8. Fixed ISOInstaller to use standard table workflow:
+   - Removed special "Add ISO Mapping" button
+   - Ensured ISOInstaller works identically to PCInstaller using the standard table interface
+   - Fixed SourceFullPath handling to find any available ISO mapping
+   - Added additional diagnostics to help track down path resolution issues
+   - Ensured consistent user experience across all RomTypes
+
+Note: Since the project must be built on Windows, these changes will need to be transferred to a Windows environment for proper testing and validation.

@@ -9,8 +9,13 @@
 	<EnableNETAnalyzers>True</EnableNETAnalyzers>
 	<RunPostBuildEvent>OnBuildSuccess</RunPostBuildEvent>
 	<DefaultItemExcludes>$(DefaultItemExcludes);toolbox\**</DefaultItemExcludes>
-	<AutoGenerateBindingRedirects>True</AutoGenerateBindingRedirects>
-	<GenerateBindingRedirectsOutputType>true</GenerateBindingRedirectsOutputType>
+	<AutoGenerateBindingRedirects>False</AutoGenerateBindingRedirects>
+	<GenerateBindingRedirectsOutputType>false</GenerateBindingRedirectsOutputType>
+  </PropertyGroup>
+  
+  <!-- Define WINDOWS constant for Windows builds -->
+  <PropertyGroup Condition="'$(OS)' == 'Windows_NT'">
+    <DefineConstants>$(DefineConstants);WINDOWS</DefineConstants>
   </PropertyGroup>
 	
   <ItemGroup>
@@ -21,6 +26,7 @@
     <PackageReference Include="PlayniteSDK" Version="6.4.0" />
     <PackageReference Include="protobuf-net" Version="3.1.25" />
     <PackageReference Include="System.IO.Abstractions" Version="2.1.0.227" />
+    <PackageReference Include="Microsoft.PowerShell.5.ReferenceAssemblies" Version="1.1.0" Condition="'$(OS)' == 'Windows_NT'" />
     <PackageReference Include="ZstdSharp.Port" Version="0.6.5" />
   </ItemGroup>
 	
@@ -48,8 +54,9 @@
     <EditorConfigFiles Remove="C:\Users\nshastings\source\repos\EmuLibrary\EmuLibrary\PlayniteCommon\.editorconfig" />
   </ItemGroup>
 	
-  <ItemGroup>
+  <ItemGroup Condition="'$(OS)' == 'Windows_NT'">
     <Reference Include="Microsoft.VisualBasic" />
+    <Reference Include="System.Management.Automation" />
   </ItemGroup>
 	
 </Project>

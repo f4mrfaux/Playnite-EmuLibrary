@@ -1,4 +1,5 @@
 ﻿using EmuLibrary.RomTypes;
+using EmuLibrary.PlayniteCommon;
 using Newtonsoft.Json;
 using Playnite.SDK;
 using Playnite.SDK.Plugins;
@@ -28,11 +29,32 @@ namespace EmuLibrary.Settings
         public bool AutoRemoveUninstalledGamesMissingFromSource { get; set; } = false;
         public bool UseWindowsCopyDialogInDesktopMode { get; set; } = false;
         public bool UseWindowsCopyDialogInFullscreenMode { get; set; } = false;
+        public bool ShowIsoMappingHelp { get; set; } = true;
+        
+        /// <summary>
+        /// Indicates preference for metadata on imported games
+        /// Note: Actual metadata download must be triggered manually through Playnite's UI
+        /// </summary>
+        public bool AutoRequestMetadata { get; set; } = true;
+        
+        // Asset Import Settings
+        public bool EnableAssetCaching { get; set; } = false;
+        public long LargeFileSizeWarningThresholdMB { get; set; } = 1000; // 1GB threshold
+        public int NetworkRetryAttempts { get; set; } = 3; 
+        public bool VerifyImportedAssets { get; set; } = true;
+        
+        // Metadata settings
+        // AutoRequestMetadata is defined above
         public ObservableCollection<EmulatorMapping> Mappings { get; set; }
 
         // Hidden settings
         public int Version { get; set; }
         public Dictionary<RomType, bool> MigratedLegacySettings { get; set; } = new Dictionary<RomType, bool>();
+
+        public EmulatorMapping GetMapping(Guid mappingId)
+        {
+            return Mappings?.FirstOrDefault(m => m.MappingId == mappingId);
+        }
 
 
         // Parameterless constructor must exist if you want to use LoadPluginSettings method.
@@ -77,7 +99,7 @@ namespace EmuLibrary.Settings
             var mappingsWithoutId = Mappings.Where(m => m.MappingId == default);
             if (mappingsWithoutId.Any())
             {
-                mappingsWithoutId.ForEach(m => m.MappingId = Guid.NewGuid());
+                mappingsWithoutId.ToList().ForEach(m => m.MappingId = Guid.NewGuid());
                 forceSave = true;
             }
 
@@ -87,7 +109,7 @@ namespace EmuLibrary.Settings
                 AutoRemoveUninstalledGamesMissingFromSource = true;
             }
 
-            Enum.GetValues(typeof(RomType)).Cast<RomType>().ForEach(rt =>
+            Enum.GetValues(typeof(RomType)).Cast<RomType>().ToList().ForEach(rt =>
             {
                 var scanner = emuLibrary.GetScanner(rt);
                 if (scanner == null)
@@ -100,7 +122,14 @@ namespace EmuLibrary.Settings
                 if (!MigratedLegacySettings.TryGetValue(rt, out bool migrated))
                 {
                     EmulatorMapping newMapping = null;
-                    var res = emuLibrary.GetScanner(rt)?.MigrateLegacyPluginSettings(legacyPlugin, out newMapping);
+                    var currentScanner = emuLibrary.GetScanner(rt);
+                    if (currentScanner == null)
+                    {
+                        // Skip this RomType if scanner is not available
+                        return;
+                    }
+                    
+                    var res = currentScanner.MigrateLegacyPluginSettings(legacyPlugin, out newMapping);
 
                     switch (res)
                     {
@@ -143,11 +172,13 @@ namespace EmuLibrary.Settings
         {
             var mappingErrors = new List<string>();
 
-            Mappings.Where(m => m.Enabled)?.ForEach(m =>
+            // Validate all enabled mappings
+            Mappings.Where(m => m.Enabled)?.ToList().ForEach(m =>
             {
+                
                 if (m.ImageExtensionsLower == null || !m.ImageExtensionsLower.Any())
                 {
-                    mappingErrors.Add($"{m.MappingId}: No image extensions specified for profile {m.EmulatorProfile.Name} with emulator {m.Emulator.Name}. There is nothing for EmuLibrary to scan.");
+                    mappingErrors.Add($"{m.MappingId}: No image extensions specified for profile {m.EmulatorProfile?.Name} with emulator {m.Emulator?.Name}. There is nothing for EmuLibrary to scan.");
                 }
 
                 if (string.IsNullOrEmpty(m.SourcePath))
@@ -158,10 +189,10 @@ namespace EmuLibrary.Settings
                 {
                     mappingErrors.Add($"{m.MappingId}: Source path doesn't exist ({m.SourcePath}).");
                 }
-
-                // For PCInstaller type, the destination path is optional initially 
+                
+                // For PCInstaller and ISOInstaller types, the destination path is optional initially 
                 // since it will be set during installation
-                if (m.RomType != RomType.PCInstaller)
+                if (m.RomType != RomType.PCInstaller && m.RomType != RomType.ISOInstaller)
                 {
                     if (string.IsNullOrEmpty(m.DestinationPathResolved))
                     {

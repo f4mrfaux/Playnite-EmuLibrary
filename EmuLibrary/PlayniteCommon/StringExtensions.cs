@@ -1,6 +1,33 @@
-﻿using System.Globalization;
+﻿using System;
+using System.Collections.Generic;
+using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
+
+namespace EmuLibrary.PlayniteCommon
+{
+    /// <summary>
+    /// Extensions for IEnumerable to mimic List's ForEach functionality
+    /// </summary>
+    public static class EnumerableExtensions
+    {
+        /// <summary>
+        /// Performs the specified action on each element of the IEnumerable.
+        /// </summary>
+        public static void ForEachItem<T>(this IEnumerable<T> source, Action<T> action)
+        {
+            if (source == null)
+                throw new ArgumentNullException(nameof(source));
+            if (action == null)
+                throw new ArgumentNullException(nameof(action));
+                
+            foreach (T item in source)
+            {
+                action(item);
+            }
+        }
+    }
+}
 
 namespace System
 {
@@ -100,8 +127,21 @@ namespace System
             newName = newName.RemoveTrademarks();
             newName = newName.Replace("_", " ");
             newName = newName.Replace(".", " ");
+            
+            // Add CamelCase splitting - insert space before capital letters that aren't at the start
+            // and aren't preceded by a capital letter
+            newName = Regex.Replace(newName, @"(?<=[a-z])(?=[A-Z])", " ");
+            
+            // Handle special case like "S P" which should be "SP" (single letters separated by space)
+            newName = Regex.Replace(newName, @"\b([A-Za-z])\s([A-Za-z])\b", "$1$2");
+            
             newName = RemoveTrademarks(newName);
-            newName = newName.Replace('’', '\'');
+            
+            // Replace special apostrophes with standard one
+            // Use string.Replace instead of char.Replace to avoid character literal issues
+            newName = newName.Replace("'", "'");
+            newName = newName.Replace("'", "'");
+            
             newName = Regex.Replace(newName, @"\[.*?\]", "");
             newName = Regex.Replace(newName, @"\(.*?\)", "");
             newName = Regex.Replace(newName, @"\s*:\s*", ": ");
@@ -224,6 +264,106 @@ namespace System
             int @charsUntilStringEnd = str.Length - startSearchFromIndex;
             resultStringBuilder.Append(str, startSearchFromIndex, @charsUntilStringEnd);
             return resultStringBuilder.ToString();
+        }
+        /// <summary>
+        /// Calculate the Levenshtein distance between two strings.
+        /// This measures how many character changes are needed to transform one string into another.
+        /// </summary>
+        /// <param name="s">First string</param>
+        /// <param name="t">Second string</param>
+        /// <returns>The edit distance between the strings</returns>
+        public static int LevenshteinDistance(this string s, string t)
+        {
+            if (string.IsNullOrEmpty(s))
+            {
+                return string.IsNullOrEmpty(t) ? 0 : t.Length;
+            }
+
+            if (string.IsNullOrEmpty(t))
+            {
+                return s.Length;
+            }
+
+            // Normalize case for comparison
+            s = s.ToLowerInvariant();
+            t = t.ToLowerInvariant();
+
+            // Create two work vectors of integer distances
+            int[] v0 = new int[t.Length + 1];
+            int[] v1 = new int[t.Length + 1];
+
+            // Initialize v0 (the previous row of distances)
+            // This row is A[0][i]: edit distance for an empty s
+            // The distance is just the number of characters to delete from t
+            for (int i = 0; i <= t.Length; i++)
+            {
+                v0[i] = i;
+            }
+
+            for (int i = 0; i < s.Length; i++)
+            {
+                // Calculate v1 (current row distances) from the previous row v0
+                v1[0] = i + 1;
+
+                // Fill in the rest of the row
+                for (int j = 0; j < t.Length; j++)
+                {
+                    int cost = (s[i] == t[j]) ? 0 : 1;
+                    v1[j + 1] = Math.Min(
+                        Math.Min(v1[j] + 1, v0[j + 1] + 1),
+                        v0[j] + cost);
+                }
+
+                // Swap v1 (current row) and v0 (previous row) for next iteration
+                int[] temp = v0;
+                v0 = v1;
+                v1 = temp;
+            }
+
+            // Return the last value calculated
+            return v0[t.Length];
+        }
+        
+        /// <summary>
+        /// Determines if two strings are similar using fuzzy matching
+        /// </summary>
+        /// <param name="s">First string</param>
+        /// <param name="t">Second string</param>
+        /// <param name="threshold">Similarity threshold (0.0 to 1.0, where 1.0 is exact match)</param>
+        /// <returns>True if the strings are considered similar</returns>
+        public static bool IsSimilarTo(this string s, string t, double threshold = 0.7)
+        {
+            if (string.IsNullOrEmpty(s) || string.IsNullOrEmpty(t))
+            {
+                return string.IsNullOrEmpty(s) && string.IsNullOrEmpty(t);
+            }
+            
+            // Normalize both strings for better comparison
+            string normalized1 = s.NormalizeGameName().ToLowerInvariant();
+            string normalized2 = t.NormalizeGameName().ToLowerInvariant();
+            
+            // If strings are equal after normalization, they're similar
+            if (normalized1 == normalized2)
+            {
+                return true;
+            }
+            
+            // Simple containment check (if one string contains the other)
+            if (normalized1.Contains(normalized2) || normalized2.Contains(normalized1))
+            {
+                return true;
+            }
+            
+            // Calculate edit distance
+            int distance = LevenshteinDistance(normalized1, normalized2);
+            
+            // Calculate similarity as a value between 0 and 1
+            int maxLength = Math.Max(normalized1.Length, normalized2.Length);
+            if (maxLength == 0) return true; // Both strings are empty or null
+            
+            double similarity = 1.0 - ((double)distance / maxLength);
+            
+            return similarity >= threshold;
         }
     }
 }

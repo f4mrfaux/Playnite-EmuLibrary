@@ -6,14 +6,10 @@ using System.Windows;
 
 namespace EmuLibrary.RomTypes.MultiFile
 {
-    class MultiFileUninstallController : UninstallController
+    class MultiFileUninstallController : ELUninstallController
     {
-        private readonly IEmuLibrary _emuLibrary;
-
-        internal MultiFileUninstallController(Game game, IEmuLibrary emuLibrary) : base(game)
+        internal MultiFileUninstallController(Game game, IEmuLibrary emuLibrary) : base(game, emuLibrary)
         {
-            Name = "Uninstall";
-            _emuLibrary = emuLibrary;
         }
 
         public override void Uninstall(UninstallActionArgs args)

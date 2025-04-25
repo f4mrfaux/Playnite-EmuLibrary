@@ -28,7 +28,28 @@ namespace EmuLibrary.RomTypes
         
         protected static bool HasMatchingExtension(FileSystemInfoBase file, string extension)
         {
-            return file.Extension.TrimStart('.').ToLower() == extension || (file.Extension == "" && extension == "<none>");
+            // Handle null cases safely
+            if (file == null)
+                return false;
+                
+            if (file.Extension == null)
+                return extension == "<none>";
+                
+            // Normalize extensions for comparison
+            string fileExt = file.Extension.TrimStart('.').ToLowerInvariant();
+            string compareExt = extension.ToLowerInvariant();
+            
+            // Compare extensions case-insensitively
+            bool basicMatch = fileExt == compareExt || (file.Extension == "" && extension == "<none>");
+            
+            // If basic match fails, try backup method with string ending check
+            if (!basicMatch && file.Name != null) {
+                // Check if the file name ends with the extension pattern
+                bool fallbackMatch = file.Name.EndsWith("." + compareExt, StringComparison.OrdinalIgnoreCase);
+                return fallbackMatch;
+            }
+            
+            return basicMatch;
         }
     }
 }
