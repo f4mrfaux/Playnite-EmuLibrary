@@ -2,7 +2,6 @@
 using EmuLibrary.RomTypes.ISOInstaller;
 using EmuLibrary.Settings;
 using EmuLibrary.PlayniteCommon;
-using EmuLibrary.PlayniteCommon;
 using Playnite.SDK;
 using Playnite.SDK.Events;
 using Playnite.SDK.Models;
