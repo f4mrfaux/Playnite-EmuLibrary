@@ -104,7 +104,71 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                         // If SourceFullPath is null, check the InstallerFullPath directly
                         if (string.IsNullOrEmpty(info.InstallerFullPath))
                         {
-                            throw new FileNotFoundException($"ISO file path is not set. Both SourceFullPath and InstallerFullPath are empty.");
+                            _emuLibrary.Logger.Error($"ISO file path is not set. Both SourceFullPath and InstallerFullPath are empty.");
+                            
+                            // Try to find the ISO file by game name in all configured ISO source folders
+                            var settings = Settings.Settings.Instance;
+                            var isoMappings = settings.Mappings.Where(m => m.RomType == RomType.ISOInstaller).ToList();
+                            
+                            _emuLibrary.Logger.Info($"Searching for ISO in {isoMappings.Count} configured mapping folders");
+                            
+                            string gameName = Game.Name.Replace(":", "_").Replace("\\", "_").Replace("/", "_");
+                            bool foundIso = false;
+                            
+                            foreach (var mapping in isoMappings)
+                            {
+                                if (string.IsNullOrEmpty(mapping.SourcePath) || !Directory.Exists(mapping.SourcePath))
+                                    continue;
+                                    
+                                _emuLibrary.Logger.Info($"Searching for {gameName} in {mapping.SourcePath}");
+                                
+                                // Search directly for common ISO formats with the game name
+                                string[] possibleExtensions = new[] { ".iso", ".bin", ".img", ".cue", ".nrg", ".mds", ".mdf" };
+                                foreach (var ext in possibleExtensions)
+                                {
+                                    // Try exact match
+                                    string possiblePath = Path.Combine(mapping.SourcePath, gameName + ext);
+                                    _emuLibrary.Logger.Info($"Checking {possiblePath}");
+                                    
+                                    if (File.Exists(possiblePath))
+                                    {
+                                        info.SourceFullPath = possiblePath;
+                                        info.SourcePath = gameName + ext;
+                                        info.MappingId = mapping.MappingId;
+                                        _emuLibrary.Logger.Info($"Found exact match ISO: {possiblePath}");
+                                        foundIso = true;
+                                        break;
+                                    }
+                                    
+                                    // Try case-insensitive search
+                                    try {
+                                        var files = Directory.GetFiles(mapping.SourcePath, "*" + ext);
+                                        var matchingFile = files.FirstOrDefault(f => 
+                                            Path.GetFileNameWithoutExtension(f).Equals(gameName, StringComparison.OrdinalIgnoreCase) ||
+                                            Path.GetFileNameWithoutExtension(f).Contains(gameName) ||
+                                            gameName.Contains(Path.GetFileNameWithoutExtension(f)));
+                                        
+                                        if (!string.IsNullOrEmpty(matchingFile))
+                                        {
+                                            info.SourceFullPath = matchingFile;
+                                            info.SourcePath = Path.GetFileName(matchingFile);
+                                            info.MappingId = mapping.MappingId;
+                                            _emuLibrary.Logger.Info($"Found similar ISO: {matchingFile}");
+                                            foundIso = true;
+                                            break;
+                                        }
+                                    } catch (Exception ex) {
+                                        _emuLibrary.Logger.Error($"Error searching in {mapping.SourcePath}: {ex.Message}");
+                                    }
+                                }
+                                
+                                if (foundIso) break;
+                            }
+                            
+                            if (!foundIso)
+                            {
+                                throw new FileNotFoundException($"ISO file not found for game: {Game.Name}. Please add a source path mapping or select the ISO file manually.");
+                            }
                         }
                         else if (!File.Exists(info.InstallerFullPath))
                         {

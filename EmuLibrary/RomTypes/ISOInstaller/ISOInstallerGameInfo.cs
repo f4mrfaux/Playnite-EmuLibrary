@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using EmuLibrary.RomTypes.PCInstaller;
 
 namespace EmuLibrary.RomTypes.ISOInstaller
@@ -93,6 +94,19 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                         if (string.IsNullOrEmpty(InstallerFullPath))
                         {
                             logger.Error("Both SourcePath and InstallerFullPath are empty");
+                            
+                            // Try to find a valid mapping to set
+                            var allMappings = settings.Mappings.Where(m => m.RomType == RomType.ISOInstaller).ToList();
+                            if (allMappings.Count > 0)
+                            {
+                                var firstMapping = allMappings.FirstOrDefault();
+                                if (firstMapping != null)
+                                {
+                                    this.MappingId = firstMapping.MappingId;
+                                    logger.Info($"Auto-assigned mapping ID {firstMapping.MappingId} to resolve empty paths");
+                                }
+                            }
+                            
                             // Return a non-null value to prevent null reference exceptions
                             return "";
                         }
