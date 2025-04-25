@@ -1,6 +1,7 @@
 ﻿using Playnite.SDK;
 using Playnite.SDK.Models;
 using Playnite.SDK.Plugins;
+using EmuLibrary.PlayniteCommon;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -62,7 +63,7 @@ namespace EmuLibrary.RomTypes.Yuzu
                     {
                         yuzu.InstallFileToNand(gameCache.UpdateFile);
                     }
-                    gameCache.DlcFiles.ForEach(dlc => yuzu.InstallFileToNand(dlc));
+                    gameCache.DlcFiles.ToList().ForEach(dlc => yuzu.InstallFileToNand(dlc));
                 });
 
                 var subPath = yuzu.GetLaunchPathFromTitleId(_gameInfo.TitleId);

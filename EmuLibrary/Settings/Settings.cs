@@ -1,4 +1,5 @@
 ﻿using EmuLibrary.RomTypes;
+using EmuLibrary.PlayniteCommon;
 using Newtonsoft.Json;
 using Playnite.SDK;
 using Playnite.SDK.Plugins;
@@ -98,7 +99,7 @@ namespace EmuLibrary.Settings
             var mappingsWithoutId = Mappings.Where(m => m.MappingId == default);
             if (mappingsWithoutId.Any())
             {
-                mappingsWithoutId.ForEach(m => m.MappingId = Guid.NewGuid());
+                mappingsWithoutId.ToList().ForEach(m => m.MappingId = Guid.NewGuid());
                 forceSave = true;
             }
 
@@ -108,7 +109,7 @@ namespace EmuLibrary.Settings
                 AutoRemoveUninstalledGamesMissingFromSource = true;
             }
 
-            Enum.GetValues(typeof(RomType)).Cast<RomType>().ForEach(rt =>
+            Enum.GetValues(typeof(RomType)).Cast<RomType>().ToList().ForEach(rt =>
             {
                 var scanner = emuLibrary.GetScanner(rt);
                 if (scanner == null)
@@ -167,14 +168,12 @@ namespace EmuLibrary.Settings
             _plugin.SavePluginSettings(this);
         }
 
-        private bool forceSave = false;
-
         public bool VerifySettings(out List<string> errors)
         {
             var mappingErrors = new List<string>();
 
             // Validate all enabled mappings
-            Mappings.Where(m => m.Enabled)?.ForEach(m =>
+            Mappings.Where(m => m.Enabled)?.ToList().ForEach(m =>
             {
                 
                 if (m.ImageExtensionsLower == null || !m.ImageExtensionsLower.Any())

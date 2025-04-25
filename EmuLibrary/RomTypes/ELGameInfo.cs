@@ -1,4 +1,5 @@
 ﻿using EmuLibrary.Settings;
+using EmuLibrary.PlayniteCommon;
 using Playnite.SDK.Models;
 using Playnite.SDK.Plugins;
 using ProtoBuf;
@@ -94,14 +95,14 @@ namespace EmuLibrary.RomTypes
             sb.AppendLine($"{nameof(RomType)}: {RomType} ({(int)RomType})");
             sb.AppendLine($"{nameof(MappingId)}: {MappingId}");
 
-            GetDescriptionLines().ForEach(l => sb.AppendLine(l));
+            GetDescriptionLines().ToList().ForEach(l => sb.AppendLine(l));
 
             var mapping = Mapping;
             if (mapping != null)
             {
                 sb.AppendLine();
                 sb.AppendLine("Mapping Info:");
-                mapping.GetDescriptionLines().ForEach(l => sb.AppendLine($"    {l}"));
+                mapping.GetDescriptionLines().ToList().ForEach(l => sb.AppendLine($"    {l}"));
             }
 
             return sb.ToString();

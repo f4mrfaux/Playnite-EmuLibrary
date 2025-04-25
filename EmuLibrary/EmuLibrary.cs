@@ -1,6 +1,8 @@
 ﻿using EmuLibrary.RomTypes;
 using EmuLibrary.RomTypes.ISOInstaller;
 using EmuLibrary.Settings;
+using EmuLibrary.PlayniteCommon;
+using EmuLibrary.PlayniteCommon;
 using Playnite.SDK;
 using Playnite.SDK.Events;
 using Playnite.SDK.Models;
@@ -138,11 +140,11 @@ private readonly Dictionary<RomType, RomTypeScanner> _scanners = new Dictionary<
                 Logger.Info("Auto-download metadata for imported games is enabled");
             }
 
-            Settings.Mappings.ForEach(mapping =>
+            Settings.Mappings.ToList().ForEach(mapping =>
             {
-                _scanners.Values.ForEach(scanner =>
+                _scanners.Values.ToList().ForEach(scanner =>
                 {
-                    var oldGameIdFormat = PlayniteApi.Database.Games.Where(game => game.PluginId == scanner.LegacyPluginId && !game.GameId.StartsWith("!"));
+                    var oldGameIdFormat = PlayniteApi.Database.Games.Where(game => game.PluginId == scanner.LegacyPluginId && !game.GameId.StartsWith("!")).ToList();
                     if (oldGameIdFormat.Any())
                     {
                         Logger.Info($"Updating {oldGameIdFormat.Count()} games to new game id format for mapping {mapping.MappingId} ({mapping.Emulator.Name}/{mapping.EmulatorProfile.Name}/{mapping.SourcePath}).");
@@ -560,7 +562,7 @@ private readonly Dictionary<RomType, RomTypeScanner> _scanners = new Dictionary<
                 {
                     Action = (arags) =>
                     {
-                        ourGameInfos.ForEach(ggi => ggi.gameInfo.BrowseToSource());
+                        ourGameInfos.ToList().ForEach(ggi => ggi.gameInfo.BrowseToSource());
                     },
                     Description = "Browse to Source...",
                     MenuSection = "EmuLibrary"
@@ -578,7 +580,7 @@ private readonly Dictionary<RomType, RomTypeScanner> _scanners = new Dictionary<
                     {
                         Action = (arags) =>
                         {
-                            uninstalledInstallerGames.ForEach(ggi => 
+                            uninstalledInstallerGames.ToList().ForEach(ggi => 
                             {
                                 ggi.game.IsInstalling = true;
                                 var controller = ggi.gameInfo.GetInstallController(ggi.game, this);

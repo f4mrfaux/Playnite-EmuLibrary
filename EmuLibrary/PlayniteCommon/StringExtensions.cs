@@ -1,16 +1,20 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace System
+namespace EmuLibrary.PlayniteCommon
 {
-    public static class StringExtensions
+    /// <summary>
+    /// Extensions for IEnumerable to mimic List's ForEach functionality
+    /// </summary>
+    public static class EnumerableExtensions
     {
         /// <summary>
         /// Performs the specified action on each element of the IEnumerable.
         /// </summary>
-        public static void ForEach<T>(this IEnumerable<T> source, Action<T> action)
+        public static void ForEachItem<T>(this IEnumerable<T> source, Action<T> action)
         {
             if (source == null)
                 throw new ArgumentNullException(nameof(source));
@@ -22,6 +26,13 @@ namespace System
                 action(item);
             }
         }
+    }
+}
+
+namespace System
+{
+    public static class StringExtensions
+    {
         private static readonly CultureInfo enUSCultInfo = new CultureInfo("en-US", false);
 
         public static string MD5(this string s)

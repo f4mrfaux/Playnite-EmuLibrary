@@ -1,5 +1,6 @@
 ﻿using EmuLibrary.RomTypes;
 using EmuLibrary.Settings;
+using EmuLibrary.PlayniteCommon;
 using Playnite.SDK;
 using System;
 using System.Collections.Generic;
@@ -51,7 +52,7 @@ namespace EmuLibrary
                 Version = 1,
             };
 
-            Mappings?.ForEach(mapping =>
+            Mappings?.ToList().ForEach(mapping =>
             {
                 settings.Mappings.Add(new EmulatorMapping()
                 {

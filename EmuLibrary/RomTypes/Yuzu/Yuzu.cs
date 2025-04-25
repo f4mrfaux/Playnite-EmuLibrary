@@ -327,7 +327,7 @@ namespace EmuLibrary.RomTypes.Yuzu
                     }
                 }
 
-                ncaFileNamesToInstall.ForEach(ncaFileName =>
+                ncaFileNamesToInstall.ToList().ForEach(ncaFileName =>
                 {
                     bool isCompressed = false;
                     var fileEntry = pfs.Files.FirstOrDefault(f => f.Name == ncaFileName);
@@ -436,7 +436,7 @@ namespace EmuLibrary.RomTypes.Yuzu
 
                                 using (var decompressionStream = new DecompressionStream(br.BaseStream))
                                 {
-                                    sections.ForEach(section =>
+                                    sections.ToList().ForEach(section =>
                                     {
                                         Aes128CtrTransform aes = null;
                                         bool isEncrypted = section.CryptoType == NcaEncryptionType.AesCtr;
@@ -528,7 +528,7 @@ namespace EmuLibrary.RomTypes.Yuzu
                 }
             }
 
-            toDelete.ForEach(f =>
+            toDelete.ToList().ForEach(f =>
             {
                 var info = new FileInfo(f);
                 info.Delete();
