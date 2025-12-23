@@ -1,4 +1,4 @@
-﻿using EmuLibrary.PlayniteCommon;
+using EmuLibrary.PlayniteCommon;
 using EmuLibrary.Settings;
 using EmuLibrary.Util;
 using Playnite.SDK;
@@ -42,52 +42,73 @@ namespace EmuLibrary.RomTypes.MultiFile
             #region Import "installed" games
             if (Directory.Exists(dstPath))
             {
-                fileEnumerator = new SafeFileEnumerator(dstPath, "*.*", SearchOption.TopDirectoryOnly);
+                // For MultiFile, we still only want the top-level directories as entry points,
+                // but we want to scan all subdirectories to find candidate folders
+                fileEnumerator = new SafeFileEnumerator(dstPath, "*.*", SearchOption.AllDirectories);
+                
+                // Keep track of directories we've already processed to avoid duplicates
+                var processedDirs = new HashSet<string>();
 
                 foreach (var file in fileEnumerator)
                 {
                     if (args.CancelToken.IsCancellationRequested)
                         yield break;
 
-                    if (file.Attributes.HasFlag(FileAttributes.Directory) && !s_discXpattern.IsMatch(file.Name))
+                    // Skip regular files, only process directories
+                    if (!file.Attributes.HasFlag(FileAttributes.Directory) || s_discXpattern.IsMatch(file.Name))
+                        continue;
+                    
+                    // Get the full path to the directory
+                    var dirPath = file.FullName;
+                    
+                    // If we already processed this directory or any parent directory, skip it
+                    if (processedDirs.Any(dir => dirPath.StartsWith(dir)))
+                        continue;
+                        
+                    var dirEnumerator = new SafeFileEnumerator(dirPath, "*.*", SearchOption.AllDirectories);
+                    // First matching rom of first valid extension that has any matches. Ex. for "m3u,cue,bin", make sure we don't grab a bin file when there's an m3u or cue handy
+                    var rom = imageExtensionsLower.Select(ext => dirEnumerator.FirstOrDefault(f => HasMatchingExtension(f, ext))).FirstOrDefault(f => f != null);
+                    
+                    if (rom != null)
                     {
-                        var dirEnumerator = new SafeFileEnumerator(file.FullName, "*.*", SearchOption.AllDirectories);
-                        // First matching rom of first valid extension that has any matches. Ex. for "m3u,cue,bin", make sure we don't grab a bin file when there's an m3u or cue handy
-                        var rom = imageExtensionsLower.Select(ext => dirEnumerator.FirstOrDefault(f => HasMatchingExtension(f, ext))).FirstOrDefault(f => f != null);
-                        if (rom != null)
+                        // Add this directory to the processed list to avoid duplicates
+                        processedDirs.Add(dirPath);
+                        
+                        // Calculate relative path from the destination root
+                        var relativeDirPath = dirPath.Substring(dstPath.Length).TrimStart(Path.DirectorySeparatorChar);
+                        var relativeRomPath = rom.FullName.Substring(dirPath.Length).TrimStart(Path.DirectorySeparatorChar);
+                        
+                        var baseFileName = StringExtensions.GetPathWithoutAllExtensions(Path.GetFileName(file.Name));
+                        var gameName = StringExtensions.NormalizeGameName(baseFileName);
+                        var info = new MultiFileGameInfo()
                         {
-                            var baseFileName = StringExtensions.GetPathWithoutAllExtensions(Path.GetFileName(file.Name));
-                            var gameName = StringExtensions.NormalizeGameName(baseFileName);
-                            var info = new MultiFileGameInfo()
-                            {
-                                MappingId = mapping.MappingId,
+                            MappingId = mapping.MappingId,
 
-                                // Relative to mapping.SourcePath
-                                SourceFilePath = Path.Combine(file.Name, rom.FullName.Replace(file.FullName, "").TrimStart('\\')),
-                                SourceBaseDir = Path.Combine(file.Name),
-                            };
+                            // Relative to mapping.SourcePath
+                            SourceFilePath = Path.Combine(relativeDirPath, relativeRomPath),
+                            SourceBaseDir = relativeDirPath,
+                        };
 
-                            yield return new GameMetadata()
-                            {
-                                Source = EmuLibrary.SourceName,
-                                Name = gameName,
-                                Roms = new List<GameRom>() { new GameRom(gameName, _playniteAPI.Paths.IsPortable ? rom.FullName.Replace(_playniteAPI.Paths.ApplicationPath, Playnite.SDK.ExpandableVariables.PlayniteDirectory) : rom.FullName) },
-                                InstallDirectory = _playniteAPI.Paths.IsPortable ? file.FullName.Replace(_playniteAPI.Paths.ApplicationPath, Playnite.SDK.ExpandableVariables.PlayniteDirectory) : file.FullName,
-                                IsInstalled = true,
-                                GameId = info.AsGameId(),
-                                Platforms = new HashSet<MetadataProperty>() { new MetadataNameProperty(mapping.Platform.Name) },
-                                Regions = FileNameUtils.GuessRegionsFromRomName(baseFileName).Select(r => new MetadataNameProperty(r)).ToHashSet<MetadataProperty>(),
-                                InstallSize = (ulong)dirEnumerator.Where(f => !f.Attributes.HasFlag(FileAttributes.Directory)).Select(f => new FileInfo(f.FullName)).Sum(f => f.Length),
-                                GameActions = new List<GameAction>() { new GameAction()
-                                    {
-                                        Name = $"Play in {mapping.Emulator.Name}",
-                                        Type = GameActionType.Emulator,
-                                        EmulatorId = mapping.EmulatorId,
-                                        EmulatorProfileId = mapping.EmulatorProfileId,
-                                        IsPlayAction = true,
-                                    } }
-                            };
-                        }
+                        yield return new GameMetadata()
+                        {
+                            Source = EmuLibrary.SourceName,
+                            Name = gameName,
+                            Roms = new List<GameRom>() { new GameRom(gameName, _playniteAPI.Paths.IsPortable ? rom.FullName.Replace(_playniteAPI.Paths.ApplicationPath, Playnite.SDK.ExpandableVariables.PlayniteDirectory) : rom.FullName) },
+                            InstallDirectory = _playniteAPI.Paths.IsPortable ? dirPath.Replace(_playniteAPI.Paths.ApplicationPath, Playnite.SDK.ExpandableVariables.PlayniteDirectory) : dirPath,
+                            IsInstalled = true,
+                            GameId = info.AsGameId(),
+                            Platforms = new HashSet<MetadataProperty>() { new MetadataNameProperty(mapping.Platform.Name) },
+                            Regions = FileNameUtils.GuessRegionsFromRomName(baseFileName).Select(r => new MetadataNameProperty(r)).ToHashSet<MetadataProperty>(),
+                            InstallSize = (ulong)dirEnumerator.Where(f => !f.Attributes.HasFlag(FileAttributes.Directory)).Select(f => new FileInfo(f.FullName)).Sum(f => f.Length),
+                            GameActions = new List<GameAction>() { new GameAction()
+                                {
+                                    Name = $"Play in {mapping.Emulator.Name}",
+                                    Type = GameActionType.Emulator,
+                                    EmulatorId = mapping.EmulatorId,
+                                    EmulatorProfileId = mapping.EmulatorProfileId,
+                                    IsPlayAction = true,
+                                } }
+                        };
                     }
                 }
             }
@@ -96,60 +117,81 @@ namespace EmuLibrary.RomTypes.MultiFile
             #region Import "uninstalled" games
             if (Directory.Exists(srcPath))
             {
-                fileEnumerator = new SafeFileEnumerator(srcPath, "*.*", SearchOption.TopDirectoryOnly);
+                // Use AllDirectories to search recursively
+                fileEnumerator = new SafeFileEnumerator(srcPath, "*.*", SearchOption.AllDirectories);
+                
+                // Keep track of directories we've already processed to avoid duplicates
+                var processedDirs = new HashSet<string>();
 
                 foreach (var file in fileEnumerator)
                 {
                     if (args.CancelToken.IsCancellationRequested)
                         yield break;
 
-                    if (file.Attributes.HasFlag(FileAttributes.Directory) && !s_discXpattern.IsMatch(file.Name))
+                    // Skip regular files, only process directories
+                    if (!file.Attributes.HasFlag(FileAttributes.Directory) || s_discXpattern.IsMatch(file.Name))
+                        continue;
+                        
+                    // Get the full path to the directory
+                    var dirPath = file.FullName;
+                    
+                    // If we already processed this directory or any parent directory, skip it
+                    if (processedDirs.Any(dir => dirPath.StartsWith(dir)))
+                        continue;
+
+                    var dirEnumerator = new SafeFileEnumerator(dirPath, "*.*", SearchOption.AllDirectories);
+                    // First matching rom of first valid extension that has any matches. Ex. for "m3u,cue,bin", make sure we don't grab a bin file when there's an m3u or cue handy
+                    var rom = imageExtensionsLower.Select(ext => dirEnumerator.FirstOrDefault(f => HasMatchingExtension(f, ext))).FirstOrDefault(f => f != null);
+                    
+                    if (rom != null)
                     {
-                        var dirEnumerator = new SafeFileEnumerator(file.FullName, "*.*", SearchOption.AllDirectories);
-                        // First matching rom of first valid extension that has any matches. Ex. for "m3u,cue,bin", make sure we don't grab a bin file when there's an m3u or cue handy
-                        var rom = imageExtensionsLower.Select(ext => dirEnumerator.FirstOrDefault(f => HasMatchingExtension(f, ext))).FirstOrDefault(f => f != null);
-                        if (rom != null)
+                        // Add this directory to the processed list to avoid duplicates
+                        processedDirs.Add(dirPath);
+                        
+                        // Calculate relative paths from source root
+                        var relativeDirPath = dirPath.Substring(srcPath.Length).TrimStart(Path.DirectorySeparatorChar);
+                        var relativeRomPath = rom.FullName.Substring(dirPath.Length).TrimStart(Path.DirectorySeparatorChar);
+                        
+                        // Check if this game is already installed
+                        var fileInfo = new FileInfo(rom.FullName);
+                        var dirInfo = new DirectoryInfo(dirPath);
+                        var equivalentInstalledPath = Path.Combine(dstPath, Path.Combine(relativeDirPath, relativeRomPath));
+
+                        if (File.Exists(equivalentInstalledPath))
                         {
-                            var fileInfo = new FileInfo(rom.FullName);
-                            var dirInfo = new DirectoryInfo(file.FullName);
-                            var equivalentInstalledPath = Path.Combine(dstPath, Path.Combine(new string[] { dirInfo.Name, fileInfo.Directory.FullName.Replace(dirInfo.FullName, "").TrimStart('\\'), fileInfo.Name }));
-
-                            if (File.Exists(equivalentInstalledPath))
-                            {
-                                continue;
-                            }
-
-                            var info = new MultiFileGameInfo()
-                            {
-                                MappingId = mapping.MappingId,
-
-                                // Relative to mapping.SourcePath
-                                SourceFilePath = Path.Combine(file.Name, rom.FullName.Replace(file.FullName, "").TrimStart('\\')),
-                                SourceBaseDir = Path.Combine(file.Name),
-                            };
-
-                            var baseFileName = StringExtensions.GetPathWithoutAllExtensions(Path.GetFileName(file.Name));
-                            var gameName = StringExtensions.NormalizeGameName(baseFileName);
-
-                            yield return new GameMetadata()
-                            {
-                                Source = EmuLibrary.SourceName,
-                                Name = gameName,
-                                IsInstalled = false,
-                                GameId = info.AsGameId(),
-                                Platforms = new HashSet<MetadataProperty>() { new MetadataNameProperty(mapping.Platform.Name) },
-                                Regions = FileNameUtils.GuessRegionsFromRomName(baseFileName).Select(r => new MetadataNameProperty(r)).ToHashSet<MetadataProperty>(),
-                                InstallSize = (ulong)dirEnumerator.Where(f => !f.Attributes.HasFlag(FileAttributes.Directory)).Select(f => new FileInfo(f.FullName)).Sum(f => f.Length),
-                                GameActions = new List<GameAction>() { new GameAction()
-                                    {
-                                        Name = $"Play in {mapping.Emulator.Name}",
-                                        Type = GameActionType.Emulator,
-                                        EmulatorId = mapping.EmulatorId,
-                                        EmulatorProfileId = mapping.EmulatorProfileId,
-                                        IsPlayAction = true,
-                                    } }
-                            };
+                            continue;
                         }
+
+                        var info = new MultiFileGameInfo()
+                        {
+                            MappingId = mapping.MappingId,
+
+                            // Relative to mapping.SourcePath
+                            SourceFilePath = Path.Combine(relativeDirPath, relativeRomPath),
+                            SourceBaseDir = relativeDirPath,
+                        };
+
+                        var baseFileName = StringExtensions.GetPathWithoutAllExtensions(Path.GetFileName(file.Name));
+                        var gameName = StringExtensions.NormalizeGameName(baseFileName);
+
+                        yield return new GameMetadata()
+                        {
+                            Source = EmuLibrary.SourceName,
+                            Name = gameName,
+                            IsInstalled = false,
+                            GameId = info.AsGameId(),
+                            Platforms = new HashSet<MetadataProperty>() { new MetadataNameProperty(mapping.Platform.Name) },
+                            Regions = FileNameUtils.GuessRegionsFromRomName(baseFileName).Select(r => new MetadataNameProperty(r)).ToHashSet<MetadataProperty>(),
+                            InstallSize = (ulong)dirEnumerator.Where(f => !f.Attributes.HasFlag(FileAttributes.Directory)).Select(f => new FileInfo(f.FullName)).Sum(f => f.Length),
+                            GameActions = new List<GameAction>() { new GameAction()
+                                {
+                                    Name = $"Play in {mapping.Emulator.Name}",
+                                    Type = GameActionType.Emulator,
+                                    EmulatorId = mapping.EmulatorId,
+                                    EmulatorProfileId = mapping.EmulatorProfileId,
+                                    IsPlayAction = true,
+                                } }
+                        };
                     }
                 }
             }

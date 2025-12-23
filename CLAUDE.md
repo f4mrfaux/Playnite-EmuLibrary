@@ -5,10 +5,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 > **IMPORTANT NOTE**: This project is developed on Arch Linux but built and deployed on Windows. Do not attempt to build the project on Linux as it will fail due to Windows-specific dependencies.
 
 ## Project Overview
-EmuLibrary is a library extension for Playnite, an open source video game library manager, focused on emulator ROM management. It allows users to "install" games from one or more folders of ROMs/Disc images to local storage, and helps manage large collections of emulated games.
+ISOlator (formerly EmuLibrary) is a library extension for Playnite, an open source video game library manager, focused on emulator ROM management and PC game installers. It allows users to "install" games from one or more folders of ROMs/Disc images to local storage, and helps manage large collections of emulated games and PC installers.
 
 ## Build Commands
-- Build solution: `msbuild EmuLibrary.sln /p:Configuration=Release`
+- Build solution: `msbuild ISOlator.sln /p:Configuration=Release`
 - Pack extension: Execute post-build event - `toolbox\toolbox.exe pack $(TargetDir) $(SolutionDir)`
 - The packing is also automatically executed as a post-build event in the project
 
@@ -32,10 +32,11 @@ EmuLibrary is a library extension for Playnite, an open source video game librar
   - ExtensionsData\41e49490-0583-4148-94d2-940c7c74f1d9\config.json
 
 ## Extension Information
-- Extension ID: ROMInstaller_41e49490-0583-4148-94d2-940c7c74f1d9
+- Extension ID: ISOlator_f0a33e7a-1f30-4761-b3ab-0fc73d54a7c3
 - Extension Type: GameLibrary
 - Required API Version: 6.4.0
 - Version numbering: Use semantic versioning (major.minor.patch)
+- Icon: The alligator icon in icon.png should be displayed in Playnite's UI
 
 ## Coding Guidelines
 - Use PascalCase for classes, methods, properties, and public members
@@ -144,13 +145,29 @@ EmuLibrary is a library extension for Playnite, an open source video game librar
 
 ### Rom Types Support
 - **SingleFile**: For single ROM files (.nes, .sfc, etc.)
+  - Recursively scans all subdirectories for ROMs
+  - Preserves folder structure during installation
 - **MultiFile**: For games with multiple files in subfolders (multi-disc games)
+  - Recursively scans all subdirectories for game folders
+  - Maintains folder hierarchy for organization
 - **Yuzu**: For Nintendo Switch games (special handling for NAND and updates)
 - **PCInstaller**: For PC game installers (.exe files)
   - Special platform handling in EmulatorMapping.cs for PC games
   - Shows PC platforms regardless of emulator profile selection
   - Only supports .exe files as specified in EmulatorMapping.cs
   - Bypasses some emulator-specific validations
+  - Works with "Choose on startup" profile as a wildcard
+- **ISOInstaller**: For disc images (.iso files) containing installable content
+  - Specialized for handling disc-based games and installers
+  - Automatically detects and handles ISO files
+  - Provides mounting and installation support
+  
+### Special Profile Handling
+- **Choose on startup** profile acts as a wildcard profile
+  - For PC platforms: Automatically uses .exe as the default extension
+  - For non-PC platforms with MultiFile type: Uses common disc image extensions (.iso, .bin, etc.)
+  - For non-PC platforms with SingleFile type: Uses common archive formats (.zip, .7z, etc.)
+  - Ensures validation passes even without explicit extension configuration
 
 ### Game Metadata Structure
 - Create specialized GameInfo classes for different game types

@@ -1,4 +1,4 @@
-﻿using EmuLibrary.Settings;
+using EmuLibrary.Settings;
 using Playnite.SDK.Models;
 using Playnite.SDK.Plugins;
 using ProtoBuf;
@@ -11,7 +11,7 @@ using System.Linq;
 namespace EmuLibrary.RomTypes
 {
     [ProtoContract]
-    internal abstract class ELGameInfo
+    public abstract class ELGameInfo
     {
         public abstract RomType RomType { get; }
 

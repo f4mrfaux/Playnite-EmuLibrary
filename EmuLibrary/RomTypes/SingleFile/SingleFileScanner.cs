@@ -1,4 +1,4 @@
-﻿using EmuLibrary.PlayniteCommon;
+using EmuLibrary.PlayniteCommon;
 using EmuLibrary.Settings;
 using EmuLibrary.Util;
 using Playnite.SDK;
@@ -42,12 +42,17 @@ namespace EmuLibrary.RomTypes.SingleFile
             #region Import "installed" games
             if (Directory.Exists(dstPath))
             {
-                fileEnumerator = new SafeFileEnumerator(dstPath, "*.*", SearchOption.TopDirectoryOnly);
+                // Use AllDirectories to search recursively
+                fileEnumerator = new SafeFileEnumerator(dstPath, "*.*", SearchOption.AllDirectories);
 
                 foreach (var file in fileEnumerator)
                 {
                     if (args.CancelToken.IsCancellationRequested)
                         yield break;
+
+                    // Skip directories
+                    if (file.Attributes.HasFlag(FileAttributes.Directory))
+                        continue;
 
                     foreach (var extension in imageExtensionsLower)
                     {
@@ -58,10 +63,14 @@ namespace EmuLibrary.RomTypes.SingleFile
                         {
                             var baseFileName = StringExtensions.GetPathWithoutAllExtensions(Path.GetFileName(file.Name));
                             var gameName = StringExtensions.NormalizeGameName(baseFileName);
+                            
+                            // Get the relative path from the destination path
+                            var relativePath = file.FullName.Substring(dstPath.Length).TrimStart(Path.DirectorySeparatorChar);
+                            
                             var info = new SingleFileGameInfo()
                             {
                                 MappingId = mapping.MappingId,
-                                SourcePath = file.Name,
+                                SourcePath = relativePath,
                             };
 
                             yield return new GameMetadata()
@@ -93,12 +102,17 @@ namespace EmuLibrary.RomTypes.SingleFile
             #region Import "uninstalled" games
             if (Directory.Exists(srcPath))
             {
-                fileEnumerator = new SafeFileEnumerator(srcPath, "*.*", SearchOption.TopDirectoryOnly);
+                // Use AllDirectories to search recursively
+                fileEnumerator = new SafeFileEnumerator(srcPath, "*.*", SearchOption.AllDirectories);
 
                 foreach (var file in fileEnumerator)
                 {
                     if (args.CancelToken.IsCancellationRequested)
                         yield break;
+
+                    // Skip directories
+                    if (file.Attributes.HasFlag(FileAttributes.Directory))
+                        continue;
 
                     foreach (var extension in imageExtensionsLower)
                     {
@@ -107,7 +121,11 @@ namespace EmuLibrary.RomTypes.SingleFile
 
                         if (HasMatchingExtension(file, extension) && !s_discXpattern.IsMatch(file.Name))
                         {
-                            var equivalentInstalledPath = Path.Combine(dstPath, file.Name);
+                            // Get the relative path from the source path
+                            var relativePath = file.FullName.Substring(srcPath.Length).TrimStart(Path.DirectorySeparatorChar);
+                            
+                            // Check for equivalent installed file
+                            var equivalentInstalledPath = Path.Combine(dstPath, relativePath);
                             if (File.Exists(equivalentInstalledPath))
                             {
                                 continue;
@@ -116,7 +134,7 @@ namespace EmuLibrary.RomTypes.SingleFile
                             var info = new SingleFileGameInfo()
                             {
                                 MappingId = mapping.MappingId,
-                                SourcePath = file.Name,
+                                SourcePath = relativePath,
                             };
 
                             var baseFileName = StringExtensions.GetPathWithoutAllExtensions(Path.GetFileName(file.Name));

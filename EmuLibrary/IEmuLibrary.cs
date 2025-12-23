@@ -1,9 +1,9 @@
-﻿using EmuLibrary.RomTypes;
+using EmuLibrary.RomTypes;
 using Playnite.SDK;
 
 namespace EmuLibrary
 {
-    internal interface IEmuLibrary
+    public interface IEmuLibrary
     {
         ILogger Logger { get; }
         IPlayniteAPI Playnite { get; }

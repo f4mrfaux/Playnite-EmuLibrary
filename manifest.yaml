@@ -1,17 +1,17 @@
-AddonId: ROMInstaller_41e49490-0583-4148-94d2-940c7c74f1d9
+AddonId: ISOlator_f0a33e7a-1f30-4761-b3ab-0fc73d54a7c3
 Packages:
-  - Version: 1.6.0
+  - Version: 1.6.1
     RequiredApiVersion: 6.4.0
-    ReleaseDate: '2025-04-25'
-    PackageUrl: https://github.com/f4mrfaux/Playnite-EmuLibrary/releases/download/v1.6.0/EmuLibrary_41e49490-0583-4148-94d2-940c7c74f1d9_1_6_0.pext
+    ReleaseDate: '2025-04-29'
+    PackageUrl: https://github.com/f4mrfaux/Playnite-ISOlator/releases/download/v1.6.1/ISOlator_f0a33e7a-1f30-4761-b3ab-0fc73d54a7c3_1_6_1.pext
     Changelog:
-      - Fixed ISO installation issues with improved path resolution
-      - Added "Find Missing ISO..." context menu option
-      - Fixed path recovery during application startup
-      - Enhanced PCInstaller with store detection for GOG installers
-      - Improved platform handling for PC games
-      - Fixed NullReferenceException in EmulatorMapping
-      - Updated documentation with improved examples and guidelines
+      - Renamed extension to ISOlator with new icon and new ID
+      - Added dedicated ISOInstaller ROM type for better disc image handling
+      - Added recursive folder scanning for both SingleFile and MultiFile types
+      - Fixed "Choose on startup" profile validation for PC emulators
+      - Improved folder hierarchy preservation during scanning
+      - Enhanced PC platform detection with automatic extension handling
+      - Updated documentation with comprehensive examples and guidelines
   - Version: 3.4.1
     RequiredApiVersion: 6.4.0
     ReleaseDate: '2024-01-13'

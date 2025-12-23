@@ -1,10 +1,10 @@
-﻿Id: ROMInstaller_41e49490-0583-4148-94d2-940c7c74f1d9
-Name: EmuLibrary
-Author: psychonic
-Version: 1.6.0
+Id: ISOlator_f0a33e7a-1f30-4761-b3ab-0fc73d54a7c3
+Name: ISOlator
+Author: f4mrfaux
+Version: 1.6.1
 Module: EmuLibrary.dll
 Type: GameLibrary
 Icon: icon.png
 Links:
     - Name: Source Code
-      Url: https://github.com/f4mrfaux/Playnite-EmuLibrary
+      Url: https://github.com/f4mrfaux/Playnite-ISOlator

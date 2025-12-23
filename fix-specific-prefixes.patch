@@ -1,0 +1,12 @@
+--- a/EmuLibrary/PlayniteCommon/StringExtensions.cs
++++ b/EmuLibrary/PlayniteCommon/StringExtensions.cs
+@@ -106,6 +106,9 @@
+             newName = newName.Replace(''', '\'');
+             newName = Regex.Replace(newName, @"\[.*?\]", "");
+             newName = Regex.Replace(newName, @"\(.*?\)", "");
++            
++            // Remove common prefixes like "patch", "update", etc.
++            newName = Regex.Replace(newName, @"^(patch|update|installer|setup|gog\s*installer)\s+", "", RegexOptions.IgnoreCase);
+             
+             newName = Regex.Replace(newName, @"\s*:\s*", ": ");
+             newName = Regex.Replace(newName, @"\s+", " ");

@@ -6,11 +6,13 @@
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <UseWPF>true</UseWPF>
     <ImportWindowsDesktopTargets>true</ImportWindowsDesktopTargets>
-	<EnableNETAnalyzers>True</EnableNETAnalyzers>
-	<RunPostBuildEvent>OnBuildSuccess</RunPostBuildEvent>
-	<DefaultItemExcludes>$(DefaultItemExcludes);toolbox\**</DefaultItemExcludes>
-	<AutoGenerateBindingRedirects>True</AutoGenerateBindingRedirects>
-	<GenerateBindingRedirectsOutputType>true</GenerateBindingRedirectsOutputType>
+    <EnableNETAnalyzers>True</EnableNETAnalyzers>
+    <RunPostBuildEvent>OnBuildSuccess</RunPostBuildEvent>
+    <DefaultItemExcludes>$(DefaultItemExcludes);toolbox\**</DefaultItemExcludes>
+    <AutoGenerateBindingRedirects>True</AutoGenerateBindingRedirects>
+    <GenerateBindingRedirectsOutputType>true</GenerateBindingRedirectsOutputType>
+    <RootNamespace>EmuLibrary</RootNamespace>
+    <AssemblyName>EmuLibrary</AssemblyName>
   </PropertyGroup>
 	
   <ItemGroup>
@@ -38,16 +40,14 @@
   </ItemGroup>
 	
   <Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="'$(OS)' == 'Windows_NT'">
-    <Exec Command="&quot;$(SolutionDir)toolbox\toolbox.exe&quot; pack $(TargetDir) $(SolutionDir)" />
+    <Message Text="Running post-build event..." Importance="high" />
+    <Message Text="TargetDir: $(TargetDir)" Importance="high" />
+    <Message Text="SolutionDir: $(SolutionDir)" Importance="high" />
+    <Exec Command="echo Running toolbox.exe pack..." />
+    <Exec Command="if exist &quot;$(TargetDir)extension.yaml&quot; echo extension.yaml exists" />
+    <Exec Command="&quot;$(SolutionDir)toolbox\toolbox.exe&quot; pack $(TargetDir) $(SolutionDir)" ContinueOnError="true" />
+    <Exec Command="if %ERRORLEVEL% NEQ 0 echo Toolbox pack command failed with error %ERRORLEVEL%" />
   </Target>
-	
-  <ItemGroup>
-    <None Include="C:\Users\nshastings\source\repos\EmuLibrary\EmuLibrary\PlayniteCommon\.editorconfig" />
-  </ItemGroup>
-	
-  <ItemGroup>
-    <EditorConfigFiles Remove="C:\Users\nshastings\source\repos\EmuLibrary\EmuLibrary\PlayniteCommon\.editorconfig" />
-  </ItemGroup>
 	
   <ItemGroup>
     <Reference Include="Microsoft.VisualBasic" />

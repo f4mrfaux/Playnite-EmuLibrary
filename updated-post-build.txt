@@ -1,0 +1,11 @@
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="'$(OS)' == 'Windows_NT'">
+    <Message Text="Running post-build event..." Importance="high" />
+    <Message Text="TargetDir: $(TargetDir)" Importance="high" />
+    <Message Text="SolutionDir: $(SolutionDir)" Importance="high" />
+    <Message Text="Ensuring extension.yaml exists in output directory..." Importance="high" />
+    <Copy SourceFiles="$(ProjectDir)extension.yaml" DestinationFolder="$(TargetDir)" />
+    <Message Text="Ensuring icon.png exists in output directory..." Importance="high" />
+    <Copy SourceFiles="$(ProjectDir)icon.png" DestinationFolder="$(TargetDir)" />
+    <Message Text="Running toolbox.exe pack..." Importance="high" />
+    <Exec Command="&quot;$(SolutionDir)toolbox\toolbox.exe&quot; pack &quot;$(TargetDir)&quot; &quot;$(SolutionDir)&quot;" ContinueOnError="true" />
+  </Target>

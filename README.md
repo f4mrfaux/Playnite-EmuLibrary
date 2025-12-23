@@ -1,10 +1,12 @@
-# EmuLibrary
+# ISOlator
 
-EmuLibrary is a library extension for [Playnite](https://www.playnite.link), an open source video game library manager, originally focused on emulator ROM management and now extended to support PC game installers as well.
+<img src="EmuLibrary/icon.png" alt="ISOlator" width="100" align="right"/>
 
-While Playnite has had built-in support for scanning paths for installed ROMs and adding them to the library since version 9, EmuLibrary provides alternate functionality.
+ISOlator (formerly EmuLibrary) is a library extension for [Playnite](https://www.playnite.link), an open source video game library manager, originally focused on emulator ROM management and now extended to support PC game installers and disc images (ISO files).
 
-EmuLibrary treats one or more folders of ROMs/Disc images or PC game installers as a library from which you can "install" games. It can be useful if you have a large collection of emulated games and PC installers with limited storage where you play them versus where you store them (HTPC vs. NAS, for example). It also is useful for keeping the list of games up to date, and for being able to filter via installed/uninstalled.
+While Playnite has had built-in support for scanning paths for installed ROMs and adding them to the library since version 9, ISOlator provides alternate functionality.
+
+ISOlator treats one or more folders of ROMs/Disc images or PC game installers as a library from which you can "install" games. It can be useful if you have a large collection of emulated games and PC installers with limited storage where you play them versus where you store them (HTPC vs. NAS, for example). It also is useful for keeping the list of games up to date, and for being able to filter via installed/uninstalled.
 
 ## Key Features
 
@@ -22,7 +24,7 @@ To set it up, you create mappings to combine one of each of the following:
 
 * Emulator - either a built-in emulator or a custom emulator manually added
 * Emulator Profile - either a built-in emulator profile or a custom one, out of those supported by the chosen emulator
-* Platform - the ROM platform/console, out of those that the emulator profile supports (PCInstaller type now shows PC platforms regardless of emulator selection)
+* Platform - the ROM platform/console, out of those that the emulator profile supports (PCInstaller and ISOInstaller types show PC platforms regardless of emulator selection)
 * RomType - See [Rom Types](#rom-types) below
 
 ## Paths
@@ -37,9 +39,13 @@ Additionally, for destination paths, relativity to the Playnite folder is preser
 
 SingleFile is the simplest type of ROM supported. This is for source folders in which each ROM is fully contained in a single file. It's commonly used for older, non-disc-based systems where the whole ROM consists of a single file. (Ex. .nes, .sfc, .md, etc.). Archive formats are supported as well if the emulator supports them directly. (Ex. .zip)
 
+The SingleFile scanner recursively searches all subdirectories of your source folder, making it easy to organize ROMs in a hierarchical folder structure without having to create separate mappings for each folder.
+
 ### MultiFile
 
-With the MultiFile type, each subfolder directly within the source folder is scanned as a potential "ROM". This is for games that have multiple loose files or those that use disc images (ISOs, BIN/CUE, etc.). When installing a MultiFile game, the whole folder is copied.
+With the MultiFile type, each folder within the source folder (including subdirectories) is scanned as a potential "ROM". This is for games that have multiple loose files or those that use disc images (ISOs, BIN/CUE, etc.). When installing a MultiFile game, the whole folder is copied.
+
+The MultiFile scanner now supports recursive directory searching, allowing you to organize your games in a folder hierarchy (e.g., by platform, genre, or series) while still having all games detected automatically.
 
 #### Working with Disc Images (ISOs and other formats)
 
@@ -50,6 +56,25 @@ The MultiFile type is the recommended ROM type for handling disc-based games wit
 
 To determine which file is used as the one to tell the emulator to load, all files matching the configured emulator profile's supported extensions are considered. Precedence is by configured image extension list order, and then by alphabetical order. For example, if file names are the same except for `(Disc 1)` versus `(Disc 2)`, the first disc takes precedence. Similarly, if you have `.cue` in the extension list before `.m3u` (as some of the built-in profiles have at the time of writing), `.cue` would be chosen over `.m3u`, which may not be desired for multi-disc games.
 
+### ISOInstaller
+
+The ISOInstaller type is designed specifically for handling disc image files (ISO, BIN/CUE, etc.) that contain game installers. This type allows you to:
+
+* Mount disc images automatically
+* Launch installers directly from the mounted disc
+* Install games from disc images to your local machine
+* Manage games installed from disc images alongside other games
+
+The ISOInstaller is especially useful for games that come packaged as disc images rather than standalone installers, and is one of the defining features of ISOlator. It provides intelligent detection to distinguish between plain disc images and those containing installable content.
+
+#### ISOInstaller Features and Capabilities
+
+* **Intelligent Detection**: Automatically identifies disc images containing game installers vs. just game data
+* **Automatic Mounting**: Seamlessly mounts disc images when installing games
+* **Installer Execution**: Finds and runs setup programs within the mounted disc
+* **Multi-disc Support**: Handles games spread across multiple disc images
+* **Filtering**: Prevents duplicate entries by detecting extracted game content
+
 ### PCInstaller
 
 The PCInstaller type supports PC game installer executables (.exe files). This type is designed for managing native PC games that don't require emulation. It allows you to:
@@ -59,6 +84,8 @@ The PCInstaller type supports PC game installer executables (.exe files). This t
 * Manage PC games alongside your emulated games collection
 
 When using the PCInstaller type, you'll be able to select from PC-related platforms (Windows, Steam, GOG, etc.) regardless of which emulator or profile you've selected. This makes it suitable for organizing PC game installers from various sources.
+
+For PC games, you can use the "Choose on startup" profile, which serves as a wildcard to handle various PC platforms. This profile will automatically use .exe files as the default extension for scanning, even if no specific extensions are defined in the emulator profile.
 
 #### PCInstaller Features and Capabilities
 
@@ -92,7 +119,7 @@ When a game is installed, the latest update and any DLC from the source will als
 #### Known Issues
 
 * If the connection to the source folder's storage is unstable, Playnite may crash when when updating the library. This is unlikely to be able to be completely fixed until Playnite uses a newer .NET version (currently being targeted for Playnite 11). Some some mitigations are planned in the meantime, but are not yet implemented.
-* If the mapping is disabled or if EmuLibrary update is cancelled before the scan for the mapping completes, game installation for the mapping's games may result in an error message. This will be fixed in a later version of this addon.
+* If the mapping is disabled or if ISOlator update is cancelled before the scan for the mapping completes, game installation for the mapping's games may result in an error message. This will be fixed in a later version of this addon.
 
 ## Usage Workflows
 
@@ -112,8 +139,8 @@ Here's a step-by-step workflow for managing a collection of disc images (ISOs):
    │   └── Metal Gear Solid 3 (Disc 2).iso
    ```
 
-2. **Configure EmuLibrary**:
-   - Open Playnite and go to Add-ons → Extensions → EmuLibrary → Configure
+2. **Configure ISOlator**:
+   - Open Playnite and go to Add-ons → Extensions → ISOlator → Configure
    - Click "Add Mapping" to create a new mapping
    - Set "Emulator" to your preferred emulator (e.g., PCSX2 for PS2 games)
    - Select an appropriate emulator profile
@@ -141,7 +168,7 @@ Here's a step-by-step workflow for adding a repository of PC game installers usi
 
 1. Launch Playnite and go to the main menu.
 
-2. Open EmuLibrary settings (Add-ons → Extensions → EmuLibrary → Configure).
+2. Open ISOlator settings (Add-ons → Extensions → ISOlator → Configure).
 
 3. In the settings window, click "Add Mapping" to create a new mapping.
 
@@ -160,6 +187,39 @@ Here's a step-by-step workflow for adding a repository of PC game installers usi
 7. Your games should now appear in your library as "uninstalled" games.
 
 8. To install a game, right-click on it and select "Install". This will copy the installer from your source to the destination and handle the setup.
+
+9. After installation, the game will be marked as "installed" and you can launch it directly from Playnite.
+
+### Example: Installing Games from Disc Images (ISO Files)
+
+Here's a step-by-step workflow for setting up and using the ISOInstaller type:
+
+1. Launch Playnite and go to the main menu.
+
+2. Open ISOlator settings (Add-ons → Extensions → ISOlator → Configure).
+
+3. In the settings window, click "Add Mapping" to create a new mapping.
+
+4. Configure your mapping:
+   - Set "Emulator" to any available emulator (it's just a placeholder for ISO installers)
+   - Set "Profile" to any available profile
+   - Set "Rom Type" to "ISOInstaller"
+   - Set "Source Path" to your disc image repository (e.g., "N:\games\ISO\")
+   - Set "Destination Path" to where you want to install the games
+   - Select a PC platform (Windows, PC, etc.)
+
+5. Click "Save" to save your mapping configuration.
+
+6. In Playnite, update your library (F5) to scan for games.
+
+7. Your games will be detected from the ISO files and appear as "uninstalled" in your library.
+
+8. To install a game:
+   - Right-click on it and select "Install ISO Game"
+   - The disc image will be automatically mounted
+   - The installer from the disc will be launched
+   - Complete the installation normally
+   - After installation completes, the disc will be unmounted automatically
 
 9. After installation, the game will be marked as "installed" and you can launch it directly from Playnite.
 

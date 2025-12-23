@@ -1,4 +1,4 @@
-﻿using EmuLibrary.Settings;
+using EmuLibrary.Settings;
 using Playnite.SDK.Models;
 using Playnite.SDK.Plugins;
 using System;
@@ -8,7 +8,7 @@ using System.Threading;
 
 namespace EmuLibrary.RomTypes
 {
-    internal abstract class RomTypeScanner
+    public abstract class RomTypeScanner
     {
 #pragma warning disable IDE0060 // Remove unused parameter
         public RomTypeScanner(IEmuLibrary emuLibrary) { }
@@ -28,7 +28,19 @@ namespace EmuLibrary.RomTypes
         
         protected static bool HasMatchingExtension(FileSystemInfoBase file, string extension)
         {
-            return file.Extension.TrimStart('.').ToLower() == extension || (file.Extension == "" && extension == "<none>");
+            // Handle null cases safely
+            if (file == null)
+                return false;
+                
+            if (file.Extension == null)
+                return extension == "<none>";
+                
+            // Normalize extensions for comparison
+            string fileExt = file.Extension.TrimStart('.').ToLowerInvariant();
+            string compareExt = extension.ToLowerInvariant();
+            
+            // Compare extensions case-insensitively
+            return fileExt == compareExt || (file.Extension == "" && extension == "<none>");
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿using EmuLibrary.RomTypes;
+using EmuLibrary.RomTypes;
 using EmuLibrary.Settings;
 using Playnite.SDK;
 using Playnite.SDK.Events;
@@ -28,15 +28,15 @@ namespace EmuLibrary
         public Settings.Settings Settings { get; private set; }
         RomTypeScanner IEmuLibrary.GetScanner(RomType romType) => _scanners[romType];
         
-        public string GetPluginUserDataPath()
+        public new string GetPluginUserDataPath()
         {
             return PlayniteApi.Paths.ExtensionsDataPath;
         }
 
-        private const string s_pluginName = "EmuLibrary";
+        private const string s_pluginName = "ISOlator";
 
         internal static readonly string Icon = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), @"icon.png");
-        internal static readonly Guid PluginId = Guid.Parse("41e49490-0583-4148-94d2-940c7c74f1d9");
+        internal static readonly Guid PluginId = Guid.Parse("f0a33e7a-1f30-4761-b3ab-0fc73d54a7c3");
         internal static readonly MetadataNameProperty SourceName = new MetadataNameProperty(s_pluginName);
 
         private readonly Dictionary<RomType, RomTypeScanner> _scanners = new Dictionary<RomType, RomTypeScanner>();
@@ -191,7 +191,7 @@ namespace EmuLibrary
             {
                 Action = (arags) => RemoveSuperUninstalledGames(true, default),
                 Description = "Remove uninstalled games with missing source file...",
-                MenuSection = "EmuLibrary"
+                MenuSection = "ISOlator"
             };
         }
 
@@ -224,7 +224,7 @@ namespace EmuLibrary
                         ourGameInfos.ForEach(ggi => ggi.gameInfo.BrowseToSource());
                     },
                     Description = "Browse to Source...",
-                    MenuSection = "EmuLibrary"
+                    MenuSection = "ISOlator"
                 };
                 
                 // Menu item for PC Installer games that are not installed
@@ -245,7 +245,29 @@ namespace EmuLibrary
                             });
                         },
                         Description = "Install Game",
-                        MenuSection = "EmuLibrary"
+                        MenuSection = "ISOlator"
+                    };
+                }
+                
+                // Menu item for ISO Installer games that are not installed
+                var uninstalledISOInstallers = ourGameInfos
+                    .Where(ggi => ggi.gameInfo.RomType == RomType.ISOInstaller && !ggi.game.IsInstalled);
+                
+                if (uninstalledISOInstallers.Any())
+                {
+                    yield return new GameMenuItem()
+                    {
+                        Action = (arags) =>
+                        {
+                            uninstalledISOInstallers.ForEach(ggi => 
+                            {
+                                ggi.game.IsInstalling = true;
+                                var controller = ggi.gameInfo.GetInstallController(ggi.game, this);
+                                controller.Install(new InstallActionArgs());
+                            });
+                        },
+                        Description = "Install ISO Game",
+                        MenuSection = "ISOlator"
                     };
                 }
                 
@@ -258,7 +280,7 @@ namespace EmuLibrary
                         Playnite.Dialogs.ShowSelectableString("Decoded GameId info for each selected game is shown below. This information can be useful for troubleshooting.", "EmuLibrary Game Info", text);
                     },
                     Description = "Show Debug Info...",
-                    MenuSection = "EmuLibrary"
+                    MenuSection = "ISOlator"
                 };
             }
         }
