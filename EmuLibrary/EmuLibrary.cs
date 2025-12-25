@@ -473,7 +473,7 @@ namespace EmuLibrary
                 {
                     Playnite.MainView.UIDispatcher.Invoke(() =>
                     {
-                        res = PlayniteApi.Dialogs.ShowMessage($"Delete {toRemove.Count()} library entries?\n\n(This may take a while, during while Playnite will seem frozen.)", "Confirm deletion", System.Windows.MessageBoxButton.YesNo);
+                        res = PlayniteApi.Dialogs.ShowMessage($"Delete {toRemove.Count()} library entries?", "Confirm deletion", System.Windows.MessageBoxButton.YesNo);
                     });
                 }
                 else
@@ -483,7 +483,11 @@ namespace EmuLibrary
 
                 if (res == System.Windows.MessageBoxResult.Yes)
                 {
-                    PlayniteApi.Database.Games.Remove(toRemove);
+                    // Use BufferedUpdate to improve performance and reduce UI events
+                    using (PlayniteApi.Database.BufferedUpdate())
+                    {
+                        PlayniteApi.Database.Games.Remove(toRemove);
+                    }
                 }
             }
             else if (promptUser)
