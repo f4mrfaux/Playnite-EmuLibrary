@@ -468,10 +468,13 @@ namespace EmuLibrary
             var toRemove = _scanners.Values.SelectMany(s => s.GetUninstalledGamesMissingSourceFiles(ct));
             if (toRemove.Any())
             {
-                System.Windows.MessageBoxResult res;
+                System.Windows.MessageBoxResult res = System.Windows.MessageBoxResult.No;
                 if (promptUser)
                 {
-                    res = PlayniteApi.Dialogs.ShowMessage($"Delete {toRemove.Count()} library entries?\n\n(This may take a while, during while Playnite will seem frozen.)", "Confirm deletion", System.Windows.MessageBoxButton.YesNo);
+                    Playnite.MainView.UIDispatcher.Invoke(() =>
+                    {
+                        res = PlayniteApi.Dialogs.ShowMessage($"Delete {toRemove.Count()} library entries?\n\n(This may take a while, during while Playnite will seem frozen.)", "Confirm deletion", System.Windows.MessageBoxButton.YesNo);
+                    });
                 }
                 else
                 {
@@ -485,7 +488,10 @@ namespace EmuLibrary
             }
             else if (promptUser)
             {
-                PlayniteApi.Dialogs.ShowMessage("Nothing to do.");
+                Playnite.MainView.UIDispatcher.Invoke(() =>
+                {
+                    PlayniteApi.Dialogs.ShowMessage("Nothing to do.");
+                });
             }
         }
     }

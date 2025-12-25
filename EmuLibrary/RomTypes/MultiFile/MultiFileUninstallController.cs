@@ -25,7 +25,10 @@ namespace EmuLibrary.RomTypes.MultiFile
             }
             else
             {
-                _emuLibrary.Playnite.Dialogs.ShowMessage($"\"{Game.Name}\" does not appear to be installed. Marking as uninstalled.", "Game not installed", MessageBoxButton.OK);
+                _emuLibrary.Playnite.MainView.UIDispatcher.Invoke(() =>
+                {
+                    _emuLibrary.Playnite.Dialogs.ShowMessage($"\"{Game.Name}\" does not appear to be installed. Marking as uninstalled.", "Game not installed", MessageBoxButton.OK);
+                });
             }
             Game.Roms.Clear();
             InvokeOnUninstalled(new GameUninstalledEventArgs());
