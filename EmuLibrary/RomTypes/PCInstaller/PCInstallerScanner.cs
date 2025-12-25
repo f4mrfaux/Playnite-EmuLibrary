@@ -218,7 +218,10 @@ namespace EmuLibrary.RomTypes.PCInstaller
                     string gameName;
                     if (!normalizedNameCache.TryGetValue(folderName, out gameName))
                     {
-                        gameName = StringExtensions.NormalizeGameName(folderName);
+                        var patterns = EmuLibrary.Settings.EnableGameNameNormalization
+                            ? EmuLibrary.Settings.GameNameNormalizationPatterns?.ToArray()
+                            : null;
+                        gameName = StringExtensions.NormalizeGameName(folderName, patterns);
                         
                         // Try metadata lookup
                         if (!string.IsNullOrEmpty(gameName) && gameName.Length > 3)
@@ -244,7 +247,10 @@ namespace EmuLibrary.RomTypes.PCInstaller
                     if (string.IsNullOrEmpty(gameName))
                     {
                         gameName = Path.GetFileNameWithoutExtension(folderIsoFiles[0].Name);
-                        gameName = StringExtensions.NormalizeGameName(gameName);
+                        var patterns = EmuLibrary.Settings.EnableGameNameNormalization
+                            ? EmuLibrary.Settings.GameNameNormalizationPatterns?.ToArray()
+                            : null;
+                        gameName = StringExtensions.NormalizeGameName(gameName, patterns);
                     }
                     
                     // Select primary ISO file (prioritize "disc 1", .m3u, smallest)
@@ -315,7 +321,10 @@ namespace EmuLibrary.RomTypes.PCInstaller
                             string gameName;
                             if (!normalizedNameCache.TryGetValue(folderName, out gameName))
                             {
-                                gameName = StringExtensions.NormalizeGameName(folderName);
+                                var patterns = EmuLibrary.Settings.EnableGameNameNormalization
+                                    ? EmuLibrary.Settings.GameNameNormalizationPatterns?.ToArray()
+                                    : null;
+                                gameName = StringExtensions.NormalizeGameName(folderName, patterns);
                                 
                                 // Try metadata lookup
                                 if (!string.IsNullOrEmpty(gameName) && gameName.Length > 3)

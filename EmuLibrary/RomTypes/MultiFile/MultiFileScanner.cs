@@ -79,7 +79,10 @@ namespace EmuLibrary.RomTypes.MultiFile
                         var relativeRomPath = rom.FullName.Substring(dirPath.Length).TrimStart(Path.DirectorySeparatorChar);
                         
                         var baseFileName = StringExtensions.GetPathWithoutAllExtensions(Path.GetFileName(file.Name));
-                        var gameName = StringExtensions.NormalizeGameName(baseFileName);
+                        var var patterns = EmuLibrary.Settings.EnableGameNameNormalization
+                        ? EmuLibrary.Settings.GameNameNormalizationPatterns?.ToArray()
+                        : null;
+                        gameName = StringExtensions.NormalizeGameName(baseFileName, patterns);
                         var info = new MultiFileGameInfo()
                         {
                             MappingId = mapping.MappingId,
@@ -172,7 +175,10 @@ namespace EmuLibrary.RomTypes.MultiFile
                         };
 
                         var baseFileName = StringExtensions.GetPathWithoutAllExtensions(Path.GetFileName(file.Name));
-                        var gameName = StringExtensions.NormalizeGameName(baseFileName);
+                        var var patterns = EmuLibrary.Settings.EnableGameNameNormalization
+                        ? EmuLibrary.Settings.GameNameNormalizationPatterns?.ToArray()
+                        : null;
+                        gameName = StringExtensions.NormalizeGameName(baseFileName, patterns);
 
                         yield return new GameMetadata()
                         {

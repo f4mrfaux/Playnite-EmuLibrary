@@ -30,6 +30,10 @@ namespace EmuLibrary.Settings
         public bool UseWindowsCopyDialogInFullscreenMode { get; set; } = false;
         public ObservableCollection<EmulatorMapping> Mappings { get; set; }
 
+        // Game Name Normalization Settings
+        public bool EnableGameNameNormalization { get; set; } = true;
+        public ObservableCollection<string> GameNameNormalizationPatterns { get; set; }
+
         // Hidden settings
         public int Version { get; set; }
         public Dictionary<RomType, bool> MigratedLegacySettings { get; set; } = new Dictionary<RomType, bool>();
@@ -72,6 +76,12 @@ namespace EmuLibrary.Settings
             if (Mappings == null)
             {
                 Mappings = new ObservableCollection<EmulatorMapping>();
+            }
+
+            // Initialize game name normalization patterns with sensible defaults
+            if (GameNameNormalizationPatterns == null)
+            {
+                GameNameNormalizationPatterns = new ObservableCollection<string>(GetDefaultNormalizationPatterns());
             }
 
             var mappingsWithoutId = Mappings.Where(m => m.MappingId == default);
@@ -181,6 +191,44 @@ namespace EmuLibrary.Settings
         private void LoadValues(Settings source)
         {
             source.CopyProperties(this, false, null, true);
+        }
+
+        /// <summary>
+        /// Returns default normalization patterns that are generic and pattern-based.
+        /// These patterns match common metadata structures without explicitly naming specific sources.
+        /// Users can customize this list to fit their needs.
+        /// </summary>
+        private static List<string> GetDefaultNormalizationPatterns()
+        {
+            return new List<string>
+            {
+                // Pattern: Remove text in brackets that's ALL CAPS (common tag format)
+                // Example: [TAGNAME] -> removed
+                @"\[([A-Z0-9]+)\]",
+
+                // Pattern: Remove hyphenated ALL CAPS suffix (common tag format)
+                // Example: GameName-TAGNAME -> GameName
+                @"-([A-Z0-9]{3,})$",
+
+                // Pattern: Remove common metadata keywords (case-insensitive)
+                // These are generic terms that appear in many contexts
+                @"\b(Repack|Remastered|Enhanced|Definitive|Edition)\b",
+
+                // Pattern: Remove platform/architecture indicators
+                @"\b(x86|x64|32bit|64bit|Win32|Win64)\b",
+
+                // Pattern: Remove "Full" qualifiers
+                @"\b(Full)\s*(Game|Version|Release)\b",
+
+                // Pattern: Remove disc/CD identifiers
+                @"\b(Disc|CD|DVD)\s*\d+",
+
+                // Pattern: Remove "Multi" language indicators
+                @"\b(Multi|MULTi)\d*",
+
+                // Pattern: Remove version-like patterns at the end
+                @"\s+v\d+\.\d+(\.\d+)?$",
+            };
         }
     }
 }

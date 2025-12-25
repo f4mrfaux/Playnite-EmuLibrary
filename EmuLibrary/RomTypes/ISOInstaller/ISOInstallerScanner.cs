@@ -291,7 +291,10 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                         if (!normalizedNameCache.TryGetValue(folderName, out gameName))
                         {
                             // First normalize the name to remove release groups, versions, etc.
-                            gameName = StringExtensions.NormalizeGameName(folderName);
+                            var patterns = EmuLibrary.Settings.EnableGameNameNormalization
+                                ? EmuLibrary.Settings.GameNameNormalizationPatterns?.ToArray()
+                                : null;
+                            gameName = StringExtensions.NormalizeGameName(folderName, patterns);
                             
                             // Optionally try to get a cleaner name from Playnite's metadata providers
                             if (!string.IsNullOrEmpty(gameName) && gameName.Length > 3)

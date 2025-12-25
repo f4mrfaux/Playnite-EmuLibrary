@@ -62,7 +62,10 @@ namespace EmuLibrary.RomTypes.SingleFile
                         if (HasMatchingExtension(file, extension) && !s_discXpattern.IsMatch(file.Name))
                         {
                             var baseFileName = StringExtensions.GetPathWithoutAllExtensions(Path.GetFileName(file.Name));
-                            var gameName = StringExtensions.NormalizeGameName(baseFileName);
+                            var patterns = EmuLibrary.Settings.EnableGameNameNormalization
+                            ? EmuLibrary.Settings.GameNameNormalizationPatterns?.ToArray()
+                            : null;
+                            var gameName = StringExtensions.NormalizeGameName(baseFileName, patterns);
                             
                             // Get the relative path from the destination path
                             var relativePath = file.FullName.Substring(dstPath.Length).TrimStart(Path.DirectorySeparatorChar);
@@ -138,7 +141,10 @@ namespace EmuLibrary.RomTypes.SingleFile
                             };
 
                             var baseFileName = StringExtensions.GetPathWithoutAllExtensions(Path.GetFileName(file.Name));
-                            var gameName = StringExtensions.NormalizeGameName(baseFileName);
+                            var patterns = EmuLibrary.Settings.EnableGameNameNormalization
+                            ? EmuLibrary.Settings.GameNameNormalizationPatterns?.ToArray()
+                            : null;
+                            var gameName = StringExtensions.NormalizeGameName(baseFileName, patterns);
 
                             yield return new GameMetadata()
                             {
