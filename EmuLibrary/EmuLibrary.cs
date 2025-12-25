@@ -34,7 +34,7 @@ namespace EmuLibrary
             return PlayniteApi.Paths.ExtensionsDataPath;
         }
 
-        private const string s_pluginName = "ISOlator";
+        private const string s_pluginName = "GameVault";
 
         internal static readonly string Icon = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), @"icon.png");
         internal static readonly Guid PluginId = Guid.Parse("f0a33e7a-1f30-4761-b3ab-0fc73d54a7c3");
@@ -369,7 +369,7 @@ namespace EmuLibrary
             {
                 Action = (arags) => RemoveSuperUninstalledGames(true, default),
                 Description = "Remove uninstalled games with missing source file...",
-                MenuSection = "ISOlator"
+                MenuSection = "GameVault"
             };
         }
 
@@ -402,7 +402,7 @@ namespace EmuLibrary
                         ourGameInfos.ForEach(ggi => ggi.gameInfo.BrowseToSource());
                     },
                     Description = "Browse to Source...",
-                    MenuSection = "ISOlator"
+                    MenuSection = "GameVault"
                 };
                 
                 // Menu item for PC Installer games that are not installed
@@ -423,7 +423,7 @@ namespace EmuLibrary
                             });
                         },
                         Description = "Install Game",
-                        MenuSection = "ISOlator"
+                        MenuSection = "GameVault"
                     };
                 }
                 
@@ -445,7 +445,7 @@ namespace EmuLibrary
                             });
                         },
                         Description = "Install ISO Game",
-                        MenuSection = "ISOlator"
+                        MenuSection = "GameVault"
                     };
                 }
                 
@@ -458,7 +458,7 @@ namespace EmuLibrary
                         Playnite.Dialogs.ShowSelectableString("Decoded GameId info for each selected game is shown below. This information can be useful for troubleshooting.", "EmuLibrary Game Info", text);
                     },
                     Description = "Show Debug Info...",
-                    MenuSection = "ISOlator"
+                    MenuSection = "GameVault"
                 };
             }
         }

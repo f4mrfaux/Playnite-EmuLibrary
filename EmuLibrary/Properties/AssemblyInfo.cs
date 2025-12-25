@@ -4,11 +4,11 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("ISOlator")]
-[assembly: AssemblyDescription("ISO and ROM management extension for Playnite")]
+[assembly: AssemblyTitle("GameVault")]
+[assembly: AssemblyDescription("Secure vault for your game collection - manage ROMs, ISOs, and PC installers")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("ISOlator")]
+[assembly: AssemblyProduct("GameVault")]
 [assembly: AssemblyCopyright("Copyright ©  2025")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]

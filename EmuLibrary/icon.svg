@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="256" height="256" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle -->
+  <circle cx="128" cy="128" r="120" fill="#2c3e50" stroke="#1a252f" stroke-width="4"/>
+  
+  <!-- Vault door main -->
+  <circle cx="128" cy="128" r="100" fill="#34495e" stroke="#1a252f" stroke-width="3"/>
+  
+  <!-- Vault door highlight -->
+  <circle cx="128" cy="128" r="90" fill="#445566" stroke="#2c3e50" stroke-width="2"/>
+  
+  <!-- Dial outer ring -->
+  <circle cx="128" cy="128" r="60" fill="#1a252f" stroke="#0d1419" stroke-width="3"/>
+  
+  <!-- Dial middle ring -->
+  <circle cx="128" cy="128" r="50" fill="#2c3e50" stroke="#1a252f" stroke-width="2"/>
+  
+  <!-- Dial inner circle -->
+  <circle cx="128" cy="128" r="40" fill="#34495e"/>
+  
+  <!-- Dial tick marks (like a combination lock) -->
+  <g stroke="#ecf0f1" stroke-width="2" stroke-linecap="round">
+    <line x1="128" y1="78" x2="128" y2="88"/>
+    <line x1="159.7" y1="88.3" x2="154.2" y2="96.3"/>
+    <line x1="177.7" y1="118.3" x2="167.7" y2="121.7"/>
+    <line x1="177.7" y1="137.7" x2="167.7" y2="134.3"/>
+    <line x1="159.7" y1="167.7" x2="154.2" y2="159.7"/>
+    <line x1="128" y1="178" x2="128" y2="168"/>
+    <line x1="96.3" y1="167.7" x2="101.8" y2="159.7"/>
+    <line x1="78.3" y1="137.7" x2="88.3" y2="134.3"/>
+    <line x1="78.3" y1="118.3" x2="88.3" y2="121.7"/>
+    <line x1="96.3" y1="88.3" x2="101.8" y2="96.3"/>
+  </g>
+  
+  <!-- Game controller D-pad (integrated into dial) -->
+  <g fill="#27ae60" opacity="0.9">
+    <!-- D-pad up -->
+    <rect x="122" y="108" width="12" height="10" rx="1"/>
+    <!-- D-pad down -->
+    <rect x="122" y="138" width="12" height="10" rx="1"/>
+    <!-- D-pad left -->
+    <rect x="108" y="122" width="10" height="12" rx="1"/>
+    <!-- D-pad right -->
+    <rect x="138" y="122" width="10" height="12" rx="1"/>
+    <!-- D-pad center -->
+    <circle cx="128" cy="128" r="6" fill="#2ecc71"/>
+  </g>
+  
+  <!-- Action buttons (game controller style) -->
+  <g opacity="0.9">
+    <circle cx="150" cy="115" r="5" fill="#e74c3c"/>
+    <circle cx="162" cy="128" r="5" fill="#f39c12"/>
+    <circle cx="150" cy="141" r="5" fill="#3498db"/>
+    <circle cx="138" cy="128" r="5" fill="#9b59b6"/>
+  </g>
+  
+  <!-- Vault handle indicators -->
+  <g stroke="#ecf0f1" stroke-width="3" fill="none" opacity="0.7">
+    <line x1="48" y1="128" x2="78" y2="128" stroke-linecap="round"/>
+    <line x1="178" y1="128" x2="208" y2="128" stroke-linecap="round"/>
+  </g>
+  
+  <!-- Center jewel/indicator -->
+  <circle cx="128" cy="128" r="4" fill="#3498db" opacity="0.8">
+    <animate attributeName="opacity" values="0.8;1;0.8" dur="2s" repeatCount="indefinite"/>
+  </circle>
+  
+  <!-- Vault bolts -->
+  <g fill="#1a252f">
+    <circle cx="50" cy="50" r="8"/>
+    <circle cx="206" cy="50" r="8"/>
+    <circle cx="50" cy="206" r="8"/>
+    <circle cx="206" cy="206" r="8"/>
+  </g>
+  <g fill="#2c3e50">
+    <circle cx="50" cy="50" r="5"/>
+    <circle cx="206" cy="50" r="5"/>
+    <circle cx="50" cy="206" r="5"/>
+    <circle cx="206" cy="206" r="5"/>
+  </g>
+</svg>
