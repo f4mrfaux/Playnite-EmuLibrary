@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -89,7 +89,16 @@ namespace System
             }
         }
 
-        public static string NormalizeGameName(this string name)
+        /// <summary>
+        /// Normalizes a game name by removing common metadata patterns.
+        /// Uses generic patterns and optional user-defined patterns for flexibility.
+        /// This allows users to customize name normalization for their specific needs
+        /// without embedding any specific use case into the extension code.
+        /// </summary>
+        /// <param name="name">The game name to normalize</param>
+        /// <param name="additionalPatterns">Optional user-defined regex patterns to apply</param>
+        /// <returns>Normalized game name</returns>
+        public static string NormalizeGameName(this string name, string[] additionalPatterns = null)
         {
             if (string.IsNullOrEmpty(name))
             {
@@ -101,60 +110,68 @@ namespace System
             newName = newName.Replace("_", " ");
             newName = newName.Replace(".", " ");
             newName = RemoveTrademarks(newName);
-            newName = newName.Replace('’', '\'');
-            
-            // Remove brackets and parentheses (often contain release info, version numbers, etc.)
+            newName = newName.Replace(''', '\'');
+
+            // Remove brackets and parentheses (often contain metadata, tags, version info, etc.)
+            // This is a generic approach that works for any type of metadata in brackets
             newName = Regex.Replace(newName, @"\[.*?\]", "");
             newName = Regex.Replace(newName, @"\(.*?\)", "");
-            
-            // Remove common release group names and scene tags (case-insensitive)
-            // Common release groups: RELOADED, CODEX, SKIDROW, PLAZA, CPY, GOG, FitGirl, DODI, etc.
-            var releaseGroupPatterns = new[]
+
+            // Generic patterns for common metadata
+            // These patterns are generic and apply to legitimate retail/digital releases
+            var genericPatterns = new[]
             {
-                @"\b(RELOADED|CODEX|SKIDROW|PLAZA|CPY|GOG|FitGirl|DODI|KaOs|Xatab|Razor1911|PROPHET|TiNYiSO|ALI213|3DM|REVOLT|HOODLUM|FLT|TENOKE|RUNE|EMPRESS|Goldberg|P2P)\b",
-                @"\b(Repack|MULTi|MULTi\d+|MULTi-\d+)\b",
-                @"\b(v?\d+\.\d+(\.\d+)?(\.\d+)?)\b", // Version numbers like v1.0, 2.3.4, etc.
-                @"\b(Update|Patch|Hotfix|DLC|Expansion|Addon)\s+\d+.*?$", // Update/Patch with numbers
-                @"\b(Build|b)\s*\d+.*?$", // Build numbers
-                @"\b(Mod|MOD|Enhanced|ENHANCED|Remastered|REMASTERED|Definitive|DEFINITIVE)\b",
-                @"\b(Crack|Cracked|Unlocked|UNLOCKED|NoDVD|No-DVD)\b",
-                @"\b(Full|FULL)\s*(Game|GAME|Version|VERSION)\b",
-                @"\b(Pre|PRE)\s*(Installed|INSTALLED|Cracked|CRACKED)\b",
-                @"\b(Install|INSTALL|Setup|SETUP)\s*(Guide|GUIDE|Instructions|INSTRUCTIONS)?\b",
-                @"\b(Readme|README|NFO|Info|INFO)\b",
-                @"\b(PC|Windows|Win\d+|x86|x64|32bit|64bit)\b", // Platform tags
-                @"\b(EN|US|EU|DE|FR|IT|ES|RU|JP|CN|KR)\b", // Language/region codes
-                @"\b(Original|ORIGINAL|Clean|CLEAN|Unmodified|UNMODIFIED)\b",
-                @"\b(Steam|Epic|Origin|Uplay|Battle\.net)\s*(Rip|RIP|Version|VERSION)?\b",
-                @"\b(DRM|DRM-Free|NoDRM|No-DRM)\s*(Free|FREE)?\b",
-                @"\b(Online|OFFLINE|Offline)\s*(Mode|MODE|Fix|FIX)?\b",
-                @"\b(Size|SIZE)\s*:?\s*\d+.*?$", // Size indicators
-                @"\b(GB|MB|TB)\s*:?\s*\d+.*?$", // Size with units
+                @"\b(v?\d+\.\d+(\.\d+)?(\.\d+)?)\b",           // Version numbers: v1.0, 2.3.4, etc.
+                @"\b(Update|Patch|Hotfix|DLC|Expansion|Addon)\s+\d+.*?$", // Update/Patch identifiers
+                @"\b(Build|b)\s*\d+.*?$",                       // Build numbers
+                @"\b(PC|Windows|Win\d+|x86|x64|32bit|64bit)\b", // Platform identifiers
+                @"\b(EN|US|EU|DE|FR|IT|ES|RU|JP|CN|KR)\b",     // Language/region codes
+                @"\b(Size|SIZE)\s*:?\s*\d+.*?$",               // Size indicators
+                @"\b(GB|MB|TB)\s*:?\s*\d+.*?$",                // Size with units
             };
-            
-            foreach (var pattern in releaseGroupPatterns)
+
+            foreach (var pattern in genericPatterns)
             {
                 newName = Regex.Replace(newName, pattern, "", RegexOptions.IgnoreCase);
             }
-            
-            // Remove common prefixes that might appear at the start
-            newName = Regex.Replace(newName, @"^(patch|update|installer|setup|gog\s*installer|disc\s*\d+|cd\s*\d+|dvd\s*\d+)\s+", "", RegexOptions.IgnoreCase);
-            
-            // Remove common suffixes
-            newName = Regex.Replace(newName, @"\s+(patch|update|installer|setup|repack|multii?|cracked|unlocked|mod|enhanced|remastered|definitive|gog|steam|epic)$", "", RegexOptions.IgnoreCase);
-            
-            // Remove standalone version numbers at the end (e.g., "Game Name 1.2.3")
+
+            // Apply user-defined patterns if provided
+            // This gives users full control over what they want to normalize
+            // without the extension making assumptions about specific use cases
+            if (additionalPatterns != null)
+            {
+                foreach (var pattern in additionalPatterns)
+                {
+                    if (!string.IsNullOrWhiteSpace(pattern))
+                    {
+                        try
+                        {
+                            newName = Regex.Replace(newName, pattern, "", RegexOptions.IgnoreCase);
+                        }
+                        catch (ArgumentException)
+                        {
+                            // Skip invalid regex patterns
+                            continue;
+                        }
+                    }
+                }
+            }
+
+            // Remove common installer/disc prefixes (generic, applies to any disc image or installer)
+            newName = Regex.Replace(newName, @"^(installer|setup|disc\s*\d+|cd\s*\d+|dvd\s*\d+)\s+", "", RegexOptions.IgnoreCase);
+
+            // Remove standalone version numbers at the end
             newName = Regex.Replace(newName, @"\s+v?\d+\.\d+(\.\d+)?(\.\d+)?$", "", RegexOptions.IgnoreCase);
-            
-            // Remove year patterns that are likely release years (4 digits, but be careful not to remove game titles with years)
-            // Only remove if it's at the end and looks like a release year (1900-2099)
+
+            // Remove year patterns at the end (likely metadata, not part of the actual title)
+            // Only 4-digit years 1900-2099 at the end of the string
             newName = Regex.Replace(newName, @"\s+(19|20)\d{2}$", "", RegexOptions.IgnoreCase);
-            
+
             // Clean up spacing and formatting
             newName = Regex.Replace(newName, @"\s*:\s*", ": ");
             newName = Regex.Replace(newName, @"\s+", " ");
-            
-            // Handle "The" at the end
+
+            // Handle "The" at the end (e.g., "Witcher, The" -> "The Witcher")
             if (Regex.IsMatch(newName, @",\s*The$"))
             {
                 newName = "The " + Regex.Replace(newName, @",\s*The$", "", RegexOptions.IgnoreCase);
