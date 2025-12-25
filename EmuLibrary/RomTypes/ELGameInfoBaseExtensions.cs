@@ -1,4 +1,4 @@
-using EmuLibrary.RomTypes;
+﻿using EmuLibrary.RomTypes;
 using EmuLibrary.RomTypes.PCInstaller;
 using EmuLibrary.RomTypes.ISOInstaller;
 using Playnite.SDK.Models;

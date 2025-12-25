@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using EmuLibrary.RomTypes;
 
 namespace EmuLibrary.Settings
 {
@@ -13,7 +15,17 @@ namespace EmuLibrary.Settings
         public SettingsView()
         {
             InitializeComponent();
+            
+            // Create filtered RomType list (exclude ISOInstaller - now handled by PCInstaller)
+            var allRomTypes = System.Enum.GetValues(typeof(RomType)).Cast<RomType>();
+            FilteredRomTypes = allRomTypes.Where(rt => rt != RomType.ISOInstaller).ToList();
         }
+        
+        /// <summary>
+        /// RomType values filtered for UI display (excludes ISOInstaller which is now handled by PCInstaller)
+        /// ISOInstaller is kept in backend for backward compatibility but hidden from users
+        /// </summary>
+        public List<RomType> FilteredRomTypes { get; private set; }
 
         private void Click_Delete(object sender, RoutedEventArgs e)
         {

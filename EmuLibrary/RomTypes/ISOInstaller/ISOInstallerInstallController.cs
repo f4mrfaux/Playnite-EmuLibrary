@@ -53,7 +53,8 @@ namespace EmuLibrary.RomTypes.ISOInstaller
 
             Task.Run(async () =>
             {
-                var cancellationToken = CancellationToken.None; // Initialize to default
+                var cancellationToken = _watcherToken.Token; // Use proper cancellation token
+                string tempExtractDir = null;
                 try
                 {
                     var sourceISOPath = _gameInfo.SourceFullPath;
@@ -67,10 +68,62 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                     if (cancellationToken.IsCancellationRequested)
                     {
                         _emuLibrary.Logger.Info($"Installation cancelled for game {Game.Name}");
+                        Game.IsInstalling = false;
                         return;
                     }
 
                     _emuLibrary.Logger.Info($"Preparing to install {Game.Name}");
+                    
+                    // Check if source file is an archive
+                    if (ArchiveExtractor.IsArchiveFile(sourceISOPath))
+                    {
+                        // Extract archive to temp directory
+                        _emuLibrary.Logger.Info($"Detected archive file: {Path.GetFileName(sourceISOPath)}");
+                        _emuLibrary.Playnite.Notifications.Add(
+                            Game.GameId,
+                            $"Extracting archive for {Game.Name}...",
+                            NotificationType.Info
+                        );
+                        
+                        tempExtractDir = Path.Combine(Path.GetTempPath(), "Playnite_ISOExtract", Guid.NewGuid().ToString());
+                        Directory.CreateDirectory(tempExtractDir);
+                        
+                        var extractor = new ArchiveExtractor(_emuLibrary.Logger);
+                        var extractSuccess = await extractor.ExtractArchiveAsync(
+                            sourceISOPath,
+                            tempExtractDir,
+                            cancellationToken
+                        );
+                        
+                        if (!extractSuccess)
+                        {
+                            throw new Exception($"Failed to extract archive: {sourceISOPath}");
+                        }
+                        
+                        if (cancellationToken.IsCancellationRequested)
+                        {
+                            _emuLibrary.Logger.Info($"Installation cancelled after extraction");
+                            Game.IsInstalling = false;
+                            return;
+                        }
+                        
+                        // Detect ISO files in extracted content
+                        var contentInfo = ArchiveExtractor.DetectContentType(tempExtractDir);
+                        
+                        if (!contentInfo.HasIsoFiles)
+                        {
+                            throw new Exception($"Extracted archive does not contain any ISO files.");
+                        }
+                        
+                        // Use the first ISO file found
+                        sourceISOPath = contentInfo.IsoFiles[0];
+                        _emuLibrary.Logger.Info($"Found ISO file in extracted archive: {Path.GetFileName(sourceISOPath)}");
+                        
+                        if (contentInfo.IsoFiles.Count > 1)
+                        {
+                            _emuLibrary.Logger.Info($"Archive contains {contentInfo.IsoFiles.Count} ISO files. Using first one: {Path.GetFileName(sourceISOPath)}");
+                        }
+                    }
                     
                     // Ensure the install directory exists
                     if (!Directory.Exists(_gameInfo.InstallDirectory))
@@ -152,14 +205,55 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                             {
                                 if (process != null)
                                 {
-                                        _emuLibrary.Logger.Info($"Running installer for {Game.Name}. Please complete the installation process.");
+                                    _emuLibrary.Logger.Info($"Running installer for {Game.Name}. Please complete the installation process.");
                                     
-                                    await Task.Run(() => process.WaitForExit());
+                                    // Wait for process with cancellation support
+                                    try
+                                    {
+                                        while (!process.HasExited)
+                                        {
+                                            if (cancellationToken.IsCancellationRequested)
+                                            {
+                                                try
+                                                {
+                                                    process.Kill();
+                                                    _emuLibrary.Logger.Info($"Installation process for {Game.Name} was cancelled and terminated");
+                                                    Game.IsInstalling = false;
+                                                    return;
+                                                }
+                                                catch (Exception ex)
+                                                {
+                                                    _emuLibrary.Logger.Error($"Failed to kill installation process: {ex.Message}");
+                                                }
+                                            }
+                                            await Task.Delay(500, cancellationToken);
+                                        }
+                                        process.WaitForExit();
+                                    }
+                                    catch (OperationCanceledException)
+                                    {
+                                        // Process was cancelled, try to kill it
+                                        try
+                                        {
+                                            if (!process.HasExited)
+                                            {
+                                                process.Kill();
+                                            }
+                                        }
+                                        catch (Exception ex)
+                                        {
+                                            _emuLibrary.Logger.Warn($"Error killing process after cancellation: {ex.Message}");
+                                        }
+                                        throw; // Re-throw to be caught by outer handler
+                                    }
                                     
-                                    _emuLibrary.Logger.Info($"Installation process completed for {Game.Name}");
-                                    
-                                    // Update game info
-                                    UpdateGameInfo();
+                                    if (!cancellationToken.IsCancellationRequested)
+                                    {
+                                        _emuLibrary.Logger.Info($"Installation process completed for {Game.Name}");
+                                        
+                                        // Update game info
+                                        UpdateGameInfo();
+                                    }
                                 }
                                 else
                                 {
@@ -186,15 +280,45 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                 catch (OperationCanceledException)
                 {
                     _emuLibrary.Logger.Info($"Installation cancelled for game {Game.Name}");
+                    Game.IsInstalling = false;
+                    _emuLibrary.Playnite.Notifications.Add(
+                        Game.GameId,
+                        $"Installation of {Game.Name} was cancelled.",
+                        NotificationType.Info
+                    );
                 }
                 catch (Exception ex)
                 {
                     _emuLibrary.Logger.Error($"Error during installation of game {Game.Name}: {ex.Message}");
-                    _emuLibrary.Playnite.Dialogs.ShowErrorMessage($"An error occurred during installation: {ex.Message}", "Installation Error");
+                    Game.IsInstalling = false;
+                    _emuLibrary.Playnite.Notifications.Add(
+                        Game.GameId,
+                        $"Failed to install {Game.Name}.{Environment.NewLine}{Environment.NewLine}{ex.Message}",
+                        NotificationType.Error
+                    );
+                    // Don't show dialog from background thread - notification is sufficient
                 }
                 finally
                 {
-                    // No progress view to close
+                    // Clean up temp extraction directory if it was created
+                    if (!string.IsNullOrEmpty(tempExtractDir) && Directory.Exists(tempExtractDir))
+                    {
+                        try
+                        {
+                            Directory.Delete(tempExtractDir, true);
+                            _emuLibrary.Logger.Debug($"Cleaned up temp extraction directory: {tempExtractDir}");
+                        }
+                        catch (Exception ex)
+                        {
+                            _emuLibrary.Logger.Warn($"Failed to clean up temp extraction directory {tempExtractDir}: {ex.Message}");
+                        }
+                    }
+                    
+                    // Ensure installation state is cleared
+                    if (Game.IsInstalling)
+                    {
+                        Game.IsInstalling = false;
+                    }
                 }
             });
         }

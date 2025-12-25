@@ -1,4 +1,4 @@
-using EmuLibrary.Settings;
+﻿using EmuLibrary.Settings;
 using Playnite.SDK.Models;
 using Playnite.SDK.Plugins;
 using ProtoBuf;

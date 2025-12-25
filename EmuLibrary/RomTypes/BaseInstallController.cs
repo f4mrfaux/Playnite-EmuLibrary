@@ -1,4 +1,4 @@
-using EmuLibrary.Util.FileCopier;
+﻿using EmuLibrary.Util.FileCopier;
 using Playnite.SDK;
 using Playnite.SDK.Models;
 using Playnite.SDK.Plugins;

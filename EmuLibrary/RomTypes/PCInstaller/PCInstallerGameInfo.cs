@@ -4,6 +4,7 @@ using Playnite.SDK.Plugins;
 using ProtoBuf;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 
 namespace EmuLibrary.RomTypes.PCInstaller
 {
@@ -21,10 +22,12 @@ namespace EmuLibrary.RomTypes.PCInstaller
         public string InstallerFullPath { get; set; }
         
         // Installation directory if installed
+        // NOTE: Excluded from GameId to ensure stable IDs - installation state shouldn't change GameId
         [ProtoMember(3)]
         public string InstallDirectory { get; set; }
         
         // Path to the primary executable after installation
+        // NOTE: Excluded from GameId to ensure stable IDs - installation state shouldn't change GameId
         [ProtoMember(4)]
         public string PrimaryExecutable { get; set; }
         
@@ -35,6 +38,32 @@ namespace EmuLibrary.RomTypes.PCInstaller
         // Store installer type (GOG, Steam, Epic, etc.)
         [ProtoMember(6)]
         public string InstallerType { get; set; }
+        
+        /// <summary>
+        /// Generates a stable GameId that excludes installation-state fields.
+        /// This ensures the same game always gets the same ID regardless of installation status.
+        /// </summary>
+        public override string AsGameId()
+        {
+            // Create a copy with only identifying fields (exclude installation state)
+            var stableInfo = new PCInstallerGameInfo
+            {
+                MappingId = MappingId,
+                SourcePath = SourcePath,
+                InstallerFullPath = InstallerFullPath,
+                StoreGameId = StoreGameId,
+                InstallerType = InstallerType,
+                // Explicitly exclude InstallDirectory and PrimaryExecutable
+                InstallDirectory = null,
+                PrimaryExecutable = null
+            };
+            
+            using (var ms = new MemoryStream())
+            {
+                Serializer.Serialize(ms, stableInfo);
+                return string.Format("!0{0}", Convert.ToBase64String(ms.ToArray()));
+            }
+        }
 
         public string SourceFullPath
         {
@@ -42,19 +71,64 @@ namespace EmuLibrary.RomTypes.PCInstaller
             {
                 try
                 {
-                    if (string.IsNullOrEmpty(SourcePath))
+                    // Primary path: use SourcePath if available
+                    if (!string.IsNullOrEmpty(SourcePath))
                     {
-                        return InstallerFullPath;
+                        var mapping = Mapping;
+                        if (mapping != null && !string.IsNullOrEmpty(mapping.SourcePath))
+                        {
+                            var fullPath = Path.Combine(mapping.SourcePath, SourcePath);
+                            if (File.Exists(fullPath))
+                                return fullPath;
+                        }
                     }
-
-                    var mapping = Mapping;
-                    if (mapping == null || string.IsNullOrEmpty(mapping.SourcePath))
+                    
+                    // Fallback 1: Use InstallerFullPath if it exists
+                    if (!string.IsNullOrEmpty(InstallerFullPath) && File.Exists(InstallerFullPath))
+                        return InstallerFullPath;
+                    
+                    // Fallback 2: If primary path doesn't exist, try to find file in source directory
+                    var mapping2 = Mapping;
+                    if (mapping2 != null && !string.IsNullOrEmpty(mapping2.SourcePath))
                     {
-                        // Fallback to direct path if mapping is missing
-                        return InstallerFullPath;
+                        var sourceDir = mapping2.SourcePath;
+                        if (Directory.Exists(sourceDir))
+                        {
+                            // Get the directory where the file should be
+                            string searchDir = sourceDir;
+                            if (!string.IsNullOrEmpty(SourcePath))
+                            {
+                                var expectedDir = Path.GetDirectoryName(Path.Combine(sourceDir, SourcePath));
+                                if (Directory.Exists(expectedDir))
+                                    searchDir = expectedDir;
+                            }
+                            
+                            // Search for installer files (EXE, ISO, archives)
+                            var extensions = new[] { ".exe", ".iso", ".zip", ".rar", ".7z", ".7zip" };
+                            var files = Directory.GetFiles(searchDir, "*.*", SearchOption.TopDirectoryOnly)
+                                .Where(f => extensions.Contains(Path.GetExtension(f).ToLowerInvariant()))
+                                .ToList();
+                            
+                            if (files.Count > 0)
+                            {
+                                // Prefer files matching the expected name if SourcePath is set
+                                if (!string.IsNullOrEmpty(SourcePath))
+                                {
+                                    var expectedName = Path.GetFileName(SourcePath);
+                                    var matchingFile = files.FirstOrDefault(f => 
+                                        Path.GetFileName(f).Equals(expectedName, StringComparison.OrdinalIgnoreCase));
+                                    if (matchingFile != null)
+                                        return matchingFile;
+                                }
+                                
+                                // Otherwise return first file found
+                                return files.First();
+                            }
+                        }
                     }
-
-                    return Path.Combine(mapping.SourcePath, SourcePath);
+                    
+                    // Final fallback: return InstallerFullPath even if it doesn't exist
+                    return InstallerFullPath;
                 }
                 catch (System.Exception ex)
                 {

@@ -61,9 +61,10 @@ namespace EmuLibrary.RomTypes.ISOInstaller
             }
 
             // Define supported disc image extensions (both lowercase and uppercase for case insensitivity)
-            // Only using .iso files as requested to avoid grabbing extracted content
+            // Also support archive files that may contain ISO files
             var discExtensions = new List<string> { 
-                "iso", "ISO"
+                "iso", "ISO",
+                "zip", "rar", "7z", "7zip" // Archive formats that may contain ISO files
             };
             
             SafeFileEnumerator fileEnumerator;
@@ -289,7 +290,33 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                         string gameName;
                         if (!normalizedNameCache.TryGetValue(folderName, out gameName))
                         {
+                            // First normalize the name to remove release groups, versions, etc.
                             gameName = StringExtensions.NormalizeGameName(folderName);
+                            
+                            // Optionally try to get a cleaner name from Playnite's metadata providers
+                            if (!string.IsNullOrEmpty(gameName) && gameName.Length > 3)
+                            {
+                                try
+                                {
+                                    var metadataName = TryGetMetadataName(gameName, mapping.Platform);
+                                    if (!string.IsNullOrEmpty(metadataName) && 
+                                        !string.Equals(metadataName, gameName, StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        _emuLibrary.Logger.Debug($"Metadata provider suggested name '{metadataName}' for '{gameName}'");
+                                        // Use metadata name if it's significantly different (likely cleaner)
+                                        if (metadataName.Length <= gameName.Length * 1.2) // Don't use if metadata name is much longer
+                                        {
+                                            gameName = metadataName;
+                                        }
+                                    }
+                                }
+                                catch (Exception ex)
+                                {
+                                    // Don't fail on metadata lookup errors, just log and continue
+                                    _emuLibrary.Logger.Debug($"Could not get metadata name for '{gameName}': {ex.Message}");
+                                }
+                            }
+                            
                             normalizedNameCache[folderName] = gameName;
                         }
                         
@@ -488,6 +515,85 @@ namespace EmuLibrary.RomTypes.ISOInstaller
             // ISO installers are a new type, so there are no legacy game IDs to convert
             gameInfo = null;
             return false;
+        }
+
+        /// <summary>
+        /// Attempts to get a cleaner game name from Playnite's metadata providers.
+        /// This helps match release names to proper game titles.
+        /// </summary>
+        private string TryGetMetadataName(string normalizedName, EmulatedPlatform platform)
+        {
+            if (string.IsNullOrEmpty(normalizedName) || _playniteAPI == null)
+            {
+                return null;
+            }
+
+            try
+            {
+                // Create a temporary game object for metadata lookup
+                var tempGame = new Game
+                {
+                    Name = normalizedName,
+                    PlatformId = platform?.Id
+                };
+
+                // Try to get metadata from available providers
+                var metadataProviders = _playniteAPI.Addons.Plugins
+                    .Where(p => p is Playnite.SDK.Plugins.MetadataPlugin)
+                    .Cast<Playnite.SDK.Plugins.MetadataPlugin>()
+                    .ToList();
+
+                if (metadataProviders.Count == 0)
+                {
+                    return null;
+                }
+
+                // Try the first available metadata provider (usually IGDB)
+                foreach (var provider in metadataProviders)
+                {
+                    try
+                    {
+                        var metadataProvider = provider.GetMetadataProvider(
+                            new Playnite.SDK.Plugins.MetadataRequestOptions
+                            {
+                                IsBackgroundDownload = true,
+                                GameData = tempGame
+                            });
+
+                        if (metadataProvider != null)
+                        {
+                            // Try to get just the name field (lightweight operation)
+                            var nameField = metadataProvider.GetName(
+                                new Playnite.SDK.Plugins.GetMetadataFieldArgs
+                                {
+                                    GameData = tempGame,
+                                    CancelToken = CancellationToken.None
+                                });
+
+                            if (!string.IsNullOrEmpty(nameField) && 
+                                nameField.Length > 2 &&
+                                !string.Equals(nameField, normalizedName, StringComparison.OrdinalIgnoreCase))
+                            {
+                                // Found a better name from metadata
+                                return nameField;
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        // Continue to next provider if this one fails
+                        _emuLibrary.Logger.Debug($"Metadata provider {provider.Name} failed: {ex.Message}");
+                        continue;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Don't throw, just return null if metadata lookup fails
+                _emuLibrary.Logger.Debug($"Error in TryGetMetadataName: {ex.Message}");
+            }
+
+            return null;
         }
 
         public override IEnumerable<Game> GetUninstalledGamesMissingSourceFiles(CancellationToken ct)

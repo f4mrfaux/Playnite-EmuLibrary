@@ -1,4 +1,4 @@
-using EmuLibrary.RomTypes;
+﻿using EmuLibrary.RomTypes;
 using Newtonsoft.Json;
 using Playnite.SDK.Models;
 using Playnite.SDK;

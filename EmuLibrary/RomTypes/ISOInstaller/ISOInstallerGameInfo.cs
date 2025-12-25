@@ -36,12 +36,14 @@ namespace EmuLibrary.RomTypes.ISOInstaller
 
         /// <summary>
         /// The installation directory path
+        /// NOTE: Excluded from GameId to ensure stable IDs - installation state shouldn't change GameId
         /// </summary>
         [ProtoMember(4)]
         public string InstallDirectory { get; set; }
 
         /// <summary>
         /// The primary executable path (relative to install directory)
+        /// NOTE: Excluded from GameId to ensure stable IDs - installation state shouldn't change GameId
         /// </summary>
         [ProtoMember(5)]
         public string PrimaryExecutable { get; set; }
@@ -57,6 +59,32 @@ namespace EmuLibrary.RomTypes.ISOInstaller
         /// </summary>
         [ProtoMember(6)]
         public List<string> ISOFiles { get; set; } = new List<string>();
+        
+        /// <summary>
+        /// Generates a stable GameId that excludes installation-state fields.
+        /// This ensures the same game always gets the same ID regardless of installation status.
+        /// </summary>
+        public override string AsGameId()
+        {
+            // Create a copy with only identifying fields (exclude installation state)
+            var stableInfo = new ISOInstallerGameInfo
+            {
+                MappingId = MappingId,
+                SourcePath = SourcePath,
+                SourceBasePath = SourceBasePath,
+                ISOFiles = ISOFiles,
+                // Explicitly exclude installation-state fields
+                InstallDirectory = null,
+                PrimaryExecutable = null,
+                WorkingDirectory = null
+            };
+            
+            using (var ms = new System.IO.MemoryStream())
+            {
+                ProtoBuf.Serializer.Serialize(ms, stableInfo);
+                return string.Format("!0{0}", Convert.ToBase64String(ms.ToArray()));
+            }
+        }
 
         /// <summary>
         /// Gets the full path to the source ISO file

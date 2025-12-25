@@ -1,4 +1,5 @@
-using EmuLibrary.RomTypes;
+﻿using EmuLibrary.RomTypes;
+using EmuLibrary.RomTypes.ISOInstaller;
 using EmuLibrary.Settings;
 using Playnite.SDK;
 using Playnite.SDK.Events;
@@ -106,6 +107,183 @@ namespace EmuLibrary
                     }
                 });
             });
+            
+            // Migrate existing games to stable GameId format (exclude installation-state fields)
+            // This prevents duplicates when games transition from uninstalled to installed
+            MigrateToStableGameIds();
+        }
+        
+        /// <summary>
+        /// Migrates existing games to stable GameId format that excludes installation-state fields.
+        /// This ensures games maintain the same ID regardless of installation status, preventing duplicates.
+        /// Playnite will automatically match games by GameId + PluginId, so we just need to update the IDs.
+        /// IMPORTANT: Preserves installation state (InstallDirectory, PrimaryExecutable, IsInstalled) during migration.
+        /// </summary>
+        private void MigrateToStableGameIds()
+        {
+            try
+            {
+                // Find all games that need migration to stable format:
+                // - Games in ProtoBuf format (!0...) that may have installation fields in their GameId
+                // - Games in legacy pipe-separated format (ISOInstaller|..., etc.) that need to be migrated to stable ProtoBuf format
+                // We check if the GameId changes when regenerated with AsGameId() (which excludes installation fields)
+                var allPluginGames = PlayniteApi.Database.Games
+                    .Where(g => g.PluginId == PluginId && g.GameId != null)
+                    .ToList();
+                
+                if (!allPluginGames.Any())
+                {
+                    return;
+                }
+                
+                var migratedCount = 0;
+                var preservedInstallStateCount = 0;
+                var skippedCount = 0;
+                
+                using (Playnite.Database.BufferedUpdate())
+                {
+                    foreach (var game in allPluginGames)
+                    {
+                        try
+                        {
+                            ELGameInfo currentGameInfo = null;
+                            
+                            // Handle both ProtoBuf format and legacy pipe-separated format
+                            if (game.GameId.StartsWith("!0"))
+                            {
+                                // ProtoBuf format - can deserialize directly
+                                currentGameInfo = game.GetELGameInfo();
+                            }
+                            else
+                            {
+                                // Legacy format (pipe-separated like "ISOInstaller|guid|path|installDir")
+                                // Try to parse using extension methods that support legacy format
+                                try
+                                {
+                                    // Try ISOInstaller format first
+                                    if (game.GameId.Contains("|") && game.GameId.StartsWith("ISOInstaller"))
+                                    {
+                                        var isoInfo = game.GetISOInstallerGameInfo();
+                                        currentGameInfo = isoInfo;
+                                    }
+                                    // Could add other legacy format parsers here if needed
+                                    // For now, ISOInstaller is the main one with legacy format support
+                                }
+                                catch
+                                {
+                                    // If we can't parse it, skip this game
+                                    skippedCount++;
+                                    Logger.Debug($"Skipping game '{game.Name}' with unrecognized GameId format: {game.GameId.Substring(0, Math.Min(50, game.GameId.Length))}...");
+                                    continue;
+                                }
+                                
+                                if (currentGameInfo == null)
+                                {
+                                    skippedCount++;
+                                    continue;
+                                }
+                            }
+                            
+                            // Preserve installation state before migration
+                            string oldInstallDirectory = null;
+                            string oldPrimaryExecutable = null;
+                            bool hadInstallState = false;
+                            
+                            // Extract installation state from old GameInfo based on RomType
+                            if (currentGameInfo.RomType == RomType.PCInstaller)
+                            {
+                                var pcInfo = currentGameInfo as RomTypes.PCInstaller.PCInstallerGameInfo;
+                                if (pcInfo != null)
+                                {
+                                    oldInstallDirectory = pcInfo.InstallDirectory;
+                                    oldPrimaryExecutable = pcInfo.PrimaryExecutable;
+                                    hadInstallState = !string.IsNullOrEmpty(oldInstallDirectory);
+                                }
+                            }
+                            else if (currentGameInfo.RomType == RomType.ISOInstaller)
+                            {
+                                var isoInfo = currentGameInfo as RomTypes.ISOInstaller.ISOInstallerGameInfo;
+                                if (isoInfo != null)
+                                {
+                                    oldInstallDirectory = isoInfo.InstallDirectory;
+                                    oldPrimaryExecutable = isoInfo.PrimaryExecutable;
+                                    hadInstallState = !string.IsNullOrEmpty(oldInstallDirectory);
+                                }
+                            }
+                            
+                            // Generate new stable GameId (excludes installation fields)
+                            var newGameId = currentGameInfo.AsGameId();
+                            
+                            // Check if GameId changed (means it had installation fields included)
+                            if (game.GameId != newGameId)
+                            {
+                                // Preserve installation state BEFORE updating GameId
+                                // (since the new GameId won't include these fields)
+                                if (hadInstallState)
+                                {
+                                    // Update game's installation state on the Game object
+                                    // This is what Playnite uses and what scanners read
+                                    game.IsInstalled = true;
+                                    game.InstallDirectory = oldInstallDirectory;
+                                    
+                                    // Update play action if PrimaryExecutable exists
+                                    if (!string.IsNullOrEmpty(oldPrimaryExecutable))
+                                    {
+                                        var playAction = game.GameActions?.FirstOrDefault(a => a.IsPlayAction);
+                                        if (playAction != null)
+                                        {
+                                            playAction.Path = oldPrimaryExecutable;
+                                            playAction.WorkingDir = oldInstallDirectory;
+                                            playAction.Name = "Play";
+                                            playAction.Type = Playnite.SDK.Models.GameActionType.File;
+                                        }
+                                        else
+                                        {
+                                            // Create new play action if none exists
+                                            game.GameActions = game.GameActions ?? new System.Collections.ObjectModel.ObservableCollection<Playnite.SDK.Models.GameAction>();
+                                            game.GameActions.Add(new Playnite.SDK.Models.GameAction
+                                            {
+                                                Path = oldPrimaryExecutable,
+                                                WorkingDir = oldInstallDirectory,
+                                                Name = "Play",
+                                                Type = Playnite.SDK.Models.GameActionType.File,
+                                                IsPlayAction = true
+                                            });
+                                        }
+                                    }
+                                    
+                                    preservedInstallStateCount++;
+                                    Logger.Debug($"Preserved installation state for game '{game.Name}': InstallDirectory={oldInstallDirectory}, PrimaryExecutable={oldPrimaryExecutable}");
+                                }
+                                
+                                // Update to stable GameId format (excludes installation fields)
+                                // The installation state is preserved on the Game object above
+                                game.GameId = newGameId;
+                                
+                                PlayniteApi.Database.Games.Update(game);
+                                migratedCount++;
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger.Warn($"Could not migrate game '{game.Name}' to stable GameId format: {ex.Message}");
+                        }
+                    }
+                }
+                
+                if (migratedCount > 0)
+                {
+                    Logger.Info($"GameId migration complete: {migratedCount} games migrated to stable GameId format (installation state excluded from ID). {preservedInstallStateCount} games had installation state preserved. {skippedCount} games skipped (not in ProtoBuf format, handled by legacy migration).");
+                }
+                else if (skippedCount > 0)
+                {
+                    Logger.Debug($"GameId migration: {skippedCount} games skipped (not in ProtoBuf format, will be handled by legacy migration in OnApplicationStarted).");
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error during GameId migration: {ex.Message}");
+            }
         }
 
         public override IEnumerable<GameMetadata> GetGames(LibraryGetGamesArgs args)

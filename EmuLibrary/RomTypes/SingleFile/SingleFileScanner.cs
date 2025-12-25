@@ -1,4 +1,4 @@
-using EmuLibrary.PlayniteCommon;
+﻿using EmuLibrary.PlayniteCommon;
 using EmuLibrary.Settings;
 using EmuLibrary.Util;
 using Playnite.SDK;
