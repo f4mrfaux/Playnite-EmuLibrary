@@ -42,13 +42,14 @@ namespace EmuLibrary.RomTypes.PCInstaller
             Task.Run(async () =>
             {
                 // Track installation state for logging
-                
+                string tempDir = null;
+
                 try
                 {
                     // Create a temporary directory for the installer
                     UpdateProgress("Creating temporary directory...", 0);
-                    
-                    var tempDir = Path.Combine(Path.GetTempPath(), "Playnite_PCInstaller", Guid.NewGuid().ToString());
+
+                    tempDir = Path.Combine(Path.GetTempPath(), "Playnite_PCInstaller", Guid.NewGuid().ToString());
                     Directory.CreateDirectory(tempDir);
                     
                     if (cancellationToken.IsCancellationRequested)
@@ -558,13 +559,26 @@ namespace EmuLibrary.RomTypes.PCInstaller
                 finally
                 {
                     // Ensure temp directory is cleaned up even on exception
+                    if (!string.IsNullOrEmpty(tempDir) && Directory.Exists(tempDir))
+                    {
+                        try
+                        {
+                            Directory.Delete(tempDir, true);
+                            _emuLibrary.Logger.Debug($"Cleaned up temp directory: {tempDir}");
+                        }
+                        catch (Exception ex)
+                        {
+                            _emuLibrary.Logger.Warn($"Failed to clean up temp directory {tempDir}: {ex.Message}");
+                        }
+                    }
+
+                    // Also clean up any orphaned temp directories older than 1 hour
                     try
                     {
-                        var tempDir = Path.Combine(Path.GetTempPath(), "Playnite_PCInstaller");
-                        if (Directory.Exists(tempDir))
+                        var baseTempDir = Path.Combine(Path.GetTempPath(), "Playnite_PCInstaller");
+                        if (Directory.Exists(baseTempDir))
                         {
-                            // Try to clean up any orphaned temp directories older than 1 hour
-                            var dirs = Directory.GetDirectories(tempDir);
+                            var dirs = Directory.GetDirectories(baseTempDir);
                             foreach (var dir in dirs)
                             {
                                 try
@@ -576,16 +590,16 @@ namespace EmuLibrary.RomTypes.PCInstaller
                                         _emuLibrary.Logger.Debug($"Cleaned up orphaned temp directory: {dir}");
                                     }
                                 }
-                                catch
+                                catch (Exception ex)
                                 {
-                                    // Ignore individual cleanup failures
+                                    _emuLibrary.Logger.Debug($"Failed to clean up orphaned temp directory {dir}: {ex.Message}");
                                 }
                             }
                         }
                     }
-                    catch
+                    catch (Exception ex)
                     {
-                        // Ignore cleanup failures in finally block
+                        _emuLibrary.Logger.Debug($"Failed to clean up orphaned temp directories: {ex.Message}");
                     }
                 }
             });
