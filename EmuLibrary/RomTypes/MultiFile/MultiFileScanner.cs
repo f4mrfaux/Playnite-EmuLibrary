@@ -268,9 +268,12 @@ namespace EmuLibrary.RomTypes.MultiFile
 
         public override IEnumerable<Game> GetUninstalledGamesMissingSourceFiles(CancellationToken ct)
         {
-            return _playniteAPI.Database.Games.TakeWhile(g => !ct.IsCancellationRequested)
-                .Where(g =>
+            return _playniteAPI.Database.Games.Where(g =>
             {
+                // Check cancellation at each iteration
+                if (ct.IsCancellationRequested)
+                    return false;
+
                 if (g.PluginId != EmuLibrary.PluginId || g.IsInstalled)
                     return false;
 

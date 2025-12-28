@@ -701,9 +701,12 @@ namespace EmuLibrary.RomTypes.PCInstaller
                         .ToList();
                     
                     return filteredGames
-                        .TakeWhile(g => !ct.IsCancellationRequested)
                         .Where(g =>
                         {
+                            // Check cancellation at each iteration
+                            if (ct.IsCancellationRequested)
+                                return false;
+
                             try
                             {
                                 var info = g.GetELGameInfo();
@@ -712,12 +715,12 @@ namespace EmuLibrary.RomTypes.PCInstaller
 
                                 var pcInfo = info as PCInstallerGameInfo;
                                 var sourceExists = File.Exists(pcInfo.SourceFullPath);
-                                
+
                                 if (!sourceExists)
                                 {
                                     _emuLibrary.Logger.Info($"Source file missing for game {g.Name}: {pcInfo.SourceFullPath}");
                                 }
-                                
+
                                 return !sourceExists;
                             }
                             catch (Exception ex)

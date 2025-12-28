@@ -114,16 +114,6 @@ namespace EmuLibrary.Settings
         {
             get
             {
-                // Special case for specific mappings that were failing validation
-                // These are mappings with "Choose on startup" profile and PC emulator
-                if (MappingId.ToString() == "de2e9966-7224-4172-a6d4-2239a5e80b1d" || 
-                    MappingId.ToString() == "b73034fe-4ae6-458a-bacf-325c0f539a46")
-                {
-                    // We can't access Settings.Instance.EmuLibrary.Logger directly since it could create a circular reference
-                    // during initialization, so we'll just return the default value without logging
-                    return new[] { "exe" };
-                }
-                
                 // Default handling for different ROM types
                 IEnumerable<string> imageExtensionsLower;
                 if (RomType == RomType.PCInstaller)

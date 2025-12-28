@@ -626,9 +626,12 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                         .ToList();
                     
                     return filteredGames
-                        .TakeWhile(g => !ct.IsCancellationRequested)
                         .Where(g =>
                         {
+                            // Check cancellation at each iteration
+                            if (ct.IsCancellationRequested)
+                                return false;
+
                             try
                             {
                                 var info = g.GetELGameInfo();
@@ -637,12 +640,12 @@ namespace EmuLibrary.RomTypes.ISOInstaller
 
                                 var isoInfo = info as ISOInstallerGameInfo;
                                 var sourceExists = File.Exists(isoInfo.SourceFullPath);
-                                
+
                                 if (!sourceExists)
                                 {
                                     _emuLibrary.Logger.Info($"Source file missing for game {g.Name}: {isoInfo.SourceFullPath}");
                                 }
-                                
+
                                 return !sourceExists;
                             }
                             catch (Exception ex)

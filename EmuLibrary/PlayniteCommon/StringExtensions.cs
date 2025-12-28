@@ -8,6 +8,9 @@ namespace System
     {
         private static readonly CultureInfo enUSCultInfo = new CultureInfo("en-US", false);
 
+        // Regex timeout to prevent catastrophic backtracking and ReDoS attacks
+        private static readonly TimeSpan RegexTimeout = TimeSpan.FromSeconds(1);
+
         public static string MD5(this string s)
         {
             using (var provider = System.Security.Cryptography.MD5.Create())
@@ -31,9 +34,9 @@ namespace System
             }
 
             var newName = name;
-            newName = Regex.Replace(newName, @"^the\s+", "", RegexOptions.IgnoreCase);
-            newName = Regex.Replace(newName, @"^a\s+", "", RegexOptions.IgnoreCase);
-            newName = Regex.Replace(newName, @"^an\s+", "", RegexOptions.IgnoreCase);
+            newName = new Regex(@"^the\s+", RegexOptions.IgnoreCase, RegexTimeout).Replace(newName, "");
+            newName = new Regex(@"^a\s+", RegexOptions.IgnoreCase, RegexTimeout).Replace(newName, "");
+            newName = new Regex(@"^an\s+", RegexOptions.IgnoreCase, RegexTimeout).Replace(newName, "");
             return newName;
         }
 
@@ -44,7 +47,7 @@ namespace System
                 return str;
             }
 
-            return Regex.Replace(str, @"[™©®]", remplacement);
+            return new Regex(@"[™©®]", RegexOptions.None, RegexTimeout).Replace(str, remplacement);
         }
 
         public static bool IsNullOrEmpty(this string source)
@@ -114,8 +117,8 @@ namespace System
 
             // Remove brackets and parentheses (often contain metadata, tags, version info, etc.)
             // This is a generic approach that works for any type of metadata in brackets
-            newName = Regex.Replace(newName, @"\[.*?\]", "");
-            newName = Regex.Replace(newName, @"\(.*?\)", "");
+            newName = new Regex(@"\[.*?\]", RegexOptions.None, RegexTimeout).Replace(newName, "");
+            newName = new Regex(@"\(.*?\)", RegexOptions.None, RegexTimeout).Replace(newName, "");
 
             // Generic patterns for common metadata
             // These patterns are generic and apply to legitimate retail/digital releases
@@ -132,7 +135,7 @@ namespace System
 
             foreach (var pattern in genericPatterns)
             {
-                newName = Regex.Replace(newName, pattern, "", RegexOptions.IgnoreCase);
+                newName = new Regex(pattern, RegexOptions.IgnoreCase, RegexTimeout).Replace(newName, "");
             }
 
             // Apply user-defined patterns if provided
@@ -146,11 +149,16 @@ namespace System
                     {
                         try
                         {
-                            newName = Regex.Replace(newName, pattern, "", RegexOptions.IgnoreCase);
+                            newName = new Regex(pattern, RegexOptions.IgnoreCase, RegexTimeout).Replace(newName, "");
                         }
                         catch (ArgumentException)
                         {
                             // Skip invalid regex patterns
+                            continue;
+                        }
+                        catch (RegexMatchTimeoutException)
+                        {
+                            // Skip patterns that take too long (potential ReDoS attack)
                             continue;
                         }
                     }
@@ -158,23 +166,23 @@ namespace System
             }
 
             // Remove common installer/disc prefixes (generic, applies to any disc image or installer)
-            newName = Regex.Replace(newName, @"^(installer|setup|disc\s*\d+|cd\s*\d+|dvd\s*\d+)\s+", "", RegexOptions.IgnoreCase);
+            newName = new Regex(@"^(installer|setup|disc\s*\d+|cd\s*\d+|dvd\s*\d+)\s+", RegexOptions.IgnoreCase, RegexTimeout).Replace(newName, "");
 
             // Remove standalone version numbers at the end
-            newName = Regex.Replace(newName, @"\s+v?\d+\.\d+(\.\d+)?(\.\d+)?$", "", RegexOptions.IgnoreCase);
+            newName = new Regex(@"\s+v?\d+\.\d+(\.\d+)?(\.\d+)?$", RegexOptions.IgnoreCase, RegexTimeout).Replace(newName, "");
 
             // Remove year patterns at the end (likely metadata, not part of the actual title)
             // Only 4-digit years 1900-2099 at the end of the string
-            newName = Regex.Replace(newName, @"\s+(19|20)\d{2}$", "", RegexOptions.IgnoreCase);
+            newName = new Regex(@"\s+(19|20)\d{2}$", RegexOptions.IgnoreCase, RegexTimeout).Replace(newName, "");
 
             // Clean up spacing and formatting
-            newName = Regex.Replace(newName, @"\s*:\s*", ": ");
-            newName = Regex.Replace(newName, @"\s+", " ");
+            newName = new Regex(@"\s*:\s*", RegexOptions.None, RegexTimeout).Replace(newName, ": ");
+            newName = new Regex(@"\s+", RegexOptions.None, RegexTimeout).Replace(newName, " ");
 
             // Handle "The" at the end (e.g., "Witcher, The" -> "The Witcher")
-            if (Regex.IsMatch(newName, @",\s*The$"))
+            if (new Regex(@",\s*The$", RegexOptions.None, RegexTimeout).IsMatch(newName))
             {
-                newName = "The " + Regex.Replace(newName, @",\s*The$", "", RegexOptions.IgnoreCase);
+                newName = "The " + new Regex(@",\s*The$", RegexOptions.IgnoreCase, RegexTimeout).Replace(newName, "");
             }
 
             return newName.Trim();
@@ -196,7 +204,7 @@ namespace System
                 return string.Empty;
             }
 
-            return Regex.Replace(path, @"(\.[A-Za-z0-9]+)+$", "");
+            return new Regex(@"(\.[A-Za-z0-9]+)+$", RegexOptions.None, RegexTimeout).Replace(path, "");
         }
 
         public static bool Contains(this string str, string value, StringComparison comparisonType)
@@ -216,7 +224,7 @@ namespace System
                 return false;
             }
 
-            return Regex.IsMatch(str, @"^https?:\/\/", RegexOptions.IgnoreCase);
+            return new Regex(@"^https?:\/\/", RegexOptions.IgnoreCase, RegexTimeout).IsMatch(str);
         }
 
         // Courtesy of https://stackoverflow.com/questions/6275980/string-replace-ignoring-case
