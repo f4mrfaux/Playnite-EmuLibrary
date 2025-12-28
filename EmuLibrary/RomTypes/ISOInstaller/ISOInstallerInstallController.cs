@@ -128,6 +128,17 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                     // Ensure the install directory exists
                     if (!Directory.Exists(_gameInfo.InstallDirectory))
                     {
+                        // Validate path length before attempting creation
+                        if (!PathValidator.ValidateDirectoryPath(_gameInfo.InstallDirectory, out string pathError))
+                        {
+                            _emuLibrary.Logger.Error($"Install directory path validation failed: {pathError}");
+                            _emuLibrary.Playnite.Dialogs.ShowErrorMessage(
+                                $"Installation directory path is too long for {Game.Name}. {pathError}. Consider using a shorter game name or base path.",
+                                "Installation Error"
+                            );
+                            return;
+                        }
+
                         try
                         {
                             Directory.CreateDirectory(_gameInfo.InstallDirectory);

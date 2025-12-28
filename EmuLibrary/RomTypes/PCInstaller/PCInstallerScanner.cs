@@ -19,6 +19,11 @@ namespace EmuLibrary.RomTypes.PCInstaller
         private readonly IEmuLibrary _emuLibrary;
         private const int BATCH_SIZE = 100; // Process games in batches for better performance
 
+        // Rate limiting for metadata API calls
+        private static DateTime _lastMetadataCallTime = DateTime.MinValue;
+        private static readonly object _metadataRateLimitLock = new object();
+        private const int METADATA_API_DELAY_MS = 200; // Minimum 200ms between metadata API calls
+
         public override RomType RomType => RomType.PCInstaller;
         public override Guid LegacyPluginId => EmuLibrary.PluginId;
 
@@ -609,12 +614,25 @@ namespace EmuLibrary.RomTypes.PCInstaller
         /// <summary>
         /// Attempts to get a cleaner game name from Playnite's metadata providers.
         /// This helps match release names to proper game titles.
+        /// Rate-limited to prevent overwhelming metadata API servers.
         /// </summary>
         private string TryGetMetadataName(string normalizedName, EmulatedPlatform platform)
         {
             if (string.IsNullOrEmpty(normalizedName) || _playniteAPI == null)
             {
                 return null;
+            }
+
+            // Apply rate limiting to avoid overwhelming metadata API servers (e.g., IGDB)
+            lock (_metadataRateLimitLock)
+            {
+                var timeSinceLastCall = DateTime.Now - _lastMetadataCallTime;
+                if (timeSinceLastCall.TotalMilliseconds < METADATA_API_DELAY_MS)
+                {
+                    var delayNeeded = METADATA_API_DELAY_MS - (int)timeSinceLastCall.TotalMilliseconds;
+                    Thread.Sleep(delayNeeded);
+                }
+                _lastMetadataCallTime = DateTime.Now;
             }
 
             try

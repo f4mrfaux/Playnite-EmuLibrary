@@ -93,6 +93,13 @@ namespace EmuLibrary.RomTypes.PCInstaller
                         // Ensure install directory exists
                         if (!Directory.Exists(installDir))
                         {
+                            // Validate path length before attempting creation
+                            if (!PathValidator.ValidateDirectoryPath(installDir, out string pathError))
+                            {
+                                _emuLibrary.Logger.Error($"Install directory path validation failed: {pathError}");
+                                throw new Exception($"Installation directory path is too long. {pathError}. Consider using a shorter game name or base path.");
+                            }
+
                             try
                             {
                                 Directory.CreateDirectory(installDir);
@@ -189,6 +196,13 @@ namespace EmuLibrary.RomTypes.PCInstaller
                             // Ensure install directory exists
                             if (!Directory.Exists(installDir))
                             {
+                                // Validate path length before attempting creation
+                                if (!PathValidator.ValidateDirectoryPath(installDir, out string pathError))
+                                {
+                                    _emuLibrary.Logger.Error($"Install directory path validation failed: {pathError}");
+                                    throw new Exception($"Installation directory path is too long. {pathError}. Consider using a shorter game name or base path.");
+                                }
+
                                 try
                                 {
                                     Directory.CreateDirectory(installDir);

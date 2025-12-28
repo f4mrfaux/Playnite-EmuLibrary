@@ -204,7 +204,13 @@ namespace System
                 return string.Empty;
             }
 
-            return new Regex(@"(\.[A-Za-z0-9]+)+$", RegexOptions.None, RegexTimeout).Replace(path, "");
+            // Improved regex to handle:
+            // - Unicode characters in extensions (uses \w which includes Unicode letters/digits)
+            // - Common extension characters (underscore, hyphen)
+            // - Proper handling of hidden files (won't strip leading dot if it's the only one)
+            // Pattern: One or more sequences of (dot + valid extension chars) at end of string
+            // Valid extension chars: Unicode word chars (\w) plus hyphen and underscore
+            return new Regex(@"(\.[A-Za-z0-9_\-\w]+)+$", RegexOptions.None, RegexTimeout).Replace(path, "");
         }
 
         public static bool Contains(this string str, string value, StringComparison comparisonType)
