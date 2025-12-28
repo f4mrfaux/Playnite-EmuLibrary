@@ -5,10 +5,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 > **IMPORTANT NOTE**: This project is developed on Arch Linux but built and deployed on Windows. Do not attempt to build the project on Linux as it will fail due to Windows-specific dependencies.
 
 ## Project Overview
-ISOlator (formerly EmuLibrary) is a library extension for Playnite, an open source video game library manager, focused on emulator ROM management and PC game installers. It allows users to "install" games from one or more folders of ROMs/Disc images to local storage, and helps manage large collections of emulated games and PC installers.
+GameVault (formerly ISOlator/EmuLibrary) is a library extension for Playnite, an open source video game library manager, focused on emulator ROM management and PC game installers. It allows users to "install" games from one or more folders of ROMs/Disc images to local storage, and helps manage large collections of emulated games and PC installers.
 
 ## Build Commands
-- Build solution: `msbuild ISOlator.sln /p:Configuration=Release`
+- Build solution: `msbuild GameVault.sln /p:Configuration=Release`
 - Pack extension: Execute post-build event - `toolbox\toolbox.exe pack $(TargetDir) $(SolutionDir)`
 - The packing is also automatically executed as a post-build event in the project
 
@@ -32,11 +32,12 @@ ISOlator (formerly EmuLibrary) is a library extension for Playnite, an open sour
   - ExtensionsData\41e49490-0583-4148-94d2-940c7c74f1d9\config.json
 
 ## Extension Information
-- Extension ID: ISOlator_f0a33e7a-1f30-4761-b3ab-0fc73d54a7c3
+- Extension ID: ISOlator_f0a33e7a-1f30-4761-b3ab-0fc73d54a7c3 (kept for compatibility)
+- Extension Name: GameVault
 - Extension Type: GameLibrary
 - Required API Version: 6.4.0
 - Version numbering: Use semantic versioning (major.minor.patch)
-- Icon: The alligator icon in icon.png should be displayed in Playnite's UI
+- Icon: The GameVault database/vault icon in icon.png should be displayed in Playnite's UI
 
 ## Coding Guidelines
 - Use PascalCase for classes, methods, properties, and public members

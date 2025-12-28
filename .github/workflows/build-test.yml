@@ -19,10 +19,10 @@ jobs:
       uses: microsoft/setup-msbuild@v1.1
 
     - name: Restore NuGet packages
-      run: nuget restore ISOlator.sln
+      run: nuget restore GameVault.sln
 
     - name: Build solution
-      run: msbuild ISOlator.sln /p:Configuration=Release /p:Platform="Any CPU" /verbosity:minimal
+      run: msbuild GameVault.sln /p:Configuration=Release /p:Platform="Any CPU" /verbosity:minimal
 
     - name: Check build output
       run: |
@@ -38,7 +38,7 @@ jobs:
     - name: Upload build artifact
       uses: actions/upload-artifact@v4
       with:
-        name: ISOlator-Plugin
+        name: GameVault-Plugin
         path: |
           EmuLibrary/bin/Release/net462/
           !EmuLibrary/bin/Release/net462/*.pdb

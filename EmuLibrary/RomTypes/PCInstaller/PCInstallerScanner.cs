@@ -259,7 +259,12 @@ namespace EmuLibrary.RomTypes.PCInstaller
                         .ThenBy(f => !Path.GetExtension(f.FullName).ToLowerInvariant().Equals(".m3u"))
                         .ThenBy(f => new FileInfo(f.FullName).Length)
                         .First();
-                    
+
+                    if (!primaryIsoFile.FullName.StartsWith(srcPath, StringComparison.OrdinalIgnoreCase))
+                    {
+                        EmuLibrary.Logger.Warn($"Installer path '{primaryIsoFile.FullName}' doesn't start with expected source path '{srcPath}'. Skipping installer.");
+                        continue;
+                    }
                     var relativePath = primaryIsoFile.FullName.Substring(srcPath.Length).TrimStart(Path.DirectorySeparatorChar);
                     
                     var info = new PCInstallerGameInfo()
@@ -352,7 +357,12 @@ namespace EmuLibrary.RomTypes.PCInstaller
                                 _emuLibrary.Logger.Warn($"Game name is empty for {file.FullName}, using file name instead");
                                 gameName = Path.GetFileNameWithoutExtension(file.Name);
                             }
-                            
+
+                            if (!file.FullName.StartsWith(srcPath, StringComparison.OrdinalIgnoreCase))
+                            {
+                                _emuLibrary.Logger.Warn($"Installer path '{file.FullName}' doesn't start with expected source path '{srcPath}'. Skipping installer.");
+                                continue;
+                            }
                             var relativePath = file.FullName.Substring(srcPath.Length).TrimStart(Path.DirectorySeparatorChar);
                             
                             // Try to detect GOG installer by checking filename

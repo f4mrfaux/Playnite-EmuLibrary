@@ -1,0 +1,1 @@
+=== Attempting to build GameVault with Mono xbuild === echo  xbuild /p:Configuration=Release ISOlator.sln

@@ -147,7 +147,15 @@ namespace EmuLibrary
                         try
                         {
                             ELGameInfo currentGameInfo = null;
-                            
+
+                            // Validate GameId is not null before processing
+                            if (string.IsNullOrEmpty(game.GameId))
+                            {
+                                skippedCount++;
+                                Logger.Debug($"Skipping game '{game.Name}' with null or empty GameId.");
+                                continue;
+                            }
+
                             // Handle both ProtoBuf format and legacy pipe-separated format
                             if (game.GameId.StartsWith("!0"))
                             {

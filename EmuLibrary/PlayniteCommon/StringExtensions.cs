@@ -110,7 +110,7 @@ namespace System
             newName = newName.Replace("_", " ");
             newName = newName.Replace(".", " ");
             newName = RemoveTrademarks(newName);
-            newName = newName.Replace(''', '\'');
+            newName = newName.Replace('\u2019', '\''); // Replace fancy apostrophe with standard apostrophe
 
             // Remove brackets and parentheses (often contain metadata, tags, version info, etc.)
             // This is a generic approach that works for any type of metadata in brackets

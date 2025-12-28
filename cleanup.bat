@@ -1,5 +1,5 @@
 @echo off
-echo Cleaning up ISOlator project...
+echo Cleaning up GameVault project...
 
 REM Copy essential files if they don't exist at the root
 if not exist "extension.yaml" (
@@ -29,5 +29,5 @@ if exist "EmuLibrary\EmuLibrary.csproj" del "EmuLibrary\EmuLibrary.csproj"
 
 echo.
 echo Cleanup complete!
-echo Now rebuild the project with ISOlator.sln.
+echo Now rebuild the project with GameVault.sln.
 pause

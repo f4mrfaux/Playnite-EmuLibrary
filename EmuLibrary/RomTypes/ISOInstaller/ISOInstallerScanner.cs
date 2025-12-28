@@ -343,10 +343,22 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                             .ThenBy(f => !Path.GetExtension(f).ToLowerInvariant().Equals(".m3u"))
                             .ThenBy(f => new FileInfo(f).Length)
                             .First();
-                        
+
                         // Get relative path from source directory
+                        if (!primaryIsoFile.StartsWith(srcPath, StringComparison.OrdinalIgnoreCase))
+                        {
+                            EmuLibrary.Logger.Warn($"ISO path '{primaryIsoFile}' doesn't start with expected source path '{srcPath}'. Skipping ISO.");
+                            continue;
+                        }
                         var relativePath = primaryIsoFile.Substring(srcPath.Length).TrimStart(Path.DirectorySeparatorChar);
-                        
+
+                        // Validate all ISO files start with source path
+                        var validIsoFiles = folderIsoFiles.Where(f => f.StartsWith(srcPath, StringComparison.OrdinalIgnoreCase)).ToList();
+                        if (validIsoFiles.Count != folderIsoFiles.Count)
+                        {
+                            EmuLibrary.Logger.Warn($"Some ISO files in folder don't start with expected source path '{srcPath}'. Using only valid files.");
+                        }
+
                         // Create game info
                         var info = new ISOInstallerGameInfo()
                         {
@@ -354,7 +366,7 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                             SourcePath = relativePath,
                             SourceBasePath = srcPath,
                             InstallDirectory = null, // Will be set during installation
-                            ISOFiles = folderIsoFiles.Select(f => f.Substring(srcPath.Length).TrimStart(Path.DirectorySeparatorChar)).ToList()
+                            ISOFiles = validIsoFiles.Select(f => f.Substring(srcPath.Length).TrimStart(Path.DirectorySeparatorChar)).ToList()
                         };
 
                         var metadata = new GameMetadata()

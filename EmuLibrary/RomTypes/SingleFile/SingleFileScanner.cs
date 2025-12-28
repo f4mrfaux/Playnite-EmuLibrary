@@ -66,8 +66,13 @@ namespace EmuLibrary.RomTypes.SingleFile
                             ? EmuLibrary.Settings.GameNameNormalizationPatterns?.ToArray()
                             : null;
                             var gameName = StringExtensions.NormalizeGameName(baseFileName, patterns);
-                            
+
                             // Get the relative path from the destination path
+                            if (!file.FullName.StartsWith(dstPath, StringComparison.OrdinalIgnoreCase))
+                            {
+                                EmuLibrary.Logger.Warn($"File path '{file.FullName}' doesn't start with expected destination path '{dstPath}'. Skipping file.");
+                                continue;
+                            }
                             var relativePath = file.FullName.Substring(dstPath.Length).TrimStart(Path.DirectorySeparatorChar);
                             
                             var info = new SingleFileGameInfo()
@@ -125,6 +130,11 @@ namespace EmuLibrary.RomTypes.SingleFile
                         if (HasMatchingExtension(file, extension) && !s_discXpattern.IsMatch(file.Name))
                         {
                             // Get the relative path from the source path
+                            if (!file.FullName.StartsWith(srcPath, StringComparison.OrdinalIgnoreCase))
+                            {
+                                EmuLibrary.Logger.Warn($"File path '{file.FullName}' doesn't start with expected source path '{srcPath}'. Skipping file.");
+                                continue;
+                            }
                             var relativePath = file.FullName.Substring(srcPath.Length).TrimStart(Path.DirectorySeparatorChar);
                             
                             // Check for equivalent installed file

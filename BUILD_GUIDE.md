@@ -1,6 +1,6 @@
-# ISOlator Build Guide
+# GameVault Build Guide
 
-This document provides instructions for building the ISOlator Playnite extension after the project rename from EmuLibrary to ISOlator.
+This document provides instructions for building the GameVault Playnite extension after the project rename from EmuLibrary to ISOlator to GameVault.
 
 ## Prerequisites
 
@@ -17,7 +17,7 @@ This document provides instructions for building the ISOlator Playnite extension
 
 2. Open the new solution file:
    ```
-   ISOlator.sln
+   GameVault.sln
    ```
 
 3. If you previously had the project open in Visual Studio, you may need to close and reopen Visual Studio for the changes to take effect.
@@ -26,14 +26,14 @@ This document provides instructions for building the ISOlator Playnite extension
 
 ### Using Visual Studio
 
-1. Open `ISOlator.sln` in Visual Studio
+1. Open `GameVault.sln` in Visual Studio
 2. Select the desired configuration (Debug or Release)
 3. Build the solution (F6 or Ctrl+Shift+B)
 
 ### Using Command Line
 
 ```
-msbuild ISOlator.sln /p:Configuration=Release
+msbuild GameVault.sln /p:Configuration=Release
 ```
 
 ## Packaging
@@ -58,6 +58,7 @@ If you encounter any issues with the build process:
 ## Important Notes
 
 - The assembly name and root namespace are still `EmuLibrary` for backward compatibility
-- The project file has been renamed to `ISOlator.csproj`
-- The solution file has been renamed to `ISOlator.sln`
-- The extension name in `extension.yaml` is now "ISOlator"
+- The project file has been renamed to `GameVault.csproj`
+- The solution file has been renamed to `GameVault.sln`
+- The extension name in `extension.yaml` is now "GameVault"
+- The extension ID remains `ISOlator_f0a33e7a-1f30-4761-b3ab-0fc73d54a7c3` for backward compatibility

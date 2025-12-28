@@ -1,12 +1,12 @@
-# ISOlator
+# GameVault
 
-<img src="EmuLibrary/icon.png" alt="ISOlator" width="100" align="right"/>
+<img src="EmuLibrary/icon.png" alt="GameVault" width="100" align="right"/>
 
-ISOlator (formerly EmuLibrary) is a library extension for [Playnite](https://www.playnite.link), an open source video game library manager, originally focused on emulator ROM management and now extended to support PC game installers and disc images (ISO files).
+GameVault (formerly ISOlator/EmuLibrary) is a library extension for [Playnite](https://www.playnite.link), an open source video game library manager, originally focused on emulator ROM management and now extended to support PC game installers and disc images (ISO files).
 
-While Playnite has had built-in support for scanning paths for installed ROMs and adding them to the library since version 9, ISOlator provides alternate functionality.
+While Playnite has had built-in support for scanning paths for installed ROMs and adding them to the library since version 9, GameVault provides alternate functionality.
 
-ISOlator treats one or more folders of ROMs/Disc images or PC game installers as a library from which you can "install" games. It can be useful if you have a large collection of emulated games and PC installers with limited storage where you play them versus where you store them (HTPC vs. NAS, for example). It also is useful for keeping the list of games up to date, and for being able to filter via installed/uninstalled.
+GameVault treats one or more folders of ROMs/Disc images or PC game installers as a library from which you can "install" games. It can be useful if you have a large collection of emulated games and PC installers with limited storage where you play them versus where you store them (HTPC vs. NAS, for example). It also is useful for keeping the list of games up to date, and for being able to filter via installed/uninstalled.
 
 ## Key Features
 
@@ -65,7 +65,7 @@ The ISOInstaller type is designed specifically for handling disc image files (IS
 * Install games from disc images to your local machine
 * Manage games installed from disc images alongside other games
 
-The ISOInstaller is especially useful for games that come packaged as disc images rather than standalone installers, and is one of the defining features of ISOlator. It provides intelligent detection to distinguish between plain disc images and those containing installable content.
+The ISOInstaller is especially useful for games that come packaged as disc images rather than standalone installers, and is one of the defining features of GameVault. It provides intelligent detection to distinguish between plain disc images and those containing installable content.
 
 #### ISOInstaller Features and Capabilities
 
@@ -139,8 +139,8 @@ Here's a step-by-step workflow for managing a collection of disc images (ISOs):
    │   └── Metal Gear Solid 3 (Disc 2).iso
    ```
 
-2. **Configure ISOlator**:
-   - Open Playnite and go to Add-ons → Extensions → ISOlator → Configure
+2. **Configure GameVault**:
+   - Open Playnite and go to Add-ons → Extensions → GameVault → Configure
    - Click "Add Mapping" to create a new mapping
    - Set "Emulator" to your preferred emulator (e.g., PCSX2 for PS2 games)
    - Select an appropriate emulator profile
@@ -168,7 +168,7 @@ Here's a step-by-step workflow for adding a repository of PC game installers usi
 
 1. Launch Playnite and go to the main menu.
 
-2. Open ISOlator settings (Add-ons → Extensions → ISOlator → Configure).
+2. Open GameVault settings (Add-ons → Extensions → GameVault → Configure).
 
 3. In the settings window, click "Add Mapping" to create a new mapping.
 
@@ -196,7 +196,7 @@ Here's a step-by-step workflow for setting up and using the ISOInstaller type:
 
 1. Launch Playnite and go to the main menu.
 
-2. Open ISOlator settings (Add-ons → Extensions → ISOlator → Configure).
+2. Open GameVault settings (Add-ons → Extensions → GameVault → Configure).
 
 3. In the settings window, click "Add Mapping" to create a new mapping.
 

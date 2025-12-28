@@ -1,6 +1,6 @@
 @echo off
 echo ==============================================
-echo ISOlator Build and Pack Tool
+echo GameVault Build and Pack Tool
 echo ==============================================
 echo.
 
@@ -11,7 +11,7 @@ echo [OK] Clean completed
 
 echo.
 echo Step 2: Building solution...
-msbuild ISOlator.sln /p:Configuration=Debug
+msbuild GameVault.sln /p:Configuration=Debug
 if %ERRORLEVEL% NEQ 0 (
   echo [ERROR] Build failed with error code %ERRORLEVEL%
   goto :end

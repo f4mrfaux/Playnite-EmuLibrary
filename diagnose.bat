@@ -1,6 +1,6 @@
 @echo off
 echo ----------------------------------------------
-echo ISOlator Post-Build Diagnostic Tool
+echo GameVault Post-Build Diagnostic Tool
 echo ----------------------------------------------
 echo.
 
@@ -10,11 +10,11 @@ cd
 echo.
 
 echo Checking project structure...
-if exist "EmuLibrary\ISOlator.csproj" echo [OK] ISOlator.csproj found in EmuLibrary folder
-if not exist "EmuLibrary\ISOlator.csproj" echo [ERROR] ISOlator.csproj not found in EmuLibrary folder
+if exist "EmuLibrary\GameVault.csproj" echo [OK] GameVault.csproj found in EmuLibrary folder
+if not exist "EmuLibrary\GameVault.csproj" echo [ERROR] GameVault.csproj not found in EmuLibrary folder
 
-if exist "ISOlator.sln" echo [OK] ISOlator.sln found
-if not exist "ISOlator.sln" echo [ERROR] ISOlator.sln not found
+if exist "GameVault.sln" echo [OK] GameVault.sln found
+if not exist "GameVault.sln" echo [ERROR] GameVault.sln not found
 
 echo.
 echo Checking original project files (for backup)...

@@ -744,11 +744,14 @@ namespace EmuLibrary.RomTypes.PCInstaller
             try
             {
                 _emuLibrary.Logger.Info($"Mounting ISO image: {Path.GetFileName(isoPath)}");
-                
+
+                // Escape single quotes for PowerShell (double them)
+                var escapedIsoPath = isoPath.Replace("'", "''");
+
                 var startInfo = new ProcessStartInfo
                 {
                     FileName = "powershell.exe",
-                    Arguments = $"-Command \"$mountResult = Mount-DiskImage -ImagePath '{isoPath}' -PassThru; $volume = Get-DiskImage -ImagePath '{isoPath}' | Get-Volume; Write-Output $volume.DriveLetter\"",
+                    Arguments = $"-Command \"$mountResult = Mount-DiskImage -ImagePath '{escapedIsoPath}' -PassThru; $volume = Get-DiskImage -ImagePath '{escapedIsoPath}' | Get-Volume; Write-Output $volume.DriveLetter\"",
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                     UseShellExecute = false,

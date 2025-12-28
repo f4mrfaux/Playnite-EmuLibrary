@@ -73,8 +73,18 @@ namespace EmuLibrary.RomTypes.MultiFile
                     {
                         // Add this directory to the processed list to avoid duplicates
                         processedDirs.Add(dirPath);
-                        
+
                         // Calculate relative path from the destination root
+                        if (!dirPath.StartsWith(dstPath, StringComparison.OrdinalIgnoreCase))
+                        {
+                            EmuLibrary.Logger.Warn($"Directory path '{dirPath}' doesn't start with expected destination path '{dstPath}'. Skipping directory.");
+                            continue;
+                        }
+                        if (!rom.FullName.StartsWith(dirPath, StringComparison.OrdinalIgnoreCase))
+                        {
+                            EmuLibrary.Logger.Warn($"ROM path '{rom.FullName}' doesn't start with expected directory path '{dirPath}'. Skipping ROM.");
+                            continue;
+                        }
                         var relativeDirPath = dirPath.Substring(dstPath.Length).TrimStart(Path.DirectorySeparatorChar);
                         var relativeRomPath = rom.FullName.Substring(dirPath.Length).TrimStart(Path.DirectorySeparatorChar);
                         
@@ -150,8 +160,18 @@ namespace EmuLibrary.RomTypes.MultiFile
                     {
                         // Add this directory to the processed list to avoid duplicates
                         processedDirs.Add(dirPath);
-                        
+
                         // Calculate relative paths from source root
+                        if (!dirPath.StartsWith(srcPath, StringComparison.OrdinalIgnoreCase))
+                        {
+                            EmuLibrary.Logger.Warn($"Directory path '{dirPath}' doesn't start with expected source path '{srcPath}'. Skipping directory.");
+                            continue;
+                        }
+                        if (!rom.FullName.StartsWith(dirPath, StringComparison.OrdinalIgnoreCase))
+                        {
+                            EmuLibrary.Logger.Warn($"ROM path '{rom.FullName}' doesn't start with expected directory path '{dirPath}'. Skipping ROM.");
+                            continue;
+                        }
                         var relativeDirPath = dirPath.Substring(srcPath.Length).TrimStart(Path.DirectorySeparatorChar);
                         var relativeRomPath = rom.FullName.Substring(dirPath.Length).TrimStart(Path.DirectorySeparatorChar);
                         
