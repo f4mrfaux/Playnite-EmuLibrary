@@ -21,6 +21,7 @@ namespace EmuLibrary.RomTypes
         public override void Dispose()
         {
             _watcherToken?.Cancel();
+            _watcherToken?.Dispose();
             base.Dispose();
         }
         

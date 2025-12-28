@@ -277,7 +277,7 @@ namespace EmuLibrary.RomTypes.PCInstaller
                     );
                     
                     // Execute the installer
-                    var process = new Process
+                    using (var process = new Process
                     {
                         StartInfo = new ProcessStartInfo
                         {
@@ -285,33 +285,34 @@ namespace EmuLibrary.RomTypes.PCInstaller
                             WorkingDirectory = string.IsNullOrEmpty(extractedContentDir) ? tempDir : Path.GetDirectoryName(tempInstallerPath),
                             UseShellExecute = true
                         }
-                    };
-                    
-                    process.Start();
-                    
-                    // Don't create nested tasks - use await directly
-                    await Task.Run(() => 
+                    })
                     {
-                        while (!process.HasExited)
+                        process.Start();
+
+                        // Don't create nested tasks - use await directly
+                        await Task.Run(() =>
                         {
-                            if (cancellationToken.IsCancellationRequested)
+                            while (!process.HasExited)
                             {
-                                try
+                                if (cancellationToken.IsCancellationRequested)
                                 {
-                                    process.Kill();
-                                    _emuLibrary.Logger.Info($"Installation process for {Game.Name} was cancelled and terminated");
-                                    Game.IsInstalling = false;
-                                    return;
+                                    try
+                                    {
+                                        process.Kill();
+                                        _emuLibrary.Logger.Info($"Installation process for {Game.Name} was cancelled and terminated");
+                                        Game.IsInstalling = false;
+                                        return;
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        _emuLibrary.Logger.Error($"Failed to kill installation process: {ex.Message}");
+                                    }
                                 }
-                                catch (Exception ex)
-                                {
-                                    _emuLibrary.Logger.Error($"Failed to kill installation process: {ex.Message}");
-                                }
+                                Thread.Sleep(500);
                             }
-                            Thread.Sleep(500);
-                        }
-                        process.WaitForExit();
-                    }, cancellationToken);
+                            process.WaitForExit();
+                        }, cancellationToken);
+                    }
                     
                     if (cancellationToken.IsCancellationRequested)
                     {
