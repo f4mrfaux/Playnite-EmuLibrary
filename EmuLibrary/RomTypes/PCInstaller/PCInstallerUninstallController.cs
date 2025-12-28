@@ -101,35 +101,44 @@ namespace EmuLibrary.RomTypes.PCInstaller
                         catch (Exception ex)
                         {
                             _emuLibrary.Logger.Error($"Failed to delete directory {_gameInfo.InstallDirectory}: {ex.Message}");
-                            _emuLibrary.Playnite.Dialogs.ShowErrorMessage(
-                                $"Failed to delete installation directory. You may need to delete it manually: {_gameInfo.InstallDirectory}", 
-                                "Uninstallation Error");
+                            _emuLibrary.Playnite.MainView.UIDispatcher.Invoke(() =>
+                            {
+                                _emuLibrary.Playnite.Dialogs.ShowErrorMessage(
+                                    $"Failed to delete installation directory. You may need to delete it manually: {_gameInfo.InstallDirectory}",
+                                    "Uninstallation Error");
+                            });
                         }
                     }
 
-                    // Update game state and notify Playnite
-                    Game.IsInstalled = false;
-                    Game.IsInstalling = false;
-                    
-                    // Clear installation-specific fields
-                    Game.InstallDirectory = null;
+                    // Clear internal fields on background thread
                     _gameInfo.InstallDirectory = null;
                     _gameInfo.PrimaryExecutable = null;
-                    
-                    // Update play action
-                    var playAction = Game.GameActions?.FirstOrDefault(a => a.IsPlayAction);
-                    if (playAction != null)
+
+                    // Update game state on UI thread
+                    _emuLibrary.Playnite.MainView.UIDispatcher.Invoke(() =>
                     {
-                        playAction.Path = "";
-                        playAction.WorkingDir = null;
-                        playAction.Name = "Install Game";
-                        playAction.Type = GameActionType.URL;
-                    }
-                    
-                    // Update the game in the database
-                    _emuLibrary.Playnite.Database.Games.Update(Game);
-                    _emuLibrary.Logger.Info($"Game {Game.Name} marked as uninstalled");
-                    
+                        using (_emuLibrary.Playnite.Database.BufferedUpdate())
+                        {
+                            Game.IsInstalled = false;
+                            Game.IsInstalling = false;
+                            Game.InstallDirectory = null;
+
+                            // Update play action
+                            var playAction = Game.GameActions?.FirstOrDefault(a => a.IsPlayAction);
+                            if (playAction != null)
+                            {
+                                playAction.Path = "";
+                                playAction.WorkingDir = null;
+                                playAction.Name = "Install Game";
+                                playAction.Type = GameActionType.URL;
+                            }
+
+                            // Update the game in the database
+                            _emuLibrary.Playnite.Database.Games.Update(Game);
+                            _emuLibrary.Logger.Info($"Game {Game.Name} marked as uninstalled");
+                        }
+                    });
+
                     InvokeOnUninstalled(new GameUninstalledEventArgs());
                     
                     _emuLibrary.Logger.Info($"{Game.Name} has been uninstalled");
@@ -137,9 +146,12 @@ namespace EmuLibrary.RomTypes.PCInstaller
                 catch (Exception ex)
                 {
                     _emuLibrary.Logger.Error($"Error during uninstallation of game {Game.Name}: {ex.Message}");
-                    _emuLibrary.Playnite.Dialogs.ShowErrorMessage(
-                        $"An error occurred during uninstallation: {ex.Message}", 
-                        "Uninstallation Error");
+                    _emuLibrary.Playnite.MainView.UIDispatcher.Invoke(() =>
+                    {
+                        _emuLibrary.Playnite.Dialogs.ShowErrorMessage(
+                            $"An error occurred during uninstallation: {ex.Message}",
+                            "Uninstallation Error");
+                    });
                 }
                 finally
                 {

@@ -68,7 +68,10 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                     if (cancellationToken.IsCancellationRequested)
                     {
                         _emuLibrary.Logger.Info($"Installation cancelled for game {Game.Name}");
-                        Game.IsInstalling = false;
+                        _emuLibrary.Playnite.MainView.UIDispatcher.Invoke(() =>
+                        {
+                            Game.IsInstalling = false;
+                        });
                         return;
                     }
 
@@ -103,7 +106,10 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                         if (cancellationToken.IsCancellationRequested)
                         {
                             _emuLibrary.Logger.Info($"Installation cancelled after extraction");
-                            Game.IsInstalling = false;
+                            _emuLibrary.Playnite.MainView.UIDispatcher.Invoke(() =>
+                            {
+                                Game.IsInstalling = false;
+                            });
                             return;
                         }
                         
@@ -229,7 +235,10 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                                                 {
                                                     process.Kill();
                                                     _emuLibrary.Logger.Info($"Installation process for {Game.Name} was cancelled and terminated");
-                                                    Game.IsInstalling = false;
+                                                    _emuLibrary.Playnite.MainView.UIDispatcher.Invoke(() =>
+                                                    {
+                                                        Game.IsInstalling = false;
+                                                    });
                                                     return;
                                                 }
                                                 catch (Exception ex)
@@ -291,7 +300,10 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                 catch (OperationCanceledException)
                 {
                     _emuLibrary.Logger.Info($"Installation cancelled for game {Game.Name}");
-                    Game.IsInstalling = false;
+                    _emuLibrary.Playnite.MainView.UIDispatcher.Invoke(() =>
+                    {
+                        Game.IsInstalling = false;
+                    });
                     _emuLibrary.Playnite.Notifications.Add(
                         Game.GameId,
                         $"Installation of {Game.Name} was cancelled.",
@@ -301,7 +313,10 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                 catch (Exception ex)
                 {
                     _emuLibrary.Logger.Error($"Error during installation of game {Game.Name}: {ex.Message}");
-                    Game.IsInstalling = false;
+                    _emuLibrary.Playnite.MainView.UIDispatcher.Invoke(() =>
+                    {
+                        Game.IsInstalling = false;
+                    });
                     _emuLibrary.Playnite.Notifications.Add(
                         Game.GameId,
                         $"Failed to install {Game.Name}.{Environment.NewLine}{Environment.NewLine}{ex.Message}",
@@ -326,31 +341,32 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                     }
                     
                     // Ensure installation state is cleared
-                    if (Game.IsInstalling)
+                    _emuLibrary.Playnite.MainView.UIDispatcher.Invoke(() =>
                     {
-                        Game.IsInstalling = false;
-                    }
+                        if (Game.IsInstalling)
+                        {
+                            Game.IsInstalling = false;
+                        }
+                    });
                 }
             });
         }
 
         private void UpdateGameInfo()
         {
-            // No need to assign InstallDirectory to itself
-            
-            // Try to find the main executable in the install directory
+            // Find the main executable on background thread (file system operations are safe)
+            string mainExe = null;
             try
             {
                 var exeFiles = Directory.GetFiles(_gameInfo.InstallDirectory, "*.exe", SearchOption.AllDirectories);
                 if (exeFiles.Length > 0)
                 {
                     // Try to find common main executable names
-                    var commonNames = new List<string> 
-                    { 
-                        "game.exe", "launcher.exe", "start.exe", "play.exe", "bin\\game.exe", "bin\\main.exe" 
+                    var commonNames = new List<string>
+                    {
+                        "game.exe", "launcher.exe", "start.exe", "play.exe", "bin\\game.exe", "bin\\main.exe"
                     };
-                    
-                    string mainExe = null;
+
                     foreach (var name in commonNames)
                     {
                         var potentialPath = Path.Combine(_gameInfo.InstallDirectory, name);
@@ -360,7 +376,7 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                             break;
                         }
                     }
-                    
+
                     // If no common name found, use the first exe in the root directory
                     if (mainExe == null)
                     {
@@ -375,7 +391,7 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                             mainExe = exeFiles[0];
                         }
                     }
-                    
+
                     if (mainExe != null)
                     {
                         _gameInfo.PrimaryExecutable = mainExe;
@@ -386,47 +402,49 @@ namespace EmuLibrary.RomTypes.ISOInstaller
             {
                 _emuLibrary.Logger.Error($"Error finding primary executable: {ex.Message}");
             }
-            
-            Game.IsInstalled = true;
-            Game.IsInstalling = false;
-            Game.InstallDirectory = _gameInfo.InstallDirectory;
-            
-            // Update play action if we found a primary executable
-            if (!string.IsNullOrEmpty(_gameInfo.PrimaryExecutable))
+
+            // All Game property mutations must happen on UI thread
+            _emuLibrary.Playnite.MainView.UIDispatcher.Invoke(() =>
             {
-                var playAction = Game.GameActions?.FirstOrDefault(a => a.IsPlayAction);
-                if (playAction != null)
+                using (_emuLibrary.Playnite.Database.BufferedUpdate())
                 {
-                    playAction.Path = _gameInfo.PrimaryExecutable;
-                    playAction.WorkingDir = _gameInfo.InstallDirectory;
-                    playAction.Type = GameActionType.File;
-                }
-                else
-                {
-                    // Create new play action
-                    Game.GameActions = Game.GameActions ?? new ObservableCollection<GameAction>();
-                    Game.GameActions.Add(new GameAction
+                    Game.IsInstalled = true;
+                    Game.IsInstalling = false;
+                    Game.InstallDirectory = _gameInfo.InstallDirectory;
+
+                    // Update play action if we found a primary executable
+                    if (!string.IsNullOrEmpty(_gameInfo.PrimaryExecutable))
                     {
-                        Name = "Play",
-                        Path = _gameInfo.PrimaryExecutable,
-                        WorkingDir = _gameInfo.InstallDirectory,
-                        Type = GameActionType.File,
-                        IsPlayAction = true
-                    });
+                        // Create new game actions collection with the play action
+                        var newGameActions = new ObservableCollection<GameAction>
+                        {
+                            new GameAction
+                            {
+                                Name = "Play",
+                                Path = _gameInfo.PrimaryExecutable,
+                                WorkingDir = _gameInfo.InstallDirectory,
+                                Type = GameActionType.File,
+                                IsPlayAction = true
+                            }
+                        };
+                        Game.GameActions = newGameActions;
+                    }
+
+                    // Update the game in the database
+                    try
+                    {
+                        _emuLibrary.Playnite.Database.Games.Update(Game);
+                        _emuLibrary.Logger.Info($"Game {Game.Name} installed successfully to {_gameInfo.InstallDirectory}");
+                    }
+                    catch (Exception ex)
+                    {
+                        _emuLibrary.Logger.Error($"Error updating game in database: {ex.Message}");
+                    }
                 }
-            }
-            
-            // Update the game in the database
-            try
-            {
-                _emuLibrary.Playnite.Database.Games.Update(Game);
-                _emuLibrary.Logger.Info($"Game {Game.Name} installed successfully to {_gameInfo.InstallDirectory}");
-                InvokeOnInstalled(new GameInstalledEventArgs());
-            }
-            catch (Exception ex)
-            {
-                _emuLibrary.Logger.Error($"Error updating game in database: {ex.Message}");
-            }
+            });
+
+            // Invoke OnInstalled event (safe to call from background thread)
+            InvokeOnInstalled(new GameInstalledEventArgs());
         }
 
         private async Task<string> MountISOImage(string isoPath, InstallActionArgs args)

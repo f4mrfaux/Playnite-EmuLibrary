@@ -54,7 +54,10 @@ namespace EmuLibrary.RomTypes.PCInstaller
                     if (cancellationToken.IsCancellationRequested)
                     {
                         _emuLibrary.Logger.Info($"Installation of {Game.Name} was cancelled during preparation");
-                        Game.IsInstalling = false;
+                        _emuLibrary.Playnite.MainView.UIDispatcher.Invoke(() =>
+                        {
+                            Game.IsInstalling = false;
+                        });
                         return;
                     }
                     
@@ -86,7 +89,10 @@ namespace EmuLibrary.RomTypes.PCInstaller
                                 $"Installation of {Game.Name} was cancelled because no installation directory was selected.",
                                 NotificationType.Error
                             );
-                            Game.IsInstalling = false;
+                            _emuLibrary.Playnite.MainView.UIDispatcher.Invoke(() =>
+                            {
+                                Game.IsInstalling = false;
+                            });
                             return;
                         }
                         
@@ -155,7 +161,10 @@ namespace EmuLibrary.RomTypes.PCInstaller
                         if (cancellationToken.IsCancellationRequested)
                         {
                             _emuLibrary.Logger.Info($"Installation of {Game.Name} was cancelled after extraction");
-                            Game.IsInstalling = false;
+                            _emuLibrary.Playnite.MainView.UIDispatcher.Invoke(() =>
+                            {
+                                Game.IsInstalling = false;
+                            });
                             return;
                         }
                         
@@ -189,7 +198,10 @@ namespace EmuLibrary.RomTypes.PCInstaller
                                     $"Installation of {Game.Name} was cancelled because no installation directory was selected.",
                                     NotificationType.Error
                                 );
-                                Game.IsInstalling = false;
+                                _emuLibrary.Playnite.MainView.UIDispatcher.Invoke(() =>
+                                {
+                                    Game.IsInstalling = false;
+                                });
                                 return;
                             }
                             
@@ -277,7 +289,10 @@ namespace EmuLibrary.RomTypes.PCInstaller
                     if (cancellationToken.IsCancellationRequested)
                     {
                         _emuLibrary.Logger.Info($"Installation of {Game.Name} was cancelled after file preparation");
-                        Game.IsInstalling = false;
+                        _emuLibrary.Playnite.MainView.UIDispatcher.Invoke(() =>
+                        {
+                            Game.IsInstalling = false;
+                        });
                         return;
                     }
                     
@@ -314,7 +329,10 @@ namespace EmuLibrary.RomTypes.PCInstaller
                                     {
                                         process.Kill();
                                         _emuLibrary.Logger.Info($"Installation process for {Game.Name} was cancelled and terminated");
-                                        Game.IsInstalling = false;
+                                        _emuLibrary.Playnite.MainView.UIDispatcher.Invoke(() =>
+                                        {
+                                            Game.IsInstalling = false;
+                                        });
                                         return;
                                     }
                                     catch (Exception ex)
@@ -331,7 +349,10 @@ namespace EmuLibrary.RomTypes.PCInstaller
                     if (cancellationToken.IsCancellationRequested)
                     {
                         _emuLibrary.Logger.Info($"Installation of {Game.Name} was cancelled after installer execution");
-                        Game.IsInstalling = false;
+                        _emuLibrary.Playnite.MainView.UIDispatcher.Invoke(() =>
+                        {
+                            Game.IsInstalling = false;
+                        });
                         return;
                     }
                     
@@ -351,7 +372,10 @@ namespace EmuLibrary.RomTypes.PCInstaller
                             $"Installation of {Game.Name} was cancelled because no installation directory was selected.",
                             NotificationType.Error
                         );
-                        Game.IsInstalling = false;
+                        _emuLibrary.Playnite.MainView.UIDispatcher.Invoke(() =>
+                        {
+                            Game.IsInstalling = false;
+                        });
                         return;
                     }
                     
@@ -469,32 +493,32 @@ namespace EmuLibrary.RomTypes.PCInstaller
                     
                     if (!string.IsNullOrEmpty(primaryExe))
                     {
-                        installationData.Roms = new List<GameRom> 
-                        { 
-                            new GameRom(Game.Name, primaryExe) 
-                        };
-                        
-                        // Use buffered update for game actions to reduce UI events
-                        using (_emuLibrary.Playnite.Database.BufferedUpdate())
+                        installationData.Roms = new List<GameRom>
                         {
-                            // Add game actions that will be applied to the game
-                            if (Game.GameActions == null)
-                            {
-                                Game.GameActions = new ObservableCollection<GameAction>();
-                            }
-                            else
-                            {
-                                Game.GameActions.Clear();
-                            }
-                            
-                            Game.GameActions.Add(new GameAction()
+                            new GameRom(Game.Name, primaryExe)
+                        };
+
+                        // Create new collection on background thread
+                        var newGameActions = new ObservableCollection<GameAction>
+                        {
+                            new GameAction()
                             {
                                 Name = "Play",
-                                Type = GameActionType.File, 
+                                Type = GameActionType.File,
                                 Path = primaryExe,
                                 IsPlayAction = true
-                            });
-                        }
+                            }
+                        };
+
+                        // Assign atomically on UI thread with buffered update
+                        _emuLibrary.Playnite.MainView.UIDispatcher.Invoke(() =>
+                        {
+                            using (_emuLibrary.Playnite.Database.BufferedUpdate())
+                            {
+                                Game.GameActions = newGameActions;
+                                _emuLibrary.Playnite.Database.Games.Update(Game);
+                            }
+                        });
                     }
                     
                     // Update progress to 100%
@@ -511,7 +535,10 @@ namespace EmuLibrary.RomTypes.PCInstaller
                         $"Installation of {Game.Name} was cancelled.",
                         NotificationType.Info
                     );
-                    Game.IsInstalling = false;
+                    _emuLibrary.Playnite.MainView.UIDispatcher.Invoke(() =>
+                    {
+                        Game.IsInstalling = false;
+                    });
                 }
                 catch (Exception ex)
                 {
@@ -522,7 +549,10 @@ namespace EmuLibrary.RomTypes.PCInstaller
                         $"Failed to install {Game.Name}.{Environment.NewLine}{Environment.NewLine}{ex.Message}",
                         NotificationType.Error
                     );
-                    Game.IsInstalling = false;
+                    _emuLibrary.Playnite.MainView.UIDispatcher.Invoke(() =>
+                    {
+                        Game.IsInstalling = false;
+                    });
                     throw; // Rethrow without wrapping to preserve stack trace
                 }
                 finally
@@ -708,27 +738,28 @@ namespace EmuLibrary.RomTypes.PCInstaller
                         {
                             info.PrimaryExecutable = mainExe;
                             _emuLibrary.Logger.Info($"Found primary executable: {mainExe}");
-                            
-                            // Update game actions
-                            using (_emuLibrary.Playnite.Database.BufferedUpdate())
+
+                            // Create new collection on background thread
+                            var newGameActions = new ObservableCollection<GameAction>
                             {
-                                if (Game.GameActions == null)
-                                {
-                                    Game.GameActions = new ObservableCollection<GameAction>();
-                                }
-                                else
-                                {
-                                    Game.GameActions.Clear();
-                                }
-                                
-                                Game.GameActions.Add(new GameAction()
+                                new GameAction()
                                 {
                                     Name = "Play",
                                     Type = GameActionType.File,
                                     Path = mainExe,
                                     IsPlayAction = true
-                                });
-                            }
+                                }
+                            };
+
+                            // Assign atomically on UI thread with buffered update
+                            _emuLibrary.Playnite.MainView.UIDispatcher.Invoke(() =>
+                            {
+                                using (_emuLibrary.Playnite.Database.BufferedUpdate())
+                                {
+                                    Game.GameActions = newGameActions;
+                                    _emuLibrary.Playnite.Database.Games.Update(Game);
+                                }
+                            });
                         }
                     }
                 }
