@@ -43,7 +43,9 @@ namespace EmuLibrary.Settings
         {
             var mapping = ((FrameworkElement)sender).DataContext as EmulatorMapping;
             string path;
-            if ((path = GetSelectedFolderPath()) != null)
+            // Use current source path as initial directory if it exists, otherwise use Documents
+            var initialDir = GetInitialDirectory(mapping.SourcePath);
+            if ((path = GetSelectedFolderPath(initialDir)) != null)
             {
                 mapping.SourcePath = path;
             }
@@ -53,7 +55,9 @@ namespace EmuLibrary.Settings
         {
             var mapping = ((FrameworkElement)sender).DataContext as EmulatorMapping;
             string path;
-            if ((path = GetSelectedFolderPath()) != null)
+            // Use current destination path as initial directory if it exists, otherwise use Documents
+            var initialDir = GetInitialDirectory(mapping.DestinationPathResolved);
+            if ((path = GetSelectedFolderPath(initialDir)) != null)
             {
                 var playnite = Settings.Instance.PlayniteAPI;
                 if (playnite.Paths.IsPortable)
@@ -65,8 +69,31 @@ namespace EmuLibrary.Settings
             }
         }
 
-        private static string GetSelectedFolderPath()
+        /// <summary>
+        /// Gets an appropriate initial directory for folder selection dialogs
+        /// </summary>
+        /// <param name="currentPath">Current path value, if any</param>
+        /// <returns>Initial directory to use in SelectFolder dialog</returns>
+        private static string GetInitialDirectory(string currentPath)
         {
+            // If current path exists and is valid, use it
+            if (!string.IsNullOrEmpty(currentPath) && System.IO.Directory.Exists(currentPath))
+            {
+                return currentPath;
+            }
+
+            // Fall back to Documents folder
+            return Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+        }
+
+        private static string GetSelectedFolderPath(string initialDirectory = null)
+        {
+            // Use the new SDK 6.13+ overload with initial directory if provided
+            if (!string.IsNullOrEmpty(initialDirectory))
+            {
+                return Settings.Instance.PlayniteAPI.Dialogs.SelectFolder(initialDirectory);
+            }
+
             return Settings.Instance.PlayniteAPI.Dialogs.SelectFolder();
         }
 

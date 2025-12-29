@@ -233,18 +233,30 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                                             {
                                                 try
                                                 {
-                                                    process.Kill();
+                                                    // Check again before killing to avoid race condition
+                                                    if (!process.HasExited)
+                                                    {
+                                                        process.Kill();
+                                                        process.WaitForExit(5000); // Wait up to 5 seconds for termination
+                                                    }
                                                     _emuLibrary.Logger.Info($"Installation process for {Game.Name} was cancelled and terminated");
                                                     _emuLibrary.Playnite.MainView.UIDispatcher.Invoke(() =>
                                                     {
                                                         Game.IsInstalling = false;
                                                     });
-                                                    return;
+                                                }
+                                                catch (InvalidOperationException)
+                                                {
+                                                    // Process already exited - this is fine
+                                                    _emuLibrary.Logger.Info($"Installation process for {Game.Name} already exited during cancellation");
                                                 }
                                                 catch (Exception ex)
                                                 {
-                                                    _emuLibrary.Logger.Error($"Failed to kill installation process: {ex.Message}");
+                                                    _emuLibrary.Logger.Error($"Unexpected error killing installation process: {ex.Message}");
                                                 }
+
+                                                // Throw to ensure proper cleanup in outer handlers
+                                                throw new OperationCanceledException();
                                             }
                                             await Task.Delay(500, cancellationToken);
                                         }
@@ -252,18 +264,8 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                                     }
                                     catch (OperationCanceledException)
                                     {
-                                        // Process was cancelled, try to kill it
-                                        try
-                                        {
-                                            if (!process.HasExited)
-                                            {
-                                                process.Kill();
-                                            }
-                                        }
-                                        catch (Exception ex)
-                                        {
-                                            _emuLibrary.Logger.Warn($"Error killing process after cancellation: {ex.Message}");
-                                        }
+                                        // Process was cancelled - cleanup already handled above
+                                        _emuLibrary.Logger.Debug($"Installation cancellation cleanup for {Game.Name}");
                                         throw; // Re-throw to be caught by outer handler
                                     }
                                     
@@ -452,12 +454,15 @@ namespace EmuLibrary.RomTypes.ISOInstaller
             try
             {
                 _emuLibrary.Logger.Info($"Mounting ISO image: {Path.GetFileName(isoPath)}");
-                
+
+                // Escape single quotes in path to prevent PowerShell injection
+                var escapedIsoPath = isoPath.Replace("'", "''");
+
                 // Use PowerShell to mount the ISO since it's built into Windows
                 var startInfo = new ProcessStartInfo
                 {
                     FileName = "powershell.exe",
-                    Arguments = $"-Command \"$mountResult = Mount-DiskImage -ImagePath '{isoPath}' -PassThru; $volume = Get-DiskImage -ImagePath '{isoPath}' | Get-Volume; Write-Output $volume.DriveLetter\"",
+                    Arguments = $"-Command \"$mountResult = Mount-DiskImage -ImagePath '{escapedIsoPath}' -PassThru; $volume = Get-DiskImage -ImagePath '{escapedIsoPath}' | Get-Volume; Write-Output $volume.DriveLetter\"",
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                     UseShellExecute = false,

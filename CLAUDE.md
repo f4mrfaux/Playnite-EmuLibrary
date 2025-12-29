@@ -13,7 +13,7 @@ GameVault (formerly ISOlator/EmuLibrary) is a library extension for Playnite, an
 - The packing is also automatically executed as a post-build event in the project
 
 ## Development Environment
-- Required SDK: Playnite SDK 6.4.0 (included in toolbox directory)
+- Required SDK: Playnite SDK 6.14.0 (December 2025 update)
 - Target Framework: .NET Framework 4.6.2
 - Dependencies:
   - ini-parser 2.5.2
@@ -35,7 +35,7 @@ GameVault (formerly ISOlator/EmuLibrary) is a library extension for Playnite, an
 - Extension ID: ISOlator_f0a33e7a-1f30-4761-b3ab-0fc73d54a7c3 (kept for compatibility)
 - Extension Name: GameVault
 - Extension Type: GameLibrary
-- Required API Version: 6.4.0
+- SDK Version: 6.14.0 (updated December 29, 2025)
 - Version numbering: Use semantic versioning (major.minor.patch)
 - Icon: The GameVault database/vault icon in icon.png should be displayed in Playnite's UI
 

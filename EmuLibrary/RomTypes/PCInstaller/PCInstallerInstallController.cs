@@ -80,7 +80,9 @@ namespace EmuLibrary.RomTypes.PCInstaller
                         string installDir = null;
                         _emuLibrary.Playnite.MainView.UIDispatcher.Invoke(() =>
                         {
-                            installDir = _emuLibrary.Playnite.Dialogs.SelectFolder();
+                            // Use sensible default: Documents\Games or fallback to Program Files
+                            var defaultPath = GetDefaultInstallDirectory();
+                            installDir = _emuLibrary.Playnite.Dialogs.SelectFolder(defaultPath);
                         });
                         
                         if (string.IsNullOrEmpty(installDir))
@@ -189,7 +191,9 @@ namespace EmuLibrary.RomTypes.PCInstaller
                             string installDir = null;
                             _emuLibrary.Playnite.MainView.UIDispatcher.Invoke(() =>
                             {
-                                installDir = _emuLibrary.Playnite.Dialogs.SelectFolder();
+                                // Use sensible default: Documents\Games or fallback to Program Files
+                                var defaultPath = GetDefaultInstallDirectory();
+                                installDir = _emuLibrary.Playnite.Dialogs.SelectFolder(defaultPath);
                             });
                             
                             if (string.IsNullOrEmpty(installDir))
@@ -328,18 +332,30 @@ namespace EmuLibrary.RomTypes.PCInstaller
                                 {
                                     try
                                     {
-                                        process.Kill();
+                                        // Check again before killing to avoid race condition
+                                        if (!process.HasExited)
+                                        {
+                                            process.Kill();
+                                            process.WaitForExit(5000); // Wait up to 5 seconds for termination
+                                        }
                                         _emuLibrary.Logger.Info($"Installation process for {Game.Name} was cancelled and terminated");
                                         _emuLibrary.Playnite.MainView.UIDispatcher.Invoke(() =>
                                         {
                                             Game.IsInstalling = false;
                                         });
-                                        return;
+                                    }
+                                    catch (InvalidOperationException)
+                                    {
+                                        // Process already exited - this is fine
+                                        _emuLibrary.Logger.Info($"Installation process for {Game.Name} already exited during cancellation");
                                     }
                                     catch (Exception ex)
                                     {
-                                        _emuLibrary.Logger.Error($"Failed to kill installation process: {ex.Message}");
+                                        _emuLibrary.Logger.Error($"Unexpected error killing installation process: {ex.Message}");
                                     }
+
+                                    // Throw to ensure proper cleanup in outer handlers
+                                    throw new OperationCanceledException();
                                 }
                                 Thread.Sleep(500);
                             }
@@ -359,11 +375,13 @@ namespace EmuLibrary.RomTypes.PCInstaller
                     
                     // Ask user to provide the installation directory
                     UpdateProgress("Selecting installation directory...", 70);
-                    
+
                     string installDir = null;
                     _emuLibrary.Playnite.MainView.UIDispatcher.Invoke(() =>
                     {
-                        installDir = _emuLibrary.Playnite.Dialogs.SelectFolder();
+                        // Start in Program Files since installer likely installed there
+                        var defaultPath = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+                        installDir = _emuLibrary.Playnite.Dialogs.SelectFolder(defaultPath);
                     });
                     
                     if (string.IsNullOrEmpty(installDir))
@@ -499,24 +517,21 @@ namespace EmuLibrary.RomTypes.PCInstaller
                             new GameRom(Game.Name, primaryExe)
                         };
 
-                        // Create new collection on background thread
-                        var newGameActions = new ObservableCollection<GameAction>
+                        // Create action object on background thread (safe - just data)
+                        var playAction = new GameAction()
                         {
-                            new GameAction()
-                            {
-                                Name = "Play",
-                                Type = GameActionType.File,
-                                Path = primaryExe,
-                                IsPlayAction = true
-                            }
+                            Name = "Play",
+                            Type = GameActionType.File,
+                            Path = primaryExe,
+                            IsPlayAction = true
                         };
 
-                        // Assign atomically on UI thread with buffered update
+                        // Create observable collection and assign on UI thread
                         _emuLibrary.Playnite.MainView.UIDispatcher.Invoke(() =>
                         {
                             using (_emuLibrary.Playnite.Database.BufferedUpdate())
                             {
-                                Game.GameActions = newGameActions;
+                                Game.GameActions = new ObservableCollection<GameAction> { playAction };
                                 _emuLibrary.Playnite.Database.Games.Update(Game);
                             }
                         });
@@ -559,6 +574,8 @@ namespace EmuLibrary.RomTypes.PCInstaller
                 finally
                 {
                     // Ensure temp directory is cleaned up even on exception
+                    // Note: We only clean up our own temp directory, not orphaned ones.
+                    // The OS will handle cleanup of old temp directories during system maintenance.
                     if (!string.IsNullOrEmpty(tempDir) && Directory.Exists(tempDir))
                     {
                         try
@@ -571,36 +588,6 @@ namespace EmuLibrary.RomTypes.PCInstaller
                             _emuLibrary.Logger.Warn($"Failed to clean up temp directory {tempDir}: {ex.Message}");
                         }
                     }
-
-                    // Also clean up any orphaned temp directories older than 1 hour
-                    try
-                    {
-                        var baseTempDir = Path.Combine(Path.GetTempPath(), "Playnite_PCInstaller");
-                        if (Directory.Exists(baseTempDir))
-                        {
-                            var dirs = Directory.GetDirectories(baseTempDir);
-                            foreach (var dir in dirs)
-                            {
-                                try
-                                {
-                                    var dirInfo = new DirectoryInfo(dir);
-                                    if (DateTime.Now - dirInfo.LastWriteTime > TimeSpan.FromHours(1))
-                                    {
-                                        Directory.Delete(dir, true);
-                                        _emuLibrary.Logger.Debug($"Cleaned up orphaned temp directory: {dir}");
-                                    }
-                                }
-                                catch (Exception ex)
-                                {
-                                    _emuLibrary.Logger.Debug($"Failed to clean up orphaned temp directory {dir}: {ex.Message}");
-                                }
-                            }
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        _emuLibrary.Logger.Debug($"Failed to clean up orphaned temp directories: {ex.Message}");
-                    }
                 }
             });
         }
@@ -608,6 +595,26 @@ namespace EmuLibrary.RomTypes.PCInstaller
         private void UpdateProgress(string status, int progressPercentage)
         {
             _emuLibrary.Logger.Debug($"Install progress for {Game.Name}: {status} ({progressPercentage}%)");
+        }
+
+        /// <summary>
+        /// Gets a sensible default directory for game installations
+        /// </summary>
+        private string GetDefaultInstallDirectory()
+        {
+            // Try Documents\Games first (user-friendly location)
+            var documentsGames = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+                "Games"
+            );
+
+            if (Directory.Exists(documentsGames))
+            {
+                return documentsGames;
+            }
+
+            // Fall back to Program Files
+            return Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
         }
         
         /// <summary>
@@ -753,24 +760,21 @@ namespace EmuLibrary.RomTypes.PCInstaller
                             info.PrimaryExecutable = mainExe;
                             _emuLibrary.Logger.Info($"Found primary executable: {mainExe}");
 
-                            // Create new collection on background thread
-                            var newGameActions = new ObservableCollection<GameAction>
+                            // Create action object on background thread (safe - just data)
+                            var playAction = new GameAction()
                             {
-                                new GameAction()
-                                {
-                                    Name = "Play",
-                                    Type = GameActionType.File,
-                                    Path = mainExe,
-                                    IsPlayAction = true
-                                }
+                                Name = "Play",
+                                Type = GameActionType.File,
+                                Path = mainExe,
+                                IsPlayAction = true
                             };
 
-                            // Assign atomically on UI thread with buffered update
+                            // Create observable collection and assign on UI thread
                             _emuLibrary.Playnite.MainView.UIDispatcher.Invoke(() =>
                             {
                                 using (_emuLibrary.Playnite.Database.BufferedUpdate())
                                 {
-                                    Game.GameActions = newGameActions;
+                                    Game.GameActions = new ObservableCollection<GameAction> { playAction };
                                     _emuLibrary.Playnite.Database.Games.Update(Game);
                                 }
                             });
