@@ -1,4 +1,5 @@
-﻿using Playnite.SDK;
+﻿using System;
+using Playnite.SDK;
 using Playnite.SDK.Models;
 using Playnite.SDK.Plugins;
 using ProtoBuf;
@@ -50,10 +51,9 @@ namespace EmuLibrary.RomTypes.PCInstaller
             {
                 MappingId = MappingId,
                 SourcePath = SourcePath,
-                InstallerFullPath = InstallerFullPath,
+                // InstallerFullPath excluded - absolute NAS path that changes with remapping
                 StoreGameId = StoreGameId,
                 InstallerType = InstallerType,
-                // Explicitly exclude InstallDirectory and PrimaryExecutable
                 InstallDirectory = null,
                 PrimaryExecutable = null
             };

@@ -8,6 +8,7 @@ using Playnite.SDK.Data;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Abstractions;
 using System.Linq;
 using System.Threading;
 
@@ -16,13 +17,11 @@ namespace EmuLibrary.RomTypes.PCInstaller
     internal class PCInstallerScanner : RomTypeScanner
     {
         private readonly IPlayniteAPI _playniteAPI;
-        private readonly IEmuLibrary _emuLibrary;
-        private const int BATCH_SIZE = 100; // Process games in batches for better performance
 
         // Rate limiting for metadata API calls
         private static DateTime _lastMetadataCallTime = DateTime.MinValue;
         private static readonly object _metadataRateLimitLock = new object();
-        private const int METADATA_API_DELAY_MS = 200; // Minimum 200ms between metadata API calls
+        private const int METADATA_API_DELAY_MS = 200;
 
         public override RomType RomType => RomType.PCInstaller;
         public override Guid LegacyPluginId => EmuLibrary.PluginId;
@@ -30,7 +29,6 @@ namespace EmuLibrary.RomTypes.PCInstaller
         public PCInstallerScanner(IEmuLibrary emuLibrary) : base(emuLibrary)
         {
             _playniteAPI = emuLibrary.Playnite;
-            _emuLibrary = emuLibrary;
         }
 
         public override IEnumerable<GameMetadata> GetGames(EmulatorMapping mapping, LibraryGetGamesArgs args)
@@ -78,87 +76,14 @@ namespace EmuLibrary.RomTypes.PCInstaller
                 fileEnumerator = new SafeFileEnumerator(srcPath, "*.*", SearchOption.AllDirectories);
                 _emuLibrary.Logger.Info($"Scanning for PC installers in {srcPath}");
 
-                // Create a dictionary to cache normalized folder names for performance
                 var normalizedNameCache = new Dictionary<string, string>();
-                
-                // CRITICAL: Detect directories that are likely extracted game content
-                // These should be skipped to avoid duplicate entries
-                HashSet<string> extractedContentFolders = new HashSet<string>();
-                var extractedContentPatterns = new List<string> {
-                    "setup.exe", "install.exe", "launcher.exe", "game.exe", "bin", "data", "INSTALL", "DATA", "redist"
-                };
-                
-                // Pre-scan to identify extracted content folders
-                try
-                {
-                    var directories = Directory.GetDirectories(srcPath, "*", SearchOption.AllDirectories);
-                    foreach (var dir in directories)
-                    {
-                        if (args.CancelToken.IsCancellationRequested)
-                            yield break;
-                            
-                        try
-                        {
-                            // Count files and folders in this directory
-                            int fileCount = Directory.GetFiles(dir, "*.*", SearchOption.TopDirectoryOnly).Length;
-                            int folderCount = Directory.GetDirectories(dir, "*", SearchOption.TopDirectoryOnly).Length;
-                            
-                            // If too many files or folders, likely an extracted game
-                            if (fileCount > 15 || folderCount > 5)
-                            {
-                                extractedContentFolders.Add(dir);
-                                _emuLibrary.Logger.Debug($"Detected potential extracted content: {dir} (files: {fileCount}, folders: {folderCount})");
-                                continue;
-                            }
-                            
-                            // Check for common extracted content patterns
-                            bool hasExtractedContentPattern = false;
-                            var dirFiles = Directory.GetFiles(dir, "*.*", SearchOption.TopDirectoryOnly)
-                                .Select(f => Path.GetFileName(f).ToLowerInvariant())
-                                .ToList();
-                                
-                            foreach (var pattern in extractedContentPatterns)
-                            {
-                                if (dirFiles.Any(f => f.Contains(pattern.ToLowerInvariant())))
-                                {
-                                    hasExtractedContentPattern = true;
-                                    _emuLibrary.Logger.Debug($"Detected extracted content pattern in {dir}: {pattern}");
-                                    break;
-                                }
-                            }
-                            
-                            if (hasExtractedContentPattern)
-                            {
-                                extractedContentFolders.Add(dir);
-                            }
-                            
-                            // Check for system folder names
-                            var folderName = Path.GetFileName(dir).ToLowerInvariant();
-                            if (folderName == "system" || folderName == "windows" || folderName == "program files" || 
-                                folderName == "users" || folderName == "games" || folderName == "desktop" || 
-                                folderName == "documents" || folderName == "downloads")
-                            {
-                                extractedContentFolders.Add(dir);
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            _emuLibrary.Logger.Error($"Error checking directory {dir}: {ex.Message}");
-                        }
-                    }
-                    
-                    _emuLibrary.Logger.Info($"Pre-scan found {extractedContentFolders.Count} potential extracted content folders");
-                }
-                catch (Exception ex)
-                {
-                    _emuLibrary.Logger.Error($"Error during pre-scan: {ex.Message}");
-                }
-                
+                var extractedContentCache = new Dictionary<string, bool>();
+
                 // Group files by folder for multi-disc support (especially for ISO files)
                 var filesByFolder = new Dictionary<string, List<FileSystemInfoBase>>();
                 var isoFilesByFolder = new Dictionary<string, List<FileSystemInfoBase>>();
-                
-                // First pass: collect all files and group by folder
+
+                // Single NAS traversal: collect all files and group by folder
                 foreach (var file in fileEnumerator)
                 {
                     if (args.CancelToken.IsCancellationRequested)
@@ -167,11 +92,10 @@ namespace EmuLibrary.RomTypes.PCInstaller
                         yield break;
                     }
 
-                    // Skip if file is in an extracted content folder
+                    // Lazy check: only inspect folder contents when we encounter a matching file
                     var parentFolderPath = Path.GetDirectoryName(file.FullName);
-                    if (parentFolderPath != null && extractedContentFolders.Contains(parentFolderPath))
+                    if (parentFolderPath != null && IsExtractedContentFolder(parentFolderPath, extractedContentCache))
                     {
-                        _emuLibrary.Logger.Debug($"Skipping file in extracted content folder: {file.FullName}");
                         continue;
                     }
 
@@ -223,8 +147,8 @@ namespace EmuLibrary.RomTypes.PCInstaller
                     string gameName;
                     if (!normalizedNameCache.TryGetValue(folderName, out gameName))
                     {
-                        var patterns = EmuLibrary.Settings.EnableGameNameNormalization
-                            ? EmuLibrary.Settings.GameNameNormalizationPatterns?.ToArray()
+                        var patterns = _emuLibrary.Settings.EnableGameNameNormalization
+                            ? _emuLibrary.Settings.GameNameNormalizationPatterns?.ToArray()
                             : null;
                         gameName = StringExtensions.NormalizeGameName(folderName, patterns);
                         
@@ -252,8 +176,8 @@ namespace EmuLibrary.RomTypes.PCInstaller
                     if (string.IsNullOrEmpty(gameName))
                     {
                         gameName = Path.GetFileNameWithoutExtension(folderIsoFiles[0].Name);
-                        var patterns = EmuLibrary.Settings.EnableGameNameNormalization
-                            ? EmuLibrary.Settings.GameNameNormalizationPatterns?.ToArray()
+                        var patterns = _emuLibrary.Settings.EnableGameNameNormalization
+                            ? _emuLibrary.Settings.GameNameNormalizationPatterns?.ToArray()
                             : null;
                         gameName = StringExtensions.NormalizeGameName(gameName, patterns);
                     }
@@ -267,7 +191,7 @@ namespace EmuLibrary.RomTypes.PCInstaller
 
                     if (!primaryIsoFile.FullName.StartsWith(srcPath, StringComparison.OrdinalIgnoreCase))
                     {
-                        EmuLibrary.Logger.Warn($"Installer path '{primaryIsoFile.FullName}' doesn't start with expected source path '{srcPath}'. Skipping installer.");
+                        _emuLibrary.Logger.Warn($"Installer path '{primaryIsoFile.FullName}' doesn't start with expected source path '{srcPath}'. Skipping installer.");
                         continue;
                     }
                     var relativePath = primaryIsoFile.FullName.Substring(srcPath.Length).TrimStart(Path.DirectorySeparatorChar);
@@ -331,8 +255,8 @@ namespace EmuLibrary.RomTypes.PCInstaller
                             string gameName;
                             if (!normalizedNameCache.TryGetValue(folderName, out gameName))
                             {
-                                var patterns = EmuLibrary.Settings.EnableGameNameNormalization
-                                    ? EmuLibrary.Settings.GameNameNormalizationPatterns?.ToArray()
+                                var patterns = _emuLibrary.Settings.EnableGameNameNormalization
+                                    ? _emuLibrary.Settings.GameNameNormalizationPatterns?.ToArray()
                                     : null;
                                 gameName = StringExtensions.NormalizeGameName(folderName, patterns);
                                 
@@ -623,14 +547,13 @@ namespace EmuLibrary.RomTypes.PCInstaller
                 return null;
             }
 
-            // Apply rate limiting to avoid overwhelming metadata API servers (e.g., IGDB)
+            // Non-blocking rate limiting: skip lookup if called too recently rather than blocking the scanner
             lock (_metadataRateLimitLock)
             {
                 var timeSinceLastCall = DateTime.Now - _lastMetadataCallTime;
                 if (timeSinceLastCall.TotalMilliseconds < METADATA_API_DELAY_MS)
                 {
-                    var delayNeeded = METADATA_API_DELAY_MS - (int)timeSinceLastCall.TotalMilliseconds;
-                    Thread.Sleep(delayNeeded);
+                    return null;
                 }
                 _lastMetadataCallTime = DateTime.Now;
             }
@@ -641,7 +564,7 @@ namespace EmuLibrary.RomTypes.PCInstaller
                 var tempGame = new Game
                 {
                     Name = normalizedName,
-                    PlatformId = platform?.Id
+                    PlatformIds = new List<Guid>()
                 };
 
                 // Try to get metadata from available providers
@@ -662,21 +585,13 @@ namespace EmuLibrary.RomTypes.PCInstaller
                     try
                     {
                         var metadataProvider = provider.GetMetadataProvider(
-                            new Playnite.SDK.Plugins.MetadataRequestOptions
-                            {
-                                IsBackgroundDownload = true,
-                                GameData = tempGame
-                            });
+                            new Playnite.SDK.Plugins.MetadataRequestOptions(tempGame, true));
 
                         if (metadataProvider != null)
                         {
                             // Try to get just the name field (lightweight operation)
                             var nameField = metadataProvider.GetName(
-                                new Playnite.SDK.Plugins.GetMetadataFieldArgs
-                                {
-                                    GameData = tempGame,
-                                    CancelToken = CancellationToken.None
-                                });
+                                new Playnite.SDK.Plugins.GetMetadataFieldArgs());
 
                             if (!string.IsNullOrEmpty(nameField) && 
                                 nameField.Length > 2 &&
@@ -707,47 +622,39 @@ namespace EmuLibrary.RomTypes.PCInstaller
         public override IEnumerable<Game> GetUninstalledGamesMissingSourceFiles(CancellationToken ct)
         {
             _emuLibrary.Logger.Info("Checking for PC installer games with missing source files");
-            
+
             try
             {
-                // Use BufferedUpdate for better performance
-                using (_playniteAPI.Database.BufferedUpdate())
-                {
-                    // First filter by plugin ID and installation status to reduce the collection size
-                    var filteredGames = _playniteAPI.Database.Games
-                        .Where(g => g.PluginId == EmuLibrary.PluginId && !g.IsInstalled)
-                        .ToList();
-                    
-                    return filteredGames
-                        .Where(g =>
+                return _playniteAPI.Database.Games
+                    .Where(g => g.PluginId == EmuLibrary.PluginId && !g.IsInstalled)
+                    .Where(g =>
+                    {
+                        if (ct.IsCancellationRequested)
+                            return false;
+
+                        try
                         {
-                            // Check cancellation at each iteration
-                            if (ct.IsCancellationRequested)
+                            var info = g.GetELGameInfo();
+                            if (info.RomType != RomType.PCInstaller)
                                 return false;
 
-                            try
+                            var pcInfo = info as PCInstallerGameInfo;
+                            var sourceExists = File.Exists(pcInfo.SourceFullPath);
+
+                            if (!sourceExists)
                             {
-                                var info = g.GetELGameInfo();
-                                if (info.RomType != RomType.PCInstaller)
-                                    return false;
-
-                                var pcInfo = info as PCInstallerGameInfo;
-                                var sourceExists = File.Exists(pcInfo.SourceFullPath);
-
-                                if (!sourceExists)
-                                {
-                                    _emuLibrary.Logger.Info($"Source file missing for game {g.Name}: {pcInfo.SourceFullPath}");
-                                }
-
-                                return !sourceExists;
+                                _emuLibrary.Logger.Info($"Source file missing for game {g.Name}: {pcInfo.SourceFullPath}");
                             }
-                            catch (Exception ex)
-                            {
-                                _emuLibrary.Logger.Error($"Error checking source file for game {g.Name}: {ex.Message}");
-                                return false;
-                            }
-                        });
-                }
+
+                            return !sourceExists;
+                        }
+                        catch (Exception ex)
+                        {
+                            _emuLibrary.Logger.Error($"Error checking source file for game {g.Name}: {ex.Message}");
+                            return false;
+                        }
+                    })
+                    .ToList();
             }
             catch (Exception ex)
             {

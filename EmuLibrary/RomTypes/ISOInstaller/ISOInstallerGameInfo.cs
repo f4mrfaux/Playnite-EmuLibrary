@@ -49,10 +49,27 @@ namespace EmuLibrary.RomTypes.ISOInstaller
         public string PrimaryExecutable { get; set; }
 
         /// <summary>
+        /// Gets the base path from Mapping (preferred) or SourceBasePath (backward compat fallback).
+        /// </summary>
+        private string GetBasePath()
+        {
+            return Mapping?.SourcePath ?? SourceBasePath ?? "";
+        }
+
+        /// <summary>
         /// The full path to the ISO installer
         /// </summary>
         [DontSerialize]
-        public string InstallerFullPath => Path.Combine(SourceBasePath, SourcePath);
+        public string InstallerFullPath
+        {
+            get
+            {
+                var basePath = GetBasePath();
+                if (string.IsNullOrEmpty(basePath) || string.IsNullOrEmpty(SourcePath))
+                    return null;
+                return Path.Combine(basePath, SourcePath);
+            }
+        }
 
         /// <summary>
         /// List of all ISO files for this game
@@ -71,9 +88,8 @@ namespace EmuLibrary.RomTypes.ISOInstaller
             {
                 MappingId = MappingId,
                 SourcePath = SourcePath,
-                SourceBasePath = SourceBasePath,
+                // SourceBasePath excluded - absolute NAS path that changes with remapping
                 ISOFiles = ISOFiles,
-                // Explicitly exclude installation-state fields
                 InstallDirectory = null,
                 PrimaryExecutable = null,
                 WorkingDirectory = null
@@ -90,31 +106,32 @@ namespace EmuLibrary.RomTypes.ISOInstaller
         /// Gets the full path to the source ISO file
         /// </summary>
         [DontSerialize]
-        public string SourceFullPath 
-        { 
-            get 
+        public string SourceFullPath
+        {
+            get
             {
-                if (string.IsNullOrEmpty(SourcePath) || string.IsNullOrEmpty(SourceBasePath))
+                var basePath = GetBasePath();
+                if (string.IsNullOrEmpty(SourcePath) || string.IsNullOrEmpty(basePath))
                     return null;
-                    
+
                 try
                 {
                     // Primary source path
-                    var fullPath = Path.Combine(SourceBasePath, SourcePath);
+                    var fullPath = Path.Combine(basePath, SourcePath);
                     if (File.Exists(fullPath))
                         return fullPath;
-                        
+
                     // If the primary source doesn't exist, check all ISO files
                     if (ISOFiles != null && ISOFiles.Count > 0)
                     {
                         foreach (var isoPath in ISOFiles)
                         {
-                            var isoFullPath = Path.Combine(SourceBasePath, isoPath);
+                            var isoFullPath = Path.Combine(basePath, isoPath);
                             if (File.Exists(isoFullPath))
                                 return isoFullPath;
                         }
                     }
-                    
+
                     // If none of the explicit paths exist, try to find any ISO in the source directory
                     var directory = Path.GetDirectoryName(fullPath);
                     if (Directory.Exists(directory))
@@ -123,17 +140,16 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                         var files = Directory.GetFiles(directory, "*.*", SearchOption.TopDirectoryOnly)
                             .Where(f => extensions.Contains(Path.GetExtension(f).ToLowerInvariant()))
                             .ToList();
-                            
+
                         if (files.Count > 0)
                             return files.First();
                     }
                 }
                 catch (Exception ex)
                 {
-                    // Just return null on any error - typically means the path wasn't found
                     LogManager.GetLogger().Error(ex, "Error getting source full path");
                 }
-                
+
                 return null;
             }
         }

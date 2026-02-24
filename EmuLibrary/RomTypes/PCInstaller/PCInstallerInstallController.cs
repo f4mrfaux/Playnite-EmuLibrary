@@ -43,6 +43,8 @@ namespace EmuLibrary.RomTypes.PCInstaller
             {
                 // Track installation state for logging
                 string tempDir = null;
+                string installDir = null;
+                GameInstallationData installationData = null;
 
                 try
                 {
@@ -77,7 +79,7 @@ namespace EmuLibrary.RomTypes.PCInstaller
                         
                         // Ask user for installation directory
                         UpdateProgress("Selecting installation directory...", 20);
-                        string installDir = null;
+                        installDir = null;
                         _emuLibrary.Playnite.MainView.UIDispatcher.Invoke(() =>
                         {
                             // Use sensible default: Documents\Games or fallback to Program Files
@@ -128,14 +130,14 @@ namespace EmuLibrary.RomTypes.PCInstaller
                         
                         // Finalize installation
                         UpdateProgress("Installation complete", 100);
-                        var installationData = new GameInstallationData
+                        installationData = new GameInstallationData
                         {
                             InstallDirectory = installDir
                         };
                         InvokeOnInstalled(new GameInstalledEventArgs(installationData));
                         return;
                     }
-                    
+
                     string tempInstallerPath = null;
                     string extractedContentDir = null;
                     
@@ -188,7 +190,7 @@ namespace EmuLibrary.RomTypes.PCInstaller
                             
                             // Ask user for installation directory
                             UpdateProgress("Selecting installation directory...", 30);
-                            string installDir = null;
+                            installDir = null;
                             _emuLibrary.Playnite.MainView.UIDispatcher.Invoke(() =>
                             {
                                 // Use sensible default: Documents\Games or fallback to Program Files
@@ -252,7 +254,7 @@ namespace EmuLibrary.RomTypes.PCInstaller
                             
                             // Finalize installation
                             UpdateProgress("Installation complete", 100);
-                            var installationData = new GameInstallationData
+                            installationData = new GameInstallationData
                             {
                                 InstallDirectory = installDir
                             };
@@ -376,7 +378,7 @@ namespace EmuLibrary.RomTypes.PCInstaller
                     // Ask user to provide the installation directory
                     UpdateProgress("Selecting installation directory...", 70);
 
-                    string installDir = null;
+                    installDir = null;
                     _emuLibrary.Playnite.MainView.UIDispatcher.Invoke(() =>
                     {
                         // Start in Program Files since installer likely installed there
@@ -497,9 +499,9 @@ namespace EmuLibrary.RomTypes.PCInstaller
                     
                     // Create GameInstallationData
                     UpdateProgress("Finalizing installation...", 95);
-                    
+
                     // Preserve store info in installation data
-                    var installationData = new GameInstallationData
+                    installationData = new GameInstallationData
                     {
                         InstallDirectory = installDir
                     };
@@ -569,7 +571,6 @@ namespace EmuLibrary.RomTypes.PCInstaller
                     {
                         Game.IsInstalling = false;
                     });
-                    throw; // Rethrow without wrapping to preserve stack trace
                 }
                 finally
                 {

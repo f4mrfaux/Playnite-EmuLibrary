@@ -17,8 +17,6 @@ namespace EmuLibrary.RomTypes.ISOInstaller
     internal class ISOInstallerScanner : RomTypeScanner
     {
         private readonly IPlayniteAPI _playniteAPI;
-        private readonly IEmuLibrary _emuLibrary;
-        private const int BATCH_SIZE = 100; // Process games in batches for better performance
 
         public override RomType RomType => RomType.ISOInstaller;
         public override Guid LegacyPluginId => EmuLibrary.PluginId;
@@ -26,7 +24,6 @@ namespace EmuLibrary.RomTypes.ISOInstaller
         public ISOInstallerScanner(IEmuLibrary emuLibrary) : base(emuLibrary)
         {
             _playniteAPI = emuLibrary.Playnite;
-            _emuLibrary = emuLibrary;
         }
 
         public override IEnumerable<GameMetadata> GetGames(EmulatorMapping mapping, LibraryGetGamesArgs args)
@@ -60,11 +57,8 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                 yield break;
             }
 
-            // Define supported disc image extensions (both lowercase and uppercase for case insensitivity)
-            // Also support archive files that may contain ISO files
-            var discExtensions = new List<string> { 
-                "iso", "ISO",
-                "zip", "rar", "7z", "7zip" // Archive formats that may contain ISO files
+            var discExtensions = new List<string> {
+                "iso", "zip", "rar", "7z", "7zip"
             };
             
             SafeFileEnumerator fileEnumerator;
@@ -77,95 +71,12 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                 fileEnumerator = new SafeFileEnumerator(srcPath, "*.*", SearchOption.AllDirectories);
                 _emuLibrary.Logger.Info($"Scanning for disc images in {srcPath}");
 
-                // Create a dictionary to cache normalized folder names for performance
                 var normalizedNameCache = new Dictionary<string, string>();
+                var extractedContentCache = new Dictionary<string, bool>();
 
-                // Do a direct file search diagnostic to verify file presence
-                try {
-                    var directSearch = Directory.GetFiles(srcPath, "*.*", SearchOption.AllDirectories)
-                        .Where(f => discExtensions.Contains(Path.GetExtension(f).TrimStart('.').ToLowerInvariant()))
-                        .ToList();
-                    
-                    _emuLibrary.Logger.Info($"Direct search found {directSearch.Count} disc image files in {srcPath}");
-                    
-                    if (directSearch.Count > 0) {
-                        _emuLibrary.Logger.Info($"Examples: {string.Join(", ", directSearch.Take(5).Select(Path.GetFileName))}");
-                    }
-                }
-                catch (Exception ex) {
-                    _emuLibrary.Logger.Error($"Error in direct file search: {ex.Message}");
-                }
-
-                // CRITICAL FIX: First detect directories that are likely extracted game content
-                // These should be handled by PCInstaller instead of ISOInstaller
-                Dictionary<string, List<string>> folderContents = new Dictionary<string, List<string>>();
-                HashSet<string> extractedContentFolders = new HashSet<string>();
-                
-                // List of common file patterns found in extracted disc image content
-                var extractedContentPatterns = new List<string> {
-                    "setup.exe", "install.exe", "launcher.exe", "game.exe", "bin", "data", "INSTALL", "DATA", "redist"
-                };
-
-                // Pre-scan to identify extracted content folders (more likely to contain PC installers)
-                try
-                {
-                    var directories = Directory.GetDirectories(srcPath, "*", SearchOption.AllDirectories);
-                    foreach (var dir in directories)
-                    {
-                        if (args.CancelToken.IsCancellationRequested)
-                            yield break;
-                            
-                        try
-                        {
-                            // Count files and folders in this directory
-                            int fileCount = Directory.GetFiles(dir, "*.*", SearchOption.TopDirectoryOnly).Length;
-                            int folderCount = Directory.GetDirectories(dir, "*", SearchOption.TopDirectoryOnly).Length;
-                            
-                            // If too many files or folders, likely an extracted game
-                            if (fileCount > 15 || folderCount > 5)
-                            {
-                                extractedContentFolders.Add(dir);
-                                _emuLibrary.Logger.Debug($"Detected potential extracted content: {dir} (files: {fileCount}, folders: {folderCount})");
-                                continue;
-                            }
-                            
-                            // Check for common extracted content patterns
-                            bool hasExtractedContentPattern = false;
-                            var dirFiles = Directory.GetFiles(dir, "*.*", SearchOption.TopDirectoryOnly)
-                                .Select(f => Path.GetFileName(f).ToLowerInvariant())
-                                .ToList();
-                                
-                            foreach (var pattern in extractedContentPatterns)
-                            {
-                                if (dirFiles.Any(f => f.Contains(pattern.ToLowerInvariant())))
-                                {
-                                    hasExtractedContentPattern = true;
-                                    _emuLibrary.Logger.Debug($"Detected extracted content pattern in {dir}: {pattern}");
-                                    break;
-                                }
-                            }
-                            
-                            if (hasExtractedContentPattern)
-                            {
-                                extractedContentFolders.Add(dir);
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            _emuLibrary.Logger.Error($"Error checking directory {dir}: {ex.Message}");
-                        }
-                    }
-                    
-                    _emuLibrary.Logger.Info($"Pre-scan found {extractedContentFolders.Count} potential extracted content folders out of {directories.Length} total directories");
-                }
-                catch (Exception ex)
-                {
-                    _emuLibrary.Logger.Error($"Error during pre-scan: {ex.Message}");
-                }
-
-                // Collect all ISO files first
+                // Collect all matching files in a single NAS traversal
                 var isoFiles = new List<string>();
-                
+
                 foreach (var file in fileEnumerator)
                 {
                     if (args.CancelToken.IsCancellationRequested)
@@ -174,24 +85,20 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                         yield break;
                     }
 
-                    // Check the file extension directly instead of iterating through each extension
                     string fileExtension = file.Extension?.TrimStart('.')?.ToLowerInvariant();
-                    
-                    _emuLibrary.Logger.Debug($"Checking if file {file.Name} has extension '{fileExtension}'");
-                    
-                    // Check if this file has a supported extension
-                    if (!string.IsNullOrEmpty(fileExtension) && discExtensions.Contains(fileExtension.ToLowerInvariant()))
+
+                    if (!string.IsNullOrEmpty(fileExtension) && discExtensions.Contains(fileExtension))
                     {
                         try
                         {
-                            // Skip if this file is in an extracted content folder
+                            // Lazy check: only inspect folder contents when we encounter a matching file
                             var parentDir = Path.GetDirectoryName(file.FullName);
-                            if (extractedContentFolders.Contains(parentDir))
+                            if (IsExtractedContentFolder(parentDir, extractedContentCache))
                             {
                                 _emuLibrary.Logger.Debug($"Skipping disc image in extracted content folder: {file.FullName}");
                                 continue;
                             }
-                            
+
                             isoFiles.Add(file.FullName);
                         }
                         catch (Exception ex)
@@ -243,41 +150,6 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                         yield break;
                     }
                     
-                    // Before processing, check if this folder has characteristics of an extracted game
-                    bool skipAsExtractedContent = false;
-                    try
-                    {
-                        // Count files and folders in this directory
-                        int fileCount = Directory.GetFiles(folder, "*.*", SearchOption.TopDirectoryOnly).Length;
-                        int folderCount = Directory.GetDirectories(folder, "*", SearchOption.TopDirectoryOnly).Length;
-                        
-                        // If too many files or folders, likely an extracted game
-                        if (fileCount > 15 || folderCount > 5)
-                        {
-                            _emuLibrary.Logger.Debug($"Skipping folder with too many files/folders: {folder} (files: {fileCount}, folders: {folderCount})");
-                            skipAsExtractedContent = true;
-                        }
-                        
-                        // Check for common system files that indicate this is an extracted game
-                        var folderName = Path.GetFileName(folder).ToLowerInvariant();
-                        if (folderName == "system" || folderName == "windows" || folderName == "program files" || 
-                            folderName == "users" || folderName == "games" || folderName == "desktop" || 
-                            folderName == "documents" || folderName == "downloads")
-                        {
-                            _emuLibrary.Logger.Debug($"Skipping system folder: {folder}");
-                            skipAsExtractedContent = true;
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        _emuLibrary.Logger.Error($"Error checking folder characteristics for {folder}: {ex.Message}");
-                    }
-                    
-                    if (skipAsExtractedContent)
-                    {
-                        continue;
-                    }
-
                     try
                     {
                         // Get all ISO files in this folder
@@ -291,8 +163,8 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                         if (!normalizedNameCache.TryGetValue(folderName, out gameName))
                         {
                             // First normalize the name to remove release groups, versions, etc.
-                            var patterns = EmuLibrary.Settings.EnableGameNameNormalization
-                                ? EmuLibrary.Settings.GameNameNormalizationPatterns?.ToArray()
+                            var patterns = _emuLibrary.Settings.EnableGameNameNormalization
+                                ? _emuLibrary.Settings.GameNameNormalizationPatterns?.ToArray()
                                 : null;
                             gameName = StringExtensions.NormalizeGameName(folderName, patterns);
                             
@@ -347,7 +219,7 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                         // Get relative path from source directory
                         if (!primaryIsoFile.StartsWith(srcPath, StringComparison.OrdinalIgnoreCase))
                         {
-                            EmuLibrary.Logger.Warn($"ISO path '{primaryIsoFile}' doesn't start with expected source path '{srcPath}'. Skipping ISO.");
+                            _emuLibrary.Logger.Warn($"ISO path '{primaryIsoFile}' doesn't start with expected source path '{srcPath}'. Skipping ISO.");
                             continue;
                         }
                         var relativePath = primaryIsoFile.Substring(srcPath.Length).TrimStart(Path.DirectorySeparatorChar);
@@ -356,7 +228,7 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                         var validIsoFiles = folderIsoFiles.Where(f => f.StartsWith(srcPath, StringComparison.OrdinalIgnoreCase)).ToList();
                         if (validIsoFiles.Count != folderIsoFiles.Count)
                         {
-                            EmuLibrary.Logger.Warn($"Some ISO files in folder don't start with expected source path '{srcPath}'. Using only valid files.");
+                            _emuLibrary.Logger.Warn($"Some ISO files in folder don't start with expected source path '{srcPath}'. Using only valid files.");
                         }
 
                         // Create game info
@@ -549,7 +421,7 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                 var tempGame = new Game
                 {
                     Name = normalizedName,
-                    PlatformId = platform?.Id
+                    PlatformIds = new List<Guid>()
                 };
 
                 // Try to get metadata from available providers
@@ -569,21 +441,13 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                     try
                     {
                         var metadataProvider = provider.GetMetadataProvider(
-                            new Playnite.SDK.Plugins.MetadataRequestOptions
-                            {
-                                IsBackgroundDownload = true,
-                                GameData = tempGame
-                            });
+                            new Playnite.SDK.Plugins.MetadataRequestOptions(tempGame, true));
 
                         if (metadataProvider != null)
                         {
                             // Try to get just the name field (lightweight operation)
                             var nameField = metadataProvider.GetName(
-                                new Playnite.SDK.Plugins.GetMetadataFieldArgs
-                                {
-                                    GameData = tempGame,
-                                    CancelToken = CancellationToken.None
-                                });
+                                new Playnite.SDK.Plugins.GetMetadataFieldArgs());
 
                             if (!string.IsNullOrEmpty(nameField) && 
                                 nameField.Length > 2 &&
@@ -614,47 +478,39 @@ namespace EmuLibrary.RomTypes.ISOInstaller
         public override IEnumerable<Game> GetUninstalledGamesMissingSourceFiles(CancellationToken ct)
         {
             _emuLibrary.Logger.Info("Checking for ISO installer games with missing source files");
-            
+
             try
             {
-                // Use BufferedUpdate for better performance
-                using (_playniteAPI.Database.BufferedUpdate())
-                {
-                    // First filter by plugin ID and installation status to reduce the collection size
-                    var filteredGames = _playniteAPI.Database.Games
-                        .Where(g => g.PluginId == EmuLibrary.PluginId && !g.IsInstalled)
-                        .ToList();
-                    
-                    return filteredGames
-                        .Where(g =>
+                return _playniteAPI.Database.Games
+                    .Where(g => g.PluginId == EmuLibrary.PluginId && !g.IsInstalled)
+                    .Where(g =>
+                    {
+                        if (ct.IsCancellationRequested)
+                            return false;
+
+                        try
                         {
-                            // Check cancellation at each iteration
-                            if (ct.IsCancellationRequested)
+                            var info = g.GetELGameInfo();
+                            if (info.RomType != RomType.ISOInstaller)
                                 return false;
 
-                            try
+                            var isoInfo = info as ISOInstallerGameInfo;
+                            var sourceExists = File.Exists(isoInfo.SourceFullPath);
+
+                            if (!sourceExists)
                             {
-                                var info = g.GetELGameInfo();
-                                if (info.RomType != RomType.ISOInstaller)
-                                    return false;
-
-                                var isoInfo = info as ISOInstallerGameInfo;
-                                var sourceExists = File.Exists(isoInfo.SourceFullPath);
-
-                                if (!sourceExists)
-                                {
-                                    _emuLibrary.Logger.Info($"Source file missing for game {g.Name}: {isoInfo.SourceFullPath}");
-                                }
-
-                                return !sourceExists;
+                                _emuLibrary.Logger.Info($"Source file missing for game {g.Name}: {isoInfo.SourceFullPath}");
                             }
-                            catch (Exception ex)
-                            {
-                                _emuLibrary.Logger.Error($"Error checking source file for game {g.Name}: {ex.Message}");
-                                return false;
-                            }
-                        });
-                }
+
+                            return !sourceExists;
+                        }
+                        catch (Exception ex)
+                        {
+                            _emuLibrary.Logger.Error($"Error checking source file for game {g.Name}: {ex.Message}");
+                            return false;
+                        }
+                    })
+                    .ToList();
             }
             catch (Exception ex)
             {
