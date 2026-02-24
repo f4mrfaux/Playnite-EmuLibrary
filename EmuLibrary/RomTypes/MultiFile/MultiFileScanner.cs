@@ -77,20 +77,20 @@ namespace EmuLibrary.RomTypes.MultiFile
                         // Calculate relative path from the destination root
                         if (!dirPath.StartsWith(dstPath, StringComparison.OrdinalIgnoreCase))
                         {
-                            EmuLibrary.Logger.Warn($"Directory path '{dirPath}' doesn't start with expected destination path '{dstPath}'. Skipping directory.");
+                            _emuLibrary.Logger.Warn($"Directory path '{dirPath}' doesn't start with expected destination path '{dstPath}'. Skipping directory.");
                             continue;
                         }
                         if (!rom.FullName.StartsWith(dirPath, StringComparison.OrdinalIgnoreCase))
                         {
-                            EmuLibrary.Logger.Warn($"ROM path '{rom.FullName}' doesn't start with expected directory path '{dirPath}'. Skipping ROM.");
+                            _emuLibrary.Logger.Warn($"ROM path '{rom.FullName}' doesn't start with expected directory path '{dirPath}'. Skipping ROM.");
                             continue;
                         }
                         var relativeDirPath = dirPath.Substring(dstPath.Length).TrimStart(Path.DirectorySeparatorChar);
                         var relativeRomPath = rom.FullName.Substring(dirPath.Length).TrimStart(Path.DirectorySeparatorChar);
                         
                         var baseFileName = StringExtensions.GetPathWithoutAllExtensions(Path.GetFileName(file.Name));
-                        var patterns = EmuLibrary.Settings.EnableGameNameNormalization
-                        ? EmuLibrary.Settings.GameNameNormalizationPatterns?.ToArray()
+                        var patterns = _emuLibrary.Settings.EnableGameNameNormalization
+                        ? _emuLibrary.Settings.GameNameNormalizationPatterns?.ToArray()
                         : null;
                         var gameName = StringExtensions.NormalizeGameName(baseFileName, patterns);
                         var info = new MultiFileGameInfo()
@@ -164,12 +164,12 @@ namespace EmuLibrary.RomTypes.MultiFile
                         // Calculate relative paths from source root
                         if (!dirPath.StartsWith(srcPath, StringComparison.OrdinalIgnoreCase))
                         {
-                            EmuLibrary.Logger.Warn($"Directory path '{dirPath}' doesn't start with expected source path '{srcPath}'. Skipping directory.");
+                            _emuLibrary.Logger.Warn($"Directory path '{dirPath}' doesn't start with expected source path '{srcPath}'. Skipping directory.");
                             continue;
                         }
                         if (!rom.FullName.StartsWith(dirPath, StringComparison.OrdinalIgnoreCase))
                         {
-                            EmuLibrary.Logger.Warn($"ROM path '{rom.FullName}' doesn't start with expected directory path '{dirPath}'. Skipping ROM.");
+                            _emuLibrary.Logger.Warn($"ROM path '{rom.FullName}' doesn't start with expected directory path '{dirPath}'. Skipping ROM.");
                             continue;
                         }
                         var relativeDirPath = dirPath.Substring(srcPath.Length).TrimStart(Path.DirectorySeparatorChar);
@@ -195,8 +195,8 @@ namespace EmuLibrary.RomTypes.MultiFile
                         };
 
                         var baseFileName = StringExtensions.GetPathWithoutAllExtensions(Path.GetFileName(file.Name));
-                        var patterns = EmuLibrary.Settings.EnableGameNameNormalization
-                        ? EmuLibrary.Settings.GameNameNormalizationPatterns?.ToArray()
+                        var patterns = _emuLibrary.Settings.EnableGameNameNormalization
+                        ? _emuLibrary.Settings.GameNameNormalizationPatterns?.ToArray()
                         : null;
                         var gameName = StringExtensions.NormalizeGameName(baseFileName, patterns);
 

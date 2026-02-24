@@ -119,7 +119,7 @@ When a game is installed, the latest update and any DLC from the source will als
 #### Known Issues
 
 * If the connection to the source folder's storage is unstable, Playnite may crash when when updating the library. This is unlikely to be able to be completely fixed until Playnite uses a newer .NET version (currently being targeted for Playnite 11). Some some mitigations are planned in the meantime, but are not yet implemented.
-* If the mapping is disabled or if ISOlator update is cancelled before the scan for the mapping completes, game installation for the mapping's games may result in an error message. This will be fixed in a later version of this addon.
+* If the mapping is disabled or if GameVault library update is cancelled before the scan for the mapping completes, game installation for the mapping's games may result in an error message. This will be fixed in a later version of this addon.
 
 ## Usage Workflows
 

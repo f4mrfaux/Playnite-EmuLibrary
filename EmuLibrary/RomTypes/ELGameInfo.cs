@@ -26,7 +26,7 @@ namespace EmuLibrary.RomTypes
             }
         }
 
-        public string AsGameId()
+        public virtual string AsGameId()
         {
             using (var ms = new MemoryStream())
             {

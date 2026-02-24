@@ -53,23 +53,23 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                     throw new ArgumentException("Game ID does not match ISO Installer format", nameof(game));
                 }
 
-                var gameInfo = new ISOInstallerGameInfo();
+                var legacyGameInfo = new ISOInstallerGameInfo();
                 if (Guid.TryParse(parts[1], out Guid mappingId))
                 {
-                    gameInfo.MappingId = mappingId;
-                }
-                
-                if (parts.Length > 2)
-                {
-                    gameInfo.SourcePath = parts[2] == string.Empty ? null : parts[2];
-                }
-                
-                if (parts.Length > 3)
-                {
-                    gameInfo.InstallDirectory = parts[3] == string.Empty ? null : parts[3];
+                    legacyGameInfo.MappingId = mappingId;
                 }
 
-                return gameInfo;
+                if (parts.Length > 2)
+                {
+                    legacyGameInfo.SourcePath = parts[2] == string.Empty ? null : parts[2];
+                }
+
+                if (parts.Length > 3)
+                {
+                    legacyGameInfo.InstallDirectory = parts[3] == string.Empty ? null : parts[3];
+                }
+
+                return legacyGameInfo;
             }
             catch (Exception ex)
             {

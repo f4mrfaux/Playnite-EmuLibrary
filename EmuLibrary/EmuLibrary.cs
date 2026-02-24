@@ -243,18 +243,18 @@ namespace EmuLibrary
                                             playAction.Path = oldPrimaryExecutable;
                                             playAction.WorkingDir = oldInstallDirectory;
                                             playAction.Name = "Play";
-                                            playAction.Type = Playnite.SDK.Models.GameActionType.File;
+                                            playAction.Type = GameActionType.File;
                                         }
                                         else
                                         {
                                             // Create new play action if none exists
-                                            game.GameActions = game.GameActions ?? new System.Collections.ObjectModel.ObservableCollection<Playnite.SDK.Models.GameAction>();
-                                            game.GameActions.Add(new Playnite.SDK.Models.GameAction
+                                            game.GameActions = game.GameActions ?? new System.Collections.ObjectModel.ObservableCollection<GameAction>();
+                                            game.GameActions.Add(new GameAction
                                             {
                                                 Path = oldPrimaryExecutable,
                                                 WorkingDir = oldInstallDirectory,
                                                 Name = "Play",
-                                                Type = Playnite.SDK.Models.GameActionType.File,
+                                                Type = GameActionType.File,
                                                 IsPlayAction = true
                                             });
                                         }

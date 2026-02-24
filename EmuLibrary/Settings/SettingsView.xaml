@@ -30,20 +30,20 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}" 
+                        <Border Background="{TemplateBinding Background}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
                                 CornerRadius="2">
-                            <TextBlock Text="✕" 
-                                      FontSize="14" 
-                                      Foreground="{DynamicResource {x:Static SystemColors.ControlTextBrushKey}}"
+                            <TextBlock Text="✕"
+                                      FontSize="14"
+                                      Foreground="{DynamicResource WarningBrush}"
                                       HorizontalAlignment="Center"
-                                      VerticalAlignment="Center">
+                                      VerticalAlignment="Center"
+                                      Opacity="0.8">
                                 <TextBlock.Style>
                                     <Style TargetType="TextBlock">
-                                        <Setter Property="Foreground" Value="#D32F2F"/>
                                         <Style.Triggers>
                                             <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=IsMouseOver}" Value="True">
-                                                <Setter Property="Foreground" Value="#B71C1C"/>
+                                                <Setter Property="Opacity" Value="1.0"/>
                                             </DataTrigger>
                                         </Style.Triggers>
                                     </Style>
@@ -55,7 +55,7 @@
             </Setter>
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="{DynamicResource {x:Static SystemColors.ControlLightBrushKey}}"/>
+                    <Setter Property="Background" Value="{DynamicResource HoverBrush}"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
@@ -63,19 +63,43 @@
         <!-- Style for help text -->
         <Style x:Key="HelpTextStyle" TargetType="TextBlock">
             <Setter Property="FontSize" Value="11"/>
-            <Setter Property="Foreground" Value="{DynamicResource {x:Static SystemColors.GrayTextBrushKey}}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextBrushDark}"/>
             <Setter Property="TextWrapping" Value="Wrap"/>
             <Setter Property="Margin" Value="4,4,0,0"/>
             <Setter Property="LineHeight" Value="16"/>
         </Style>
-        
+
         <!-- Style for section description -->
         <Style x:Key="SectionDescriptionStyle" TargetType="TextBlock">
             <Setter Property="FontSize" Value="12"/>
-            <Setter Property="Foreground" Value="{DynamicResource {x:Static SystemColors.GrayTextBrushKey}}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextBrushDarker}"/>
             <Setter Property="TextWrapping" Value="Wrap"/>
             <Setter Property="Margin" Value="0,0,0,12"/>
             <Setter Property="LineHeight" Value="18"/>
+        </Style>
+
+        <!-- Style for DataGrid column headers -->
+        <Style x:Key="DataGridHeaderStyle" TargetType="DataGridColumnHeader">
+            <Setter Property="Background" Value="{DynamicResource PanelBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource NormalBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="0,0,1,1"/>
+            <Setter Property="Padding" Value="8,6"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+
+        <!-- Style for DataGrid cells -->
+        <Style x:Key="DataGridCellStyle" TargetType="DataGridCell">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource NormalBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="0,0,1,0"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+            <Style.Triggers>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource HoverBrush}"/>
+                    <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+                </Trigger>
+            </Style.Triggers>
         </Style>
     </UserControl.Resources>
     
@@ -88,9 +112,8 @@
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="Emulator Path Mappings" FontWeight="SemiBold" FontSize="14"/>
                         <TextBlock Margin="8,0,0,0">
-                            <Hyperlink NavigateUri="https://github.com/psychonic/Playnite-EmuLibrary/blob/master/README.md#setup" 
-                                      RequestNavigate="Hyperlink_RequestNavigate"
-                                      Foreground="{DynamicResource {x:Static SystemColors.HotTrackBrushKey}}">
+                            <Hyperlink NavigateUri="https://github.com/psychonic/Playnite-EmuLibrary/blob/master/README.md#setup"
+                                      RequestNavigate="Hyperlink_RequestNavigate">
                                 <Run Text="Help"/>
                                 <Run Text="🔗" FontSize="10"/>
                             </Hyperlink>
@@ -108,20 +131,22 @@
                         <Run Text=" are required." FontWeight="Bold"/>
                     </TextBlock>
                 
-                <DataGrid ItemsSource="{Binding Mappings}" 
-                         AutoGenerateColumns="False" 
-                         CellEditEnding="DataGrid_CellEditEnding" 
-                         CurrentCellChanged="DataGrid_CurrentCellChanged" 
-                         SelectionUnit="Cell" 
+                <DataGrid ItemsSource="{Binding Mappings}"
+                         AutoGenerateColumns="False"
+                         CellEditEnding="DataGrid_CellEditEnding"
+                         CurrentCellChanged="DataGrid_CurrentCellChanged"
+                         SelectionUnit="Cell"
                          CanUserAddRows="True"
                          CanUserDeleteRows="False"
                          HeadersVisibility="Column"
                          GridLinesVisibility="Horizontal"
-                         AlternatingRowBackground="{DynamicResource {x:Static SystemColors.ControlLightBrushKey}}"
-                         RowBackground="{DynamicResource {x:Static SystemColors.WindowBrushKey}}"
-                         Background="{DynamicResource {x:Static SystemColors.WindowBrushKey}}"
+                         RowBackground="{DynamicResource ControlBackgroundBrush}"
+                         Background="{DynamicResource ControlBackgroundBrush}"
                          BorderThickness="1"
-                         BorderBrush="{DynamicResource {x:Static SystemColors.ControlDarkBrushKey}}"
+                         BorderBrush="{DynamicResource NormalBorderBrush}"
+                         Foreground="{DynamicResource TextBrush}"
+                         ColumnHeaderStyle="{StaticResource DataGridHeaderStyle}"
+                         CellStyle="{StaticResource DataGridCellStyle}"
                          Margin="0,8,0,0">
                     <DataGrid.Columns>
                         <DataGridTemplateColumn Width="50" CanUserResize="False">
@@ -150,7 +175,7 @@
                                 </TextBlock>
                             </DataGridTemplateColumn.Header>
                             <DataGridTemplateColumn.HeaderStyle>
-                                <Style TargetType="DataGridColumnHeader">
+                                <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource DataGridHeaderStyle}">
                                     <Setter Property="ToolTip" Value="The emulator to use for this mapping. Select from configured emulators in Playnite."/>
                                 </Style>
                             </DataGridTemplateColumn.HeaderStyle>
@@ -183,7 +208,7 @@
                                 </TextBlock>
                             </DataGridTemplateColumn.Header>
                             <DataGridTemplateColumn.HeaderStyle>
-                                <Style TargetType="DataGridColumnHeader">
+                                <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource DataGridHeaderStyle}">
                                     <Setter Property="ToolTip" Value="The emulator profile to use. Profiles define how the emulator launches games and which file extensions it supports."/>
                                 </Style>
                             </DataGridTemplateColumn.HeaderStyle>
@@ -216,7 +241,7 @@
                                 </TextBlock>
                             </DataGridTemplateColumn.Header>
                             <DataGridTemplateColumn.HeaderStyle>
-                                <Style TargetType="DataGridColumnHeader">
+                                <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource DataGridHeaderStyle}">
                                     <Setter Property="ToolTip" Value="The platform/console for the games in this mapping (e.g., PlayStation 2, Nintendo Switch, Windows, etc.)."/>
                                 </Style>
                             </DataGridTemplateColumn.HeaderStyle>
@@ -249,7 +274,7 @@
                                 </TextBlock>
                             </DataGridTemplateColumn.Header>
                             <DataGridTemplateColumn.HeaderStyle>
-                                <Style TargetType="DataGridColumnHeader">
+                                <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource DataGridHeaderStyle}">
                                     <Setter Property="ToolTip" Value="The type of ROM/installer: SingleFile (one file per game), MultiFile (folder per game), PCInstaller (handles EXE, ISO, and archives), or Yuzu (Nintendo Switch). ISOInstaller is deprecated and handled by PCInstaller."/>
                                 </Style>
                             </DataGridTemplateColumn.HeaderStyle>
@@ -267,7 +292,6 @@
                                              ItemsSource="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=FilteredRomTypes}"
                                              SelectedItem="{Binding RomType, Mode=TwoWay}"
                                              Margin="2"
-                                             ToolTip="PCInstaller handles all PC game formats: EXE files, ISO disc images, and archives (ZIP/RAR/7Z). ISOInstaller is deprecated and handled by PCInstaller."
                                              ToolTip="Select the ROM type for this mapping"/>
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellEditingTemplate>
@@ -281,8 +305,8 @@
                                 </TextBlock>
                             </DataGridTemplateColumn.Header>
                             <DataGridTemplateColumn.HeaderStyle>
-                                <Style TargetType="DataGridColumnHeader">
-                                    <Setter Property="ToolTip" Value="The folder path where ISOlator will scan for games. This can be a local path, network share (UNC), or mapped drive. Games are scanned from this location but remain there until installed."/>
+                                <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource DataGridHeaderStyle}">
+                                    <Setter Property="ToolTip" Value="The folder path where GameVault will scan for games. This can be a local path, network share (UNC), or mapped drive. Games are scanned from this location but remain there until installed."/>
                                 </Style>
                             </DataGridTemplateColumn.HeaderStyle>
                             <DataGridTemplateColumn.CellTemplate>
@@ -330,7 +354,7 @@
                                 </TextBlock>
                             </DataGridTemplateColumn.Header>
                             <DataGridTemplateColumn.HeaderStyle>
-                                <Style TargetType="DataGridColumnHeader">
+                                <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource DataGridHeaderStyle}">
                                     <Setter Property="ToolTip" Value="The folder path where games will be installed when you choose to install them. For PCInstaller type, this can be set during installation. For portable Playnite installations, paths relative to Playnite directory are preserved."/>
                                 </Style>
                             </DataGridTemplateColumn.HeaderStyle>
@@ -381,6 +405,7 @@
                         </DataGridCheckBoxColumn>
                     </DataGrid.Columns>
                 </DataGrid>
+                </StackPanel>
             </GroupBox>
             
             <!-- Library Scanning Section -->
@@ -391,13 +416,13 @@
                 
                 <StackPanel>
                     <TextBlock Style="{StaticResource SectionDescriptionStyle}">
-                        Configure how ISOlator scans for games and manages your library.
+                        Configure how GameVault scans for games and manages your library.
                     </TextBlock>
                     
                     <CheckBox IsChecked="{Binding ScanGamesInFullScreen, Mode=TwoWay}" Margin="0,0,0,12">
                         <CheckBox.ToolTip>
                             <TextBlock TextWrapping="Wrap" MaxWidth="400">
-                                When enabled, ISOlator will scan for games even when Playnite is running in Fullscreen mode. 
+                                When enabled, GameVault will scan for games even when Playnite is running in Fullscreen mode.
                                 By default, scanning is disabled in Fullscreen mode to avoid performance issues.
                             </TextBlock>
                         </CheckBox.ToolTip>
