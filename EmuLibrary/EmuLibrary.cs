@@ -473,15 +473,15 @@ namespace EmuLibrary
 
         private void RemoveSuperUninstalledGames(bool promptUser, CancellationToken ct)
         {
-            var toRemove = _scanners.Values.SelectMany(s => s.GetUninstalledGamesMissingSourceFiles(ct));
-            if (toRemove.Any())
+            var toRemove = _scanners.Values.SelectMany(s => s.GetUninstalledGamesMissingSourceFiles(ct)).ToList();
+            if (toRemove.Count > 0)
             {
                 System.Windows.MessageBoxResult res = System.Windows.MessageBoxResult.No;
                 if (promptUser)
                 {
                     Playnite.MainView.UIDispatcher.Invoke(() =>
                     {
-                        res = PlayniteApi.Dialogs.ShowMessage($"Delete {toRemove.Count()} library entries?", "Confirm deletion", System.Windows.MessageBoxButton.YesNo);
+                        res = PlayniteApi.Dialogs.ShowMessage($"Delete {toRemove.Count} library entries?", "Confirm deletion", System.Windows.MessageBoxButton.YesNo);
                     });
                 }
                 else

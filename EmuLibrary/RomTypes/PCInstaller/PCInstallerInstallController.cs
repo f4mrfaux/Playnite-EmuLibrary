@@ -825,8 +825,11 @@ namespace EmuLibrary.RomTypes.PCInstaller
                 
                 using (var process = Process.Start(startInfo))
                 {
-                    string output = await process.StandardOutput.ReadToEndAsync();
-                    string error = await process.StandardError.ReadToEndAsync();
+                    var outputTask = process.StandardOutput.ReadToEndAsync();
+                    var errorTask = process.StandardError.ReadToEndAsync();
+                    await Task.WhenAll(outputTask, errorTask);
+                    string output = await outputTask;
+                    string error = await errorTask;
                     await Task.Run(() => process.WaitForExit());
                     
                     if (process.ExitCode != 0 || string.IsNullOrWhiteSpace(output))

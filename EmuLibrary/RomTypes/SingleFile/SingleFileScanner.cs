@@ -246,11 +246,19 @@ namespace EmuLibrary.RomTypes.SingleFile
                 if (g.PluginId != EmuLibrary.PluginId || g.IsInstalled)
                     return false;
 
-                var info = g.GetELGameInfo();
-                if (info.RomType != RomType.SingleFile)
-                    return false;
+                try
+                {
+                    var info = g.GetELGameInfo();
+                    if (info.RomType != RomType.SingleFile)
+                        return false;
 
-                return !File.Exists((info as SingleFileGameInfo).SourceFullPath);
+                    return !File.Exists((info as SingleFileGameInfo).SourceFullPath);
+                }
+                catch (Exception ex)
+                {
+                    _emuLibrary.Logger.Error($"Error checking source for {g.Name}: {ex.Message}");
+                    return false;
+                }
             });
         }
     }

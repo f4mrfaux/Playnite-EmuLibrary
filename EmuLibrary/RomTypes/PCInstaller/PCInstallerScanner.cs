@@ -458,7 +458,7 @@ namespace EmuLibrary.RomTypes.PCInstaller
                         if (args.CancelToken.IsCancellationRequested)
                         {
                             _emuLibrary.Logger.Info("Updating installed games cancelled");
-                            yield break; // Will continue after the catch block
+                            yield break;
                         }
                         
                         GameMetadata gameMetadata = null;
@@ -476,7 +476,7 @@ namespace EmuLibrary.RomTypes.PCInstaller
                                         IsInstalled = true,
                                         GameId = gameInfo.AsGameId(),
                                         InstallDirectory = gameInfo.InstallDirectory,
-                                        Platforms = new HashSet<MetadataProperty>() { new MetadataNameProperty(mapping.Platform.Name) },
+                                        Platforms = new HashSet<MetadataProperty>() { new MetadataNameProperty(mapping.Platform?.Name ?? "PC") },
                                         GameActions = new List<GameAction>() 
                                         { 
                                             new GameAction()

@@ -62,7 +62,7 @@ namespace EmuLibrary.RomTypes.MultiFile
                     var dirPath = file.FullName;
                     
                     // If we already processed this directory or any parent directory, skip it
-                    if (processedDirs.Any(dir => dirPath.StartsWith(dir)))
+                    if (processedDirs.Any(dir => dirPath.Equals(dir, StringComparison.OrdinalIgnoreCase) || dirPath.StartsWith(dir + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)))
                         continue;
                         
                     var dirEnumerator = new SafeFileEnumerator(dirPath, "*.*", SearchOption.AllDirectories);
@@ -149,7 +149,7 @@ namespace EmuLibrary.RomTypes.MultiFile
                     var dirPath = file.FullName;
                     
                     // If we already processed this directory or any parent directory, skip it
-                    if (processedDirs.Any(dir => dirPath.StartsWith(dir)))
+                    if (processedDirs.Any(dir => dirPath.Equals(dir, StringComparison.OrdinalIgnoreCase) || dirPath.StartsWith(dir + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)))
                         continue;
 
                     var dirEnumerator = new SafeFileEnumerator(dirPath, "*.*", SearchOption.AllDirectories);
@@ -277,11 +277,19 @@ namespace EmuLibrary.RomTypes.MultiFile
                 if (g.PluginId != EmuLibrary.PluginId || g.IsInstalled)
                     return false;
 
-                var info = g.GetELGameInfo();
-                if (info.RomType != RomType.MultiFile)
-                    return false;
+                try
+                {
+                    var info = g.GetELGameInfo();
+                    if (info.RomType != RomType.MultiFile)
+                        return false;
 
-                return !Directory.Exists((info as MultiFileGameInfo).SourceFullBaseDir);
+                    return !Directory.Exists((info as MultiFileGameInfo).SourceFullBaseDir);
+                }
+                catch (Exception ex)
+                {
+                    _emuLibrary.Logger.Error($"Error checking source for {g.Name}: {ex.Message}");
+                    return false;
+                }
             });
         }
     }
