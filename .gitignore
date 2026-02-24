@@ -1,5 +1,8 @@
 *.pext
 **/bin/*
+**/obj/
 packages/
 .vs/
+.claude/
 toolbox/JITProfiles/toolbox
+*:Zone.Identifier
