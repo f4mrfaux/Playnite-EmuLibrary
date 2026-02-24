@@ -249,16 +249,7 @@ namespace EmuLibrary.RomTypes.ISOInstaller
                             GameId = info.AsGameId(),
                             Platforms = new HashSet<MetadataProperty>() { new MetadataNameProperty(mapping.Platform.Name) },
                             InstallSize = folderIsoFiles.Select(f => (ulong)new FileInfo(f).Length).Aggregate((a, b) => a + b),
-                            GameActions = new List<GameAction>() 
-                            { 
-                                new GameAction()
-                                {
-                                    Name = "Install Game",
-                                    Type = GameActionType.URL,
-                                    Path = "", // Will be updated after installation
-                                    IsPlayAction = false
-                                }
-                            }
+                            GameActions = new List<GameAction>()
                         };
                         
                         // Add ISO type tag

@@ -45,6 +45,10 @@ namespace EmuLibrary
         public EmuLibrary(IPlayniteAPI api) : base(api)
         {
             Playnite = api;
+            Properties = new LibraryPluginProperties
+            {
+                HasSettings = true
+            };
 
             // This must occur before we instantiate the Settings class
             InitializeRomTypeScanners();
@@ -91,7 +95,7 @@ namespace EmuLibrary
                     var oldGameIdFormat = PlayniteApi.Database.Games.Where(game => game.PluginId == scanner.LegacyPluginId && !game.GameId.StartsWith("!")).ToList();
                     if (oldGameIdFormat.Any())
                     {
-                        Logger.Info($"Updating {oldGameIdFormat.Count} games to new game id format for mapping {mapping.MappingId} ({mapping.Emulator.Name}/{mapping.EmulatorProfile.Name}/{mapping.SourcePath}).");
+                        Logger.Info($"Updating {oldGameIdFormat.Count} games to new game id format for mapping {mapping.MappingId} ({mapping.Emulator?.Name ?? "<unknown>"}/{mapping.EmulatorProfile?.Name ?? "<unknown>"}/{mapping.SourcePath}).");
                         using (Playnite.Database.BufferedUpdate())
                         {
                             oldGameIdFormat.ForEach(game =>

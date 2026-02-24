@@ -42,6 +42,7 @@ namespace EmuLibrary.Settings
         private void Click_BrowseSource(object sender, RoutedEventArgs e)
         {
             var mapping = ((FrameworkElement)sender).DataContext as EmulatorMapping;
+            if (mapping == null) return;
             string path;
             // Use current source path as initial directory if it exists, otherwise use Documents
             var initialDir = GetInitialDirectory(mapping.SourcePath);
@@ -54,6 +55,7 @@ namespace EmuLibrary.Settings
         private void Click_BrowseDestination(object sender, RoutedEventArgs e)
         {
             var mapping = ((FrameworkElement)sender).DataContext as EmulatorMapping;
+            if (mapping == null) return;
             string path;
             // Use current destination path as initial directory if it exists, otherwise use Documents
             var initialDir = GetInitialDirectory(mapping.DestinationPathResolved);

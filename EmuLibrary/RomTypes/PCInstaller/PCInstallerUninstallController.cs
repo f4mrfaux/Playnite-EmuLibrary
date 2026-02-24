@@ -83,8 +83,14 @@ namespace EmuLibrary.RomTypes.PCInstaller
                         {
                             _emuLibrary.Logger.Info($"Waiting for uninstaller to complete for {Game.Name}");
                             process.WaitForExit();
-                            
+
                             _emuLibrary.Logger.Info($"Uninstaller completed for {Game.Name} with exit code {process.ExitCode}");
+
+                            if (process.ExitCode != 0)
+                            {
+                                _emuLibrary.Logger.Warn($"Uninstaller exited with non-zero code {process.ExitCode} for {Game.Name}, aborting uninstall");
+                                return;
+                            }
                         }
                     }
                     else

@@ -27,7 +27,7 @@ namespace EmuLibrary.Settings
         public Emulator Emulator
         {
             get => AvailableEmulators.FirstOrDefault(e => e.Id == EmulatorId);
-            set { EmulatorId = value.Id; }
+            set { if (value != null) EmulatorId = value.Id; }
         }
         public Guid EmulatorId { get; set; }
 
@@ -35,7 +35,7 @@ namespace EmuLibrary.Settings
         public EmulatorProfile EmulatorProfile
         {
             get => Emulator?.SelectableProfiles.FirstOrDefault(p => p.Id == EmulatorProfileId);
-            set { EmulatorProfileId = value.Id; }
+            set { if (value != null) EmulatorProfileId = value.Id; }
         }
         public string EmulatorProfileId { get; set; }
 
@@ -43,7 +43,7 @@ namespace EmuLibrary.Settings
         public EmulatedPlatform Platform
         {
             get => AvailablePlatforms.FirstOrDefault(p => p.Id == PlatformId);
-            set { PlatformId = value.Id; }
+            set { if (value != null) PlatformId = value.Id; }
         }
         public string PlatformId { get; set; }
 

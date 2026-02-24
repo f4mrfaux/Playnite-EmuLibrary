@@ -22,7 +22,6 @@ namespace EmuLibrary.RomTypes.ISOInstaller
         internal ISOInstallerInstallController(Game game, IEmuLibrary emuLibrary) : base(game, emuLibrary)
         {
             _gameInfo = game.GetISOInstallerGameInfo();
-            _watcherToken = new CancellationTokenSource();
         }
 
         public override void Install(InstallActionArgs args)
@@ -51,9 +50,10 @@ namespace EmuLibrary.RomTypes.ISOInstaller
             // No built-in progress reporting in InstallActionArgs
             _emuLibrary.Logger.Info($"Installing {Game.Name}");
 
+            _watcherToken = new CancellationTokenSource();
             Task.Run(async () =>
             {
-                var cancellationToken = _watcherToken.Token; // Use proper cancellation token
+                var cancellationToken = _watcherToken.Token;
                 string tempExtractDir = null;
                 try
                 {
@@ -446,7 +446,8 @@ namespace EmuLibrary.RomTypes.ISOInstaller
             });
 
             // Invoke OnInstalled event (safe to call from background thread)
-            InvokeOnInstalled(new GameInstalledEventArgs());
+            var installationData = new GameInstallationData { InstallDirectory = _gameInfo.InstallDirectory };
+            InvokeOnInstalled(new GameInstalledEventArgs(installationData));
         }
 
         private async Task<string> MountISOImage(string isoPath, InstallActionArgs args)
@@ -471,8 +472,11 @@ namespace EmuLibrary.RomTypes.ISOInstaller
 
                 using (var process = Process.Start(startInfo))
                 {
-                    string output = await process.StandardOutput.ReadToEndAsync();
-                    string error = await process.StandardError.ReadToEndAsync();
+                    var outputTask = process.StandardOutput.ReadToEndAsync();
+                    var errorTask = process.StandardError.ReadToEndAsync();
+                    await Task.WhenAll(outputTask, errorTask);
+                    string output = await outputTask;
+                    string error = await errorTask;
                     await Task.Run(() => process.WaitForExit());
 
                     if (process.ExitCode != 0 || string.IsNullOrWhiteSpace(output))

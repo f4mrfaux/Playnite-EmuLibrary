@@ -157,7 +157,7 @@ namespace EmuLibrary.Settings
             {
                 if (m.ImageExtensionsLower == null || !m.ImageExtensionsLower.Any())
                 {
-                    mappingErrors.Add($"{m.MappingId}: No image extensions specified for profile {m.EmulatorProfile.Name} with emulator {m.Emulator.Name}. There is nothing for EmuLibrary to scan.");
+                    mappingErrors.Add($"{m.MappingId}: No image extensions specified for profile {m.EmulatorProfile?.Name ?? "<unknown>"} with emulator {m.Emulator?.Name ?? "<unknown>"}. There is nothing for EmuLibrary to scan.");
                 }
 
                 if (string.IsNullOrEmpty(m.SourcePath))
