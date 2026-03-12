@@ -1,6 +1,4 @@
-﻿using EmuLibrary.RomTypes;
-using EmuLibrary.RomTypes.PCInstaller;
-using EmuLibrary.RomTypes.ISOInstaller;
+using EmuLibrary.RomTypes;
 using Playnite.SDK.Models;
 
 internal static class ELGameInfoBaseExtensions

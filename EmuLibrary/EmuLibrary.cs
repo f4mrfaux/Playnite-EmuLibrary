@@ -1,5 +1,4 @@
 ﻿using EmuLibrary.RomTypes;
-using EmuLibrary.RomTypes.ISOInstaller;
 using EmuLibrary.Settings;
 using Playnite.SDK;
 using Playnite.SDK.Events;
@@ -88,28 +87,30 @@ namespace EmuLibrary
         {
             base.OnApplicationStarted(args);
 
-            Settings.Mappings.ForEach(mapping =>
+            _scanners.Values.ForEach(scanner =>
             {
-                _scanners.Values.ForEach(scanner =>
+                var oldGameIdFormat = PlayniteApi.Database.Games.Where(game => game.PluginId == scanner.LegacyPluginId && !game.GameId.StartsWith("!")).ToList();
+                if (oldGameIdFormat.Any())
                 {
-                    var oldGameIdFormat = PlayniteApi.Database.Games.Where(game => game.PluginId == scanner.LegacyPluginId && !game.GameId.StartsWith("!")).ToList();
-                    if (oldGameIdFormat.Any())
+                    Logger.Info($"Updating {oldGameIdFormat.Count} games to new game id format for scanner {scanner.RomType}.");
+                    using (Playnite.Database.BufferedUpdate())
                     {
-                        Logger.Info($"Updating {oldGameIdFormat.Count} games to new game id format for mapping {mapping.MappingId} ({mapping.Emulator?.Name ?? "<unknown>"}/{mapping.EmulatorProfile?.Name ?? "<unknown>"}/{mapping.SourcePath}).");
-                        using (Playnite.Database.BufferedUpdate())
+                        oldGameIdFormat.ForEach(game =>
                         {
-                            oldGameIdFormat.ForEach(game =>
+                            // Try each mapping until one succeeds
+                            foreach (var mapping in Settings.Mappings)
                             {
                                 if (scanner.TryGetGameInfoBaseFromLegacyGameId(game, mapping, out var gameInfo))
                                 {
                                     game.GameId = gameInfo.AsGameId();
                                     game.PluginId = PluginId;
                                     PlayniteApi.Database.Games.Update(game);
+                                    break;
                                 }
-                            });
-                        }
+                            }
+                        });
                     }
-                });
+                }
             });
             
             // Migrate existing games to stable GameId format (exclude installation-state fields)
@@ -129,7 +130,6 @@ namespace EmuLibrary
             {
                 // Find all games that need migration to stable format:
                 // - Games in ProtoBuf format (!0...) that may have installation fields in their GameId
-                // - Games in legacy pipe-separated format (ISOInstaller|..., etc.) that need to be migrated to stable ProtoBuf format
                 // We check if the GameId changes when regenerated with AsGameId() (which excludes installation fields)
                 var allPluginGames = PlayniteApi.Database.Games
                     .Where(g => g.PluginId == PluginId && g.GameId != null)
@@ -160,40 +160,16 @@ namespace EmuLibrary
                                 continue;
                             }
 
-                            // Handle both ProtoBuf format and legacy pipe-separated format
+                            // Only handle ProtoBuf format (!0...)
                             if (game.GameId.StartsWith("!0"))
                             {
-                                // ProtoBuf format - can deserialize directly
                                 currentGameInfo = game.GetELGameInfo();
                             }
                             else
                             {
-                                // Legacy format (pipe-separated like "ISOInstaller|guid|path|installDir")
-                                // Try to parse using extension methods that support legacy format
-                                try
-                                {
-                                    // Try ISOInstaller format first
-                                    if (game.GameId.Contains("|") && game.GameId.StartsWith("ISOInstaller"))
-                                    {
-                                        var isoInfo = game.GetISOInstallerGameInfo();
-                                        currentGameInfo = isoInfo;
-                                    }
-                                    // Could add other legacy format parsers here if needed
-                                    // For now, ISOInstaller is the main one with legacy format support
-                                }
-                                catch
-                                {
-                                    // If we can't parse it, skip this game
-                                    skippedCount++;
-                                    Logger.Debug($"Skipping game '{game.Name}' with unrecognized GameId format: {game.GameId.Substring(0, Math.Min(50, game.GameId.Length))}...");
-                                    continue;
-                                }
-                                
-                                if (currentGameInfo == null)
-                                {
-                                    skippedCount++;
-                                    continue;
-                                }
+                                // Skip legacy format games
+                                skippedCount++;
+                                continue;
                             }
                             
                             // Preserve installation state before migration
@@ -212,17 +188,8 @@ namespace EmuLibrary
                                     hadInstallState = !string.IsNullOrEmpty(oldInstallDirectory);
                                 }
                             }
-                            else if (currentGameInfo.RomType == RomType.ISOInstaller)
-                            {
-                                var isoInfo = currentGameInfo as RomTypes.ISOInstaller.ISOInstallerGameInfo;
-                                if (isoInfo != null)
-                                {
-                                    oldInstallDirectory = isoInfo.InstallDirectory;
-                                    oldPrimaryExecutable = isoInfo.PrimaryExecutable;
-                                    hadInstallState = !string.IsNullOrEmpty(oldInstallDirectory);
-                                }
-                            }
-                            
+
+
                             // Generate new stable GameId (excludes installation fields)
                             var newGameId = currentGameInfo.AsGameId();
                             
@@ -427,11 +394,9 @@ namespace EmuLibrary
                     {
                         Action = (arags) =>
                         {
-                            uninstalledPCInstallers.ForEach(ggi => 
+                            uninstalledPCInstallers.ForEach(ggi =>
                             {
-                                ggi.game.IsInstalling = true;
-                                var controller = ggi.gameInfo.GetInstallController(ggi.game, this);
-                                controller.Install(new InstallActionArgs());
+                                Playnite.InstallGame(ggi.game.Id);
                             });
                         },
                         Description = "Install Game",
@@ -439,28 +404,8 @@ namespace EmuLibrary
                     };
                 }
                 
-                // Menu item for ISO Installer games that are not installed
-                var uninstalledISOInstallers = ourGameInfos
-                    .Where(ggi => ggi.gameInfo.RomType == RomType.ISOInstaller && !ggi.game.IsInstalled);
-                
-                if (uninstalledISOInstallers.Any())
-                {
-                    yield return new GameMenuItem()
-                    {
-                        Action = (arags) =>
-                        {
-                            uninstalledISOInstallers.ForEach(ggi => 
-                            {
-                                ggi.game.IsInstalling = true;
-                                var controller = ggi.gameInfo.GetInstallController(ggi.game, this);
-                                controller.Install(new InstallActionArgs());
-                            });
-                        },
-                        Description = "Install ISO Game",
-                        MenuSection = "GameVault"
-                    };
-                }
-                
+
+
                 yield return new GameMenuItem()
                 {
                     Action = (arags) =>
