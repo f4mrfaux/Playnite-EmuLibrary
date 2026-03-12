@@ -27,7 +27,16 @@ namespace EmuLibrary.Settings
         public Emulator Emulator
         {
             get => AvailableEmulators.FirstOrDefault(e => e.Id == EmulatorId);
-            set { if (value != null) EmulatorId = value.Id; }
+            set
+            {
+                if (value != null)
+                {
+                    EmulatorId = value.Id;
+                    OnPropertyChanged(nameof(Emulator));
+                    OnPropertyChanged(nameof(AvailableProfiles));
+                    OnPropertyChanged(nameof(EmulatorProfile));
+                }
+            }
         }
         public Guid EmulatorId { get; set; }
 
@@ -35,7 +44,14 @@ namespace EmuLibrary.Settings
         public EmulatorProfile EmulatorProfile
         {
             get => Emulator?.SelectableProfiles.FirstOrDefault(p => p.Id == EmulatorProfileId);
-            set { if (value != null) EmulatorProfileId = value.Id; }
+            set
+            {
+                if (value != null)
+                {
+                    EmulatorProfileId = value.Id;
+                    OnPropertyChanged(nameof(EmulatorProfile));
+                }
+            }
         }
         public string EmulatorProfileId { get; set; }
 
@@ -43,7 +59,14 @@ namespace EmuLibrary.Settings
         public EmulatedPlatform Platform
         {
             get => AvailablePlatforms.FirstOrDefault(p => p.Id == PlatformId);
-            set { if (value != null) PlatformId = value.Id; }
+            set
+            {
+                if (value != null)
+                {
+                    PlatformId = value.Id;
+                    OnPropertyChanged(nameof(Platform));
+                }
+            }
         }
         public string PlatformId { get; set; }
 
@@ -51,7 +74,17 @@ namespace EmuLibrary.Settings
         public string DestinationPath { get; set; }
         public RomType RomType { get; set; }
 
-        public static IEnumerable<Emulator> AvailableEmulators => Settings.Instance.PlayniteAPI.Database.Emulators.OrderBy(x => x.Name);
+        public static IEnumerable<Emulator> AvailableEmulators
+        {
+            get
+            {
+                if (Settings.Instance?.PlayniteAPI == null)
+                {
+                    return Enumerable.Empty<Emulator>();
+                }
+                return Settings.Instance.PlayniteAPI.Database.Emulators.OrderBy(x => x.Name);
+            }
+        }
 
         [JsonIgnore]
         public IEnumerable<EmulatorProfile> AvailableProfiles => Emulator?.SelectableProfiles;
@@ -84,6 +117,10 @@ namespace EmuLibrary.Settings
         {
             get
             {
+                if (Settings.Instance?.PlayniteAPI == null)
+                {
+                    return DestinationPath;
+                }
                 var playnite = Settings.Instance.PlayniteAPI;
                 return playnite.Paths.IsPortable ? DestinationPath?.Replace(ExpandableVariables.PlayniteDirectory, playnite.Paths.ApplicationPath) : DestinationPath;
             }
@@ -99,8 +136,12 @@ namespace EmuLibrary.Settings
         {
             get
             {
-                var playnite = Settings.Instance.PlayniteAPI;
                 var ret = Emulator?.InstallDir;
+                if (Settings.Instance?.PlayniteAPI == null)
+                {
+                    return ret;
+                }
+                var playnite = Settings.Instance.PlayniteAPI;
                 if (playnite.Paths.IsPortable)
                 {
                     ret = ret?.Replace(ExpandableVariables.PlayniteDirectory, playnite.Paths.ApplicationPath);
@@ -121,11 +162,6 @@ namespace EmuLibrary.Settings
                     // For PC installers, we only support .exe files
                     imageExtensionsLower = new[] { "exe" };
                 }
-                else if (RomType == RomType.ISOInstaller)
-                {
-                    // For ISO installers, we only support ISO files as requested
-                    imageExtensionsLower = new[] { "iso" };
-                }
                 else if (EmulatorProfile is CustomEmulatorProfile)
                 {
                     imageExtensionsLower = (EmulatorProfile as CustomEmulatorProfile).ImageExtensions?.Where(ext => !ext.IsNullOrEmpty()).Select(ext => ext.Trim().ToLower());
@@ -136,7 +172,7 @@ namespace EmuLibrary.Settings
                 }
                 else
                 {
-                    throw new NotImplementedException("Unknown emulator profile type.");
+                    imageExtensionsLower = Enumerable.Empty<string>();
                 }
                 
                 // If no extensions were found or the list is empty, apply special handling

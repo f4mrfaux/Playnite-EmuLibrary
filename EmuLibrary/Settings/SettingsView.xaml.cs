@@ -12,29 +12,26 @@ namespace EmuLibrary.Settings
     {
         private bool InManualCellCommit = false;
 
+        private Settings PluginSettings => DataContext as Settings;
+
         public SettingsView()
         {
             InitializeComponent();
             
-            // Create filtered RomType list (exclude ISOInstaller - now handled by PCInstaller)
-            var allRomTypes = System.Enum.GetValues(typeof(RomType)).Cast<RomType>();
-            FilteredRomTypes = allRomTypes.Where(rt => rt != RomType.ISOInstaller).ToList();
+            FilteredRomTypes = System.Enum.GetValues(typeof(RomType)).Cast<RomType>().ToList();
         }
-        
-        /// <summary>
-        /// RomType values filtered for UI display (excludes ISOInstaller which is now handled by PCInstaller)
-        /// ISOInstaller is kept in backend for backward compatibility but hidden from users
-        /// </summary>
+
         public List<RomType> FilteredRomTypes { get; private set; }
 
         private void Click_Delete(object sender, RoutedEventArgs e)
         {
+            if (PluginSettings == null) return;
             if (((FrameworkElement)sender).DataContext is EmulatorMapping mapping)
             {
-                var res = Settings.Instance.PlayniteAPI.Dialogs.ShowMessage(string.Format("Delete this mapping?\r\n\r\n{0}", mapping.GetDescriptionLines().Aggregate((a, b) => $"{a}{Environment.NewLine}{b}")), "Confirm delete", MessageBoxButton.YesNo);
+                var res = PluginSettings.PlayniteAPI.Dialogs.ShowMessage(string.Format("Delete this mapping?\r\n\r\n{0}", mapping.GetDescriptionLines().Aggregate((a, b) => $"{a}{Environment.NewLine}{b}")), "Confirm delete", MessageBoxButton.YesNo);
                 if (res == MessageBoxResult.Yes)
                 {
-                    Settings.Instance.Mappings.Remove(mapping);
+                    PluginSettings.Mappings.Remove(mapping);
                 }
             }
         }
@@ -61,7 +58,7 @@ namespace EmuLibrary.Settings
             var initialDir = GetInitialDirectory(mapping.DestinationPathResolved);
             if ((path = GetSelectedFolderPath(initialDir)) != null)
             {
-                var playnite = Settings.Instance.PlayniteAPI;
+                var playnite = PluginSettings.PlayniteAPI;
                 if (playnite.Paths.IsPortable)
                 {
                     path = path.Replace(playnite.Paths.ApplicationPath, Playnite.SDK.ExpandableVariables.PlayniteDirectory);
@@ -88,15 +85,16 @@ namespace EmuLibrary.Settings
             return Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
         }
 
-        private static string GetSelectedFolderPath(string initialDirectory = null)
+        private string GetSelectedFolderPath(string initialDirectory = null)
         {
+            if (PluginSettings == null) return null;
             // Use the new SDK 6.13+ overload with initial directory if provided
             if (!string.IsNullOrEmpty(initialDirectory))
             {
-                return Settings.Instance.PlayniteAPI.Dialogs.SelectFolder(initialDirectory);
+                return PluginSettings.PlayniteAPI.Dialogs.SelectFolder(initialDirectory);
             }
 
-            return Settings.Instance.PlayniteAPI.Dialogs.SelectFolder();
+            return PluginSettings.PlayniteAPI.Dialogs.SelectFolder();
         }
 
         private void DataGrid_CellEditEnding(object sender, DataGridCellEditEndingEventArgs e)
@@ -105,21 +103,16 @@ namespace EmuLibrary.Settings
             {
                 InManualCellCommit = true;
 
-                // HACK!!!!
-                // Alternate approach 1: try to find new value here and store that somewhere as the currently selected emu
-                // Alternate approach 2: the "right" way(?) https://stackoverflow.com/a/34332709
-                if (e.Column.Header?.ToString() == "Emulator" || e.Column.Header?.ToString() == "Profile")
+                // Use declaration-order index (Columns[n]) not DisplayIndex, which can shift if columns are reordered
+                // Column order: Delete=0, Emulator=1, Profile=2, Platform=3, RomType=4, Source=5, Destination=6, Enabled=7
+                var col = e.Column;
+                if (grid.Columns.Count > 2 && (col == grid.Columns[1] || col == grid.Columns[2])) // Emulator or Profile columns
                 {
                     grid.CommitEdit(DataGridEditingUnit.Row, true);
                 }
 
                 InManualCellCommit = false;
             }
-        }
-
-        private void DataGrid_CurrentCellChanged(object sender, EventArgs e)
-        {
-            
         }
 
         private void Hyperlink_RequestNavigate(object sender, System.Windows.Navigation.RequestNavigateEventArgs e)

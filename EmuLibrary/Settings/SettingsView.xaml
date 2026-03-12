@@ -134,10 +134,10 @@
                 <DataGrid ItemsSource="{Binding Mappings}"
                          AutoGenerateColumns="False"
                          CellEditEnding="DataGrid_CellEditEnding"
-                         CurrentCellChanged="DataGrid_CurrentCellChanged"
                          SelectionUnit="Cell"
                          CanUserAddRows="True"
                          CanUserDeleteRows="False"
+                         CanUserReorderColumns="False"
                          HeadersVisibility="Column"
                          GridLinesVisibility="Horizontal"
                          RowBackground="{DynamicResource ControlBackgroundBrush}"
@@ -275,7 +275,7 @@
                             </DataGridTemplateColumn.Header>
                             <DataGridTemplateColumn.HeaderStyle>
                                 <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource DataGridHeaderStyle}">
-                                    <Setter Property="ToolTip" Value="The type of ROM/installer: SingleFile (one file per game), MultiFile (folder per game), PCInstaller (handles EXE, ISO, and archives), or Yuzu (Nintendo Switch). ISOInstaller is deprecated and handled by PCInstaller."/>
+                                    <Setter Property="ToolTip" Value="The type of ROM/installer: SingleFile (one file per game), MultiFile (folder per game), PCInstaller (handles EXE, ISO, and archives), or Yuzu (Nintendo Switch)."/>
                                 </Style>
                             </DataGridTemplateColumn.HeaderStyle>
                             <DataGridTemplateColumn.CellTemplate>
@@ -348,10 +348,7 @@
 
                         <DataGridTemplateColumn Width="*" MinWidth="200">
                             <DataGridTemplateColumn.Header>
-                                <TextBlock>
-                                    <Run Text="Destination Path"/>
-                                    <Run Text="*" Foreground="Red"/>
-                                </TextBlock>
+                                <TextBlock Text="Destination Path"/>
                             </DataGridTemplateColumn.Header>
                             <DataGridTemplateColumn.HeaderStyle>
                                 <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource DataGridHeaderStyle}">
@@ -481,7 +478,7 @@
                                   Margin="4,0,0,0"/>
                     </CheckBox>
                     
-                        <CheckBox IsChecked="{Binding UseWindowsCopyDialogInFullscreenMode, Mode=TwoWay}" Margin="0,0,0,0">
+                    <CheckBox IsChecked="{Binding UseWindowsCopyDialogInFullscreenMode, Mode=TwoWay}" Margin="0,0,0,0">
                         <CheckBox.ToolTip>
                             <TextBlock TextWrapping="Wrap" MaxWidth="400">
                                 <Run Text="When enabled, game installations will use Windows' native file copy dialog in Fullscreen mode."/>
