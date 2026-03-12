@@ -689,9 +689,10 @@ namespace EmuLibrary.RomTypes.PCInstaller
                 var startInfo = new ProcessStartInfo
                 {
                     FileName = installerPath,
-                    WorkingDirectory = Path.GetDirectoryName(installerPath)
+                    WorkingDirectory = Path.GetDirectoryName(installerPath),
+                    UseShellExecute = true
                 };
-                
+
                 using (var process = Process.Start(startInfo))
                 {
                     if (process != null)
@@ -828,8 +829,8 @@ namespace EmuLibrary.RomTypes.PCInstaller
                     var outputTask = process.StandardOutput.ReadToEndAsync();
                     var errorTask = process.StandardError.ReadToEndAsync();
                     await Task.WhenAll(outputTask, errorTask);
-                    string output = await outputTask;
-                    string error = await errorTask;
+                    string output = outputTask.Result;
+                    string error = errorTask.Result;
                     await Task.Run(() => process.WaitForExit());
                     
                     if (process.ExitCode != 0 || string.IsNullOrWhiteSpace(output))

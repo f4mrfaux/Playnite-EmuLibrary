@@ -51,9 +51,9 @@ namespace EmuLibrary.RomTypes.PCInstaller
                     if (!File.Exists(uninstallerPath))
                     {
                         // Look for uninstaller using pattern matching (more robust than checking specific names)
-                        var uninstallerPatterns = new[] { 
-                            "uninstall*.exe", "uninst*.exe", "setup.exe", "uninstall_*.exe", 
-                            "UNINSTALL*.EXE", "UNINST*.EXE", "SETUP.EXE", "UNINSTALL_*.EXE" 
+                        var uninstallerPatterns = new[] {
+                            "uninstall*.exe", "uninst*.exe", "uninstall_*.exe",
+                            "UNINSTALL*.EXE", "UNINST*.EXE", "UNINSTALL_*.EXE"
                         };
                         
                         foreach (var pattern in uninstallerPatterns)
@@ -76,7 +76,8 @@ namespace EmuLibrary.RomTypes.PCInstaller
                         var startInfo = new System.Diagnostics.ProcessStartInfo
                         {
                             FileName = uninstallerPath,
-                            WorkingDirectory = Path.GetDirectoryName(uninstallerPath)
+                            WorkingDirectory = Path.GetDirectoryName(uninstallerPath),
+                            UseShellExecute = true
                         };
                         
                         using (var process = System.Diagnostics.Process.Start(startInfo))

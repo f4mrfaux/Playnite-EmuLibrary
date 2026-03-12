@@ -49,8 +49,10 @@ namespace EmuLibrary.RomTypes
             return fileExt == compareExt || (file.Extension == "" && extension == "<none>");
         }
 
-        private static readonly string[] _extractedContentPatterns =
-            { "setup.exe", "install.exe", "launcher.exe", "game.exe", "bin", "data", "redist" };
+        private static readonly string[] _extractedContentExactNames =
+            { "launcher.exe", "game.exe", "redist" };
+        private static readonly string[] _extractedContentDirNames =
+            { "bin", "data" };
 
         private static readonly HashSet<string> _systemFolderNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
             { "system", "windows", "program files", "users", "games" };
@@ -78,7 +80,14 @@ namespace EmuLibrary.RomTypes
                 else
                 {
                     var lowerFileNames = files.Select(f => Path.GetFileName(f).ToLowerInvariant()).ToArray();
-                    isExtracted = _extractedContentPatterns.Any(p => lowerFileNames.Any(f => f.Contains(p)));
+                    // Use exact filename match to avoid false positives (e.g. "cabin.exe" matching "bin")
+                    isExtracted = _extractedContentExactNames.Any(p => lowerFileNames.Contains(p));
+                    if (!isExtracted)
+                    {
+                        // Check for subdirectory names that indicate extracted content
+                        var lowerDirNames = dirs.Select(d => Path.GetFileName(d).ToLowerInvariant()).ToArray();
+                        isExtracted = _extractedContentDirNames.Any(p => lowerDirNames.Contains(p));
+                    }
                 }
 
                 if (!isExtracted)

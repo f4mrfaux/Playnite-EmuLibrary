@@ -104,25 +104,20 @@ namespace EmuLibrary.RomTypes.PCInstaller
                             }
                             
                             // Search for installer files (EXE, ISO, archives)
-                            var extensions = new[] { ".exe", ".iso", ".zip", ".rar", ".7z", ".7zip" };
+                            var extensions = new[] { ".exe", ".iso", ".zip", ".rar", ".7z" };
                             var files = Directory.GetFiles(searchDir, "*.*", SearchOption.TopDirectoryOnly)
                                 .Where(f => extensions.Contains(Path.GetExtension(f).ToLowerInvariant()))
                                 .ToList();
                             
-                            if (files.Count > 0)
+                            if (files.Count > 0 && !string.IsNullOrEmpty(SourcePath))
                             {
-                                // Prefer files matching the expected name if SourcePath is set
-                                if (!string.IsNullOrEmpty(SourcePath))
-                                {
-                                    var expectedName = Path.GetFileName(SourcePath);
-                                    var matchingFile = files.FirstOrDefault(f => 
-                                        Path.GetFileName(f).Equals(expectedName, StringComparison.OrdinalIgnoreCase));
-                                    if (matchingFile != null)
-                                        return matchingFile;
-                                }
-                                
-                                // Otherwise return first file found
-                                return files.First();
+                                // Only return a file if it matches the expected name to avoid
+                                // returning a completely wrong game's installer
+                                var expectedName = Path.GetFileName(SourcePath);
+                                var matchingFile = files.FirstOrDefault(f =>
+                                    Path.GetFileName(f).Equals(expectedName, StringComparison.OrdinalIgnoreCase));
+                                if (matchingFile != null)
+                                    return matchingFile;
                             }
                         }
                     }

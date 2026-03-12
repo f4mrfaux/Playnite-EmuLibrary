@@ -4,7 +4,6 @@ using EmuLibrary.Util;
 using Playnite.SDK;
 using Playnite.SDK.Models;
 using Playnite.SDK.Plugins;
-using Playnite.SDK.Data;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -17,11 +16,6 @@ namespace EmuLibrary.RomTypes.PCInstaller
     internal class PCInstallerScanner : RomTypeScanner
     {
         private readonly IPlayniteAPI _playniteAPI;
-
-        // Rate limiting for metadata API calls
-        private static DateTime _lastMetadataCallTime = DateTime.MinValue;
-        private static readonly object _metadataRateLimitLock = new object();
-        private const int METADATA_API_DELAY_MS = 200;
 
         public override RomType RomType => RomType.PCInstaller;
         public override Guid LegacyPluginId => EmuLibrary.PluginId;
@@ -64,7 +58,7 @@ namespace EmuLibrary.RomTypes.PCInstaller
 
             // Support EXE files, ISO files, and archive files (ZIP, RAR, 7Z) for unified PC game installer
             // PCInstaller now handles all PC game formats: EXE installers, ISO disc images, and archives containing either
-            var installerExtensions = new List<string> { "exe", "iso", "zip", "rar", "7z", "7zip" };
+            var installerExtensions = new List<string> { "exe", "iso", "zip", "rar", "7z" };
             
             SafeFileEnumerator fileEnumerator;
             var gameMetadataBatch = new List<GameMetadata>();
@@ -151,28 +145,9 @@ namespace EmuLibrary.RomTypes.PCInstaller
                             ? _emuLibrary.Settings.GameNameNormalizationPatterns?.ToArray()
                             : null;
                         gameName = StringExtensions.NormalizeGameName(folderName, patterns);
-                        
-                        // Try metadata lookup
-                        if (!string.IsNullOrEmpty(gameName) && gameName.Length > 3)
-                        {
-                            try
-                            {
-                                var metadataName = TryGetMetadataName(gameName, mapping.Platform);
-                                if (!string.IsNullOrEmpty(metadataName) && 
-                                    !string.Equals(metadataName, gameName, StringComparison.OrdinalIgnoreCase) &&
-                                    metadataName.Length <= gameName.Length * 1.2)
-                                {
-                                    gameName = metadataName;
-                                }
-                            }
-                            catch (Exception ex)
-                            {
-                                _emuLibrary.Logger.Debug($"Could not get metadata name for '{gameName}': {ex.Message}");
-                            }
-                        }
                         normalizedNameCache[folderName] = gameName;
                     }
-                    
+
                     if (string.IsNullOrEmpty(gameName))
                     {
                         gameName = Path.GetFileNameWithoutExtension(folderIsoFiles[0].Name);
@@ -250,25 +225,6 @@ namespace EmuLibrary.RomTypes.PCInstaller
                                     ? _emuLibrary.Settings.GameNameNormalizationPatterns?.ToArray()
                                     : null;
                                 gameName = StringExtensions.NormalizeGameName(folderName, patterns);
-                                
-                                // Try metadata lookup
-                                if (!string.IsNullOrEmpty(gameName) && gameName.Length > 3)
-                                {
-                                    try
-                                    {
-                                        var metadataName = TryGetMetadataName(gameName, mapping.Platform);
-                                        if (!string.IsNullOrEmpty(metadataName) && 
-                                            !string.Equals(metadataName, gameName, StringComparison.OrdinalIgnoreCase) &&
-                                            metadataName.Length <= gameName.Length * 1.2)
-                                        {
-                                            gameName = metadataName;
-                                        }
-                                    }
-                                    catch (Exception ex)
-                                    {
-                                        _emuLibrary.Logger.Debug($"Could not get metadata name for '{gameName}': {ex.Message}");
-                                    }
-                                }
                                 normalizedNameCache[folderName] = gameName;
                             }
                             
@@ -415,108 +371,6 @@ namespace EmuLibrary.RomTypes.PCInstaller
                 yield return game;
             }
             #endregion
-            
-            #region Update installed games
-            var installedGamesToReturn = new List<GameMetadata>();
-            try
-            {
-                _emuLibrary.Logger.Info("Updating installed PC installer games");
-                
-                // Use BufferedUpdate for better performance
-                using (_playniteAPI.Database.BufferedUpdate())
-                {
-                    // More efficient filtering upfront to reduce iteration
-                    var installedGames = _playniteAPI.Database.Games
-                        .Where(g => g.PluginId == EmuLibrary.PluginId && g.IsInstalled)
-                        .Select(g => {
-                            try {
-                                var info = g.GetELGameInfo();
-                                if (info.RomType == RomType.PCInstaller) {
-                                    return (g, info as PCInstallerGameInfo);
-                                }
-                            } 
-                            catch (Exception ex) {
-                                _emuLibrary.Logger.Error($"Error getting game info for {g.Name}: {ex.Message}");
-                            }
-                            return (null, null);
-                        })
-                        .Where(pair => pair.Item1 != null);
-                
-                    foreach (var pair in installedGames)
-                    {
-                        var game = pair.Item1;
-                        var gameInfo = pair.Item2;
-                        if (args.CancelToken.IsCancellationRequested)
-                        {
-                            _emuLibrary.Logger.Info("Updating installed games cancelled");
-                            yield break;
-                        }
-                        
-                        GameMetadata gameMetadata = null;
-                        try
-                        {
-                            if (!string.IsNullOrEmpty(gameInfo.InstallDirectory))
-                            {
-                                if (Directory.Exists(gameInfo.InstallDirectory))
-                                {
-                                    // Game is still installed, prepare it for returning later
-                                    gameMetadata = new GameMetadata()
-                                    {
-                                        Source = EmuLibrary.SourceName,
-                                        Name = game.Name,
-                                        IsInstalled = true,
-                                        GameId = gameInfo.AsGameId(),
-                                        InstallDirectory = gameInfo.InstallDirectory,
-                                        Platforms = new HashSet<MetadataProperty>() { new MetadataNameProperty(mapping.Platform?.Name ?? "PC") },
-                                        GameActions = new List<GameAction>() 
-                                        { 
-                                            new GameAction()
-                                            {
-                                                Name = "Play",
-                                                Type = GameActionType.File,
-                                                Path = !string.IsNullOrEmpty(gameInfo.PrimaryExecutable) 
-                                                    ? gameInfo.PrimaryExecutable 
-                                                    : _playniteAPI.Database.Games.Get(game.Id)?.GameActions?.FirstOrDefault(a => a.IsPlayAction)?.Path 
-                                                    ?? gameInfo.InstallDirectory,
-                                                IsPlayAction = true
-                                            }
-                                        }
-                                    };
-                                }
-                                else
-                                {
-                                    _emuLibrary.Logger.Warn($"Install directory no longer exists for game {game.Name}: {gameInfo.InstallDirectory}");
-                                }
-                            }
-                            else
-                            {
-                                _emuLibrary.Logger.Warn($"Install directory is empty for installed game {game.Name}");
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            _emuLibrary.Logger.Error($"Error processing installed game {game.Name}: {ex.Message}");
-                        }
-                        
-                        // Metadata will be collected and returned outside the try/catch block
-                        if (gameMetadata != null)
-                        {
-                            installedGamesToReturn.Add(gameMetadata);
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                _emuLibrary.Logger.Error($"Error updating installed games: {ex.Message}");
-            }
-            
-            // Return all collected games after the try/catch block
-            foreach (var game in installedGamesToReturn)
-            {
-                yield return game;
-            }
-            #endregion
         }
 
         public override bool TryGetGameInfoBaseFromLegacyGameId(Game game, EmulatorMapping mapping, out ELGameInfo gameInfo)
@@ -524,90 +378,6 @@ namespace EmuLibrary.RomTypes.PCInstaller
             // PC installers are a new type, so there are no legacy game IDs to convert
             gameInfo = null;
             return false;
-        }
-
-        /// <summary>
-        /// Attempts to get a cleaner game name from Playnite's metadata providers.
-        /// This helps match release names to proper game titles.
-        /// Rate-limited to prevent overwhelming metadata API servers.
-        /// </summary>
-        private string TryGetMetadataName(string normalizedName, EmulatedPlatform platform)
-        {
-            if (string.IsNullOrEmpty(normalizedName) || _playniteAPI == null)
-            {
-                return null;
-            }
-
-            // Non-blocking rate limiting: skip lookup if called too recently rather than blocking the scanner
-            lock (_metadataRateLimitLock)
-            {
-                var timeSinceLastCall = DateTime.Now - _lastMetadataCallTime;
-                if (timeSinceLastCall.TotalMilliseconds < METADATA_API_DELAY_MS)
-                {
-                    return null;
-                }
-                _lastMetadataCallTime = DateTime.Now;
-            }
-
-            try
-            {
-                // Create a temporary game object for metadata lookup
-                var tempGame = new Game
-                {
-                    Name = normalizedName,
-                    PlatformIds = new List<Guid>()
-                };
-
-                // Try to get metadata from available providers
-                // Playnite's metadata providers can help clean up names
-                var metadataProviders = _playniteAPI.Addons.Plugins
-                    .Where(p => p is Playnite.SDK.Plugins.MetadataPlugin)
-                    .Cast<Playnite.SDK.Plugins.MetadataPlugin>()
-                    .ToList();
-
-                if (metadataProviders.Count == 0)
-                {
-                    return null;
-                }
-
-                // Try the first available metadata provider (usually IGDB)
-                foreach (var provider in metadataProviders)
-                {
-                    try
-                    {
-                        var metadataProvider = provider.GetMetadataProvider(
-                            new Playnite.SDK.Plugins.MetadataRequestOptions(tempGame, true));
-
-                        if (metadataProvider != null)
-                        {
-                            // Try to get just the name field (lightweight operation)
-                            var nameField = metadataProvider.GetName(
-                                new Playnite.SDK.Plugins.GetMetadataFieldArgs());
-
-                            if (!string.IsNullOrEmpty(nameField) && 
-                                nameField.Length > 2 &&
-                                !string.Equals(nameField, normalizedName, StringComparison.OrdinalIgnoreCase))
-                            {
-                                // Found a better name from metadata
-                                return nameField;
-                            }
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        // Continue to next provider if this one fails
-                        _emuLibrary.Logger.Debug($"Metadata provider {provider.Name} failed: {ex.Message}");
-                        continue;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                // Don't throw, just return null if metadata lookup fails
-                _emuLibrary.Logger.Debug($"Error in TryGetMetadataName: {ex.Message}");
-            }
-
-            return null;
         }
 
         public override IEnumerable<Game> GetUninstalledGamesMissingSourceFiles(CancellationToken ct)
