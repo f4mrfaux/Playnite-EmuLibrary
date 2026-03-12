@@ -50,11 +50,14 @@ namespace EmuLibrary.RomTypes
 
         private static T FromGameIdString<T>(string gameId) where T : ELGameInfo
         {
-            Debug.Assert(gameId != null, "GameId is null");
-            Debug.Assert(gameId.Length > 0, "GameId is empty");
-            Debug.Assert(gameId[0] == '!', "GameId is not in expected format. (Legacy game that didn't get converted?)");
-            Debug.Assert(gameId.Length > 2, $"GameId is too short ({gameId.Length} chars)");
-            Debug.Assert(gameId[1] == '0', $"GameId is marked as being serialized ProtoBuf, but of invalid version. (Expected 0, got {gameId[1]})");
+            if (string.IsNullOrEmpty(gameId))
+                throw new ArgumentException("GameId is null or empty");
+            if (gameId[0] != '!')
+                throw new ArgumentException($"GameId is not in expected format (expected '!' prefix, got '{gameId[0]}'). Legacy game that didn't get converted?");
+            if (gameId.Length < 3)
+                throw new ArgumentException($"GameId is too short ({gameId.Length} chars)");
+            if (gameId[1] != '0')
+                throw new ArgumentException($"GameId version mismatch (expected '0', got '{gameId[1]}')");
 
             return Serializer.Deserialize<T>(Convert.FromBase64String(gameId.Substring(2)).AsSpan());
         }
