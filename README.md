@@ -18,6 +18,16 @@ GameVault treats one or more folders of ROMs/Disc images or PC game installers a
 
 Disclaimer: This extension was originally created for personal usage, and that is still the primary focus. Because of this, many parts of it are still tailored to specific needs and usage patterns. Despite that, it's being shared with others in case it is useful to them. It is still in the process of being adapted for more general use.
 
+## Quick Start
+
+1. Install the GameVault extension from this repo
+2. Access the extension settings: Add-ons → Extensions → GameVault → Configure
+3. Add mappings for your game collections based on their type (see [ROM Types](#rom-types) below)
+4. Save settings and refresh your library (F5)
+5. Your games appear in Playnite as "uninstalled" titles
+6. Install games by right-clicking and selecting "Install"
+7. Manage your collection through Playnite's standard interface
+
 ## Setup
 
 To set it up, you create mappings to combine one of each of the following:
@@ -227,7 +237,7 @@ These workflows allow you to maintain central repositories of games while only k
 
 ## Support
 
-To get help, check out the #extension-support channel on the Playnite Discord, linked at the top of https://playnite.link/
+To get help, check out the #extension-support channel on the [Playnite Discord](https://playnite.link/).
 
 The following files are generally useful for troubleshooting, relative to the folder where Playnite data is stored. For a portable installation, this is the same folder that Playnite is installed to. For non-portable installations, it is in AppData.
 
